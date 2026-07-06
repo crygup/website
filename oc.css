@@ -1,0 +1,95 @@
+.oc-hint {
+  text-align: center;
+  font-size: 0.85rem;
+  color: #94a3b8;
+  margin: 0 0 1rem;
+  line-height: 1.5;
+}
+.best-indicator {
+  color: #f8fafc;
+  font-weight: 600;
+}
+
+#oc-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 0.4rem;
+  max-width: 360px;
+  margin: 0 auto;
+}
+
+.oc-cell {
+  aspect-ratio: 1;
+  border: none;
+  border-radius: 0.25rem;
+  cursor: pointer;
+  font-size: 0.75rem;
+  font-family: inherit;
+  color: #64748b;
+  background: #243133;
+  transition: background 0.15s, box-shadow 0.15s, transform 0.1s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.oc-cell:hover {
+  transform: scale(1.06);
+}
+.oc-cell:disabled {
+  cursor: default;
+  background: #1a1d20;
+  color: #4a4b56;
+}
+.oc-cell:disabled:hover {
+  transform: none;
+}
+
+/* Color states */
+.oc-cell[data-color="blue"]   { background: #3b82f6; color: #fff; }
+.oc-cell[data-color="green"]  { background: #22c55e; color: #fff; }
+.oc-cell[data-color="yellow"] { background: #eab308; color: #1a1d20; }
+.oc-cell[data-color="orange"] { background: #f97316; color: #fff; }
+.oc-cell[data-color="teal"]   { background: #14b8a6; color: #fff; }
+.oc-cell[data-color="red"]    { background: #ef4444; color: #fff; }
+
+/* Best move highlight */
+.oc-cell.best {
+  box-shadow: inset 0 0 0 2px #f8fafc;
+}
+
+/* Labels */
+.oc-cell[data-color="blue"]::after   { content: "B"; }
+.oc-cell[data-color="green"]::after  { content: "G"; }
+.oc-cell[data-color="yellow"]::after { content: "Y"; }
+.oc-cell[data-color="orange"]::after { content: "O"; }
+.oc-cell[data-color="teal"]::after   { content: "T"; }
+.oc-cell[data-color="red"]::after    { content: "R"; }
+
+/* Emoji mode — hide labels, show image */
+.oc-grid-emoji .oc-cell::after { content: none !important; }
+.oc-grid-emoji .oc-cell[data-color] { background-image: var(--emoji); background-size: 50%; background-position: center; background-repeat: no-repeat; color: transparent; }
+
+#oc-controls {
+  text-align: center;
+  margin-top: 0.75rem;
+  display: flex;
+  gap: 0.5rem;
+  justify-content: center;
+}
+#oc-reset,
+#oc-emoji-toggle {
+  padding: 0.5rem 1.25rem;
+  font-size: 0.85rem;
+  font-family: inherit;
+  color: #94a3b8;
+  background: #332b37;
+  border: none;
+  border-radius: 0.25rem;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+#oc-reset:hover,
+#oc-emoji-toggle:hover {
+  background: #232b2e;
+  color: #cbd5e1;
+}

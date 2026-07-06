@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>crygup · oq solver</title>
+  <link rel="stylesheet" href="style.css?s=9">
+  <link rel="stylesheet" href="oc.css?s=1">
+  <link rel="stylesheet" href="oq.css?s=1">
+  <link rel="icon" type="image/x-icon" href="images/pfp.ico">
+<body>
+  <header>
+    <h1>OQ Solver</h1>
+  </header>
+  <main>
+    <nav class="tab-bar">
+      <a href="/" class="tab-btn">Home</a>
+      <a href="/oc" class="tab-btn">OC Solver</a>
+    </nav>
+
+    <section class="tab-panel" id="oq-panel">
+      <p class="oc-hint">Click cells to cycle through colors, White outline = recommended next click. Green = safe. Purple outline = guaranteed purple.</p>
+      <div id="oq-grid"></div>
+
+      <p id="oq-status"></p>
+
+      <div id="oq-controls">
+        <button id="oq-reset">Reset Grid</button>
+        <button id="oq-emoji-toggle">Show Emojis</button>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <p>&copy; <span id="year"></span></p>
+  </footer>
+
+  <script src="script.js?s=3"></script>
+  <script src="oq.js?s=1"></script>
+</html>

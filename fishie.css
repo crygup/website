@@ -1,0 +1,65 @@
+.fishie-card { text-align: center; padding: 1rem; }
+.fishie-card h2 { color: #f8fafc; font-size: 1.5rem; margin-bottom: 0.75rem; }
+.fishie-desc { color: #94a3b8; font-size: 0.95rem; max-width: 480px; margin: 0 auto 1.5rem; line-height: 1.6; }
+.fishie-links { display: flex; gap: 0.75rem; justify-content: center; flex-wrap: wrap; }
+.fishie-btn { display: inline-block; padding: 0.65rem 1.5rem; background: #5865f2; color: #fff; text-decoration: none; border-radius: 0.25rem; font-size: 0.9rem; font-weight: 600; font-family: inherit; transition: background 0.15s; }
+.fishie-btn:hover { background: #4752c4; }
+.fishie-loading { text-align: center; color: #94a3b8; font-size: 0.95rem; padding: 2rem; }
+.fishie-stats { display: flex; gap: 0.5rem; justify-content: center; flex-wrap: wrap; margin-bottom: 1.25rem; }
+.stat { display: flex; flex-direction: column; align-items: center; padding: 0.5rem 0.75rem; background: #243133; border-radius: 0.25rem; min-width: 70px; }
+.stat-value { font-size: 1.5rem; font-weight: 700; color: #f8fafc; }
+.stat-label { font-size: 0.8rem; color: #64748b; margin-top: 0.25rem; }
+.fishie-commands { max-width: 640px; margin: 0 auto; }
+.cmd-category { margin-bottom: 1.25rem; }
+.cmd-category h3 { color: #336058; font-size: 0.95rem; margin-bottom: 0.4rem; padding-bottom: 0.3rem; border-bottom: 1px solid #4a4b56; }
+.cmd-item { display: flex; justify-content: space-between; align-items: baseline; padding: 0.3rem 0; font-size: 0.85rem; }
+.cmd-name { color: #e2e8f0; font-weight: 600; white-space: nowrap; margin-right: 1rem; max-width: 160px; overflow: hidden; text-overflow: ellipsis; }
+.cmd-desc { color: #94a3b8; text-align: right; max-width: 320px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fishie-logs { display: flex; gap: 0.5rem; justify-content: center; flex-wrap: wrap; }
+.stat-compact { display: flex; flex-direction: column; align-items: center; padding: 0.5rem 0.75rem; background: #243133; border-radius: 0.25rem; font-size: 0.82rem; color: #e2e8f0; min-width: 90px; }
+.stat-compact strong { font-size: 0.75rem; color: #94a3b8; font-weight: 600; margin-bottom: 0.15rem; }
+.stat-compact span { color: #94a3b8; font-size: 0.78rem; line-height: 1.4; }
+
+.fishie-tooltip {
+  display: none; position: fixed; z-index: 200;
+  max-width: 240px; padding: 0.5rem 0.7rem;
+  background: #1a1d20; color: #cbd5e1; font-size: 0.8rem;
+  border-radius: 0.25rem; line-height: 1.4; white-space: pre-wrap;
+  pointer-events: none; box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+}
+
+.policy-content {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 0.5rem 0;
+  color: #cbd5e1;
+  font-size: 0.9rem;
+  line-height: 1.7;
+}
+.policy-content h2 {
+  font-size: 1.15rem;
+  color: #f8fafc;
+  margin: 1.5rem 0 0.5rem;
+  padding-bottom: 0.3rem;
+  border-bottom: 1px solid #4a4b56;
+}
+.policy-content h3 {
+  font-size: 1rem;
+  color: #e2e8f0;
+  margin: 1.25rem 0 0.4rem;
+}
+.policy-content h4 {
+  font-size: 0.9rem;
+  color: #94a3b8;
+  margin: 1rem 0 0.3rem;
+}
+.policy-content p {
+  margin: 0.5rem 0;
+}
+.policy-content ul, .policy-content ol {
+  margin: 0.4rem 0;
+  padding-left: 1.5rem;
+}
+.policy-content li {
+  margin: 0.2rem 0;
+}

@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>crygup · fishie</title>
+  <link rel="stylesheet" href="style.css?s=9">
+  <link rel="stylesheet" href="fishie.css?s=2">
+  <link rel="icon" type="image/x-icon" href="images/pfp.ico">
+</head>
+<body>
+  <header>
+    <h1>Fishie</h1>
+  </header>
+  <main>
+    <nav class="tab-bar" id="fishie-tabs">
+      <a href="/" class="tab-btn">Home</a>
+      <button class="tab-btn active" data-tab="about">About</button>
+      <button class="tab-btn" data-tab="stats">Stats</button>
+      <button class="tab-btn" data-tab="commands">Commands</button>
+      <button class="tab-btn" data-tab="privacy">Privacy</button>
+      <button class="tab-btn" data-tab="terms">Terms</button>
+    </nav>
+
+    <section class="tab-panel" id="fishie-panel">
+      <div id="tab-content"></div>
+    </section>
+  </main>
+
+  <footer>
+    <p>&copy; <span id="year"></span></p>
+  </footer>
+
+  <script src="script.js?s=3"></script>
+  <script src="fishie.js?s=3"></script>
+</body>
+</html>
