@@ -6,15 +6,20 @@ const LASTFM_USER = "crygup";
 const profile = {
   name: "crygup",
   tagline: "video editor & backend developer",
-  bio: `<strong>hey!</strong> my name's zil but you can call me z, crygup, liz, cry or whatever you want, i don't really mind.
+  bio: `<strong>hey!</strong> my name's zil, but you can call me z, crygup, cry, or whatever you want. i don't really mind.
 
-part-time video editor for a few different overwatch streamers. you can find my work in the <a href="#" data-tab="videos">videos</a> tab.
+i'm a part-time video editor for a few different overwatch streamers. you can check out some of my work in the <a href="#" data-tab="videos">videos</a> tab.
 
-part-time software developer for many different things, mainly my discord bot right now. you can learn about it in the <a href="#" data-tab="projects">projects</a> tab.
+i'm also a part-time software developer working on a bunch of different projects, though my main focus right now is my discord bot. you can learn more about it in the <a href="#" data-tab="projects">projects</a> tab.
 
-i've been editing videos for about 8 years now but only really got back into it recently as a hobby. similar for programming, 10+ years, but with ai taking over it's been pretty demotivating, so i only do it occasionally now. fun fact: that's why i got back into video editing.
+i've been editing videos for about 8 years now, though i only recently got back into it as a hobby. programming's been a similar story but i've been doing it for about 10+ years, but with ai taking over it's been pretty demotivating, so i only do it as a hobby nowadays. fun fact: that's actually what got me back into video editing.
+
+programming-wise, i'm proficient in python, ts/js, and lua and i'm currently learning c# and rust.
+
+as for video editing, i've used adobe premiere pro for years, but about a year ago i switched to davinci resolve. i've been loving it ever since and i'm fully committed to the switch.
 
 any pronouns`,
+
   projects: [
     {
       name: "Fishie",
@@ -32,9 +37,9 @@ You'll also find a download command, which supports a variety of websites, essen
 <a href="/oc" target="_blank" rel="noopener">OC Solver</a> & <a href="/oc" target="_blank" rel="noopener">OQ Solver</a>`,
     },
     {
-      name: "Avatar History",
-      desc: `Saved using my Discord bot, Fishie, we can track the avatars of any user and view them online.
-Check it out <a href="/avatars" target="_blank" rel="noopener">here</a>`,
+      name: "Discord avatar/username history",
+      desc: `Saved using my Discord bot, Fishie, we can track the avatars, usernames and more of any user and view them online.
+Check it out <a href="/discord" target="_blank" rel="noopener">here</a>`,
     },
     {
       name: "Subreddit Image Downloader",
