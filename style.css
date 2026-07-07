@@ -441,6 +441,17 @@ footer {
 }
 
 /* ── Mobile ─────────────────────────────────────────── */
+
+/* ── Narrow screens: shrink before wrapping ──────────── */
+@media (max-width: 640px) {
+  .tab-btn,
+  .dropdown-wrapper {
+    padding: 0.4rem 0.65rem;
+    font-size: 0.8rem;
+  }
+}
+
+/* ── Mobile ─────────────────────────────────────────── */
 @media (max-width: 480px) {
   header {
     padding: 2rem 1rem 1.25rem;
@@ -454,7 +465,7 @@ footer {
     gap: 0.2rem;
   }
   .tab-btn,
-  .dropdown-wrapper {
+  .tab-bar .dropdown-wrapper {
     padding: 0.4rem 0.65rem;
     font-size: 0.8rem;
     border-radius: 0.25rem;
