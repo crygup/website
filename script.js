@@ -224,7 +224,8 @@ const nameEl = document.getElementById("name");
 if (nameEl) nameEl.textContent = profile.name;
 const taglineEl = document.getElementById("tagline");
 if (taglineEl) taglineEl.textContent = profile.tagline;
-document.getElementById("year").textContent = String(new Date().getFullYear());
+const yearEl = document.getElementById("year");
+if (yearEl) yearEl.textContent = String(new Date().getFullYear());
 const bio = document.getElementById("bio");
 if (bio) bio.innerHTML = profile.bio;
 
