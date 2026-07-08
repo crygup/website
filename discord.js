@@ -98,9 +98,6 @@ guildSubtabs.addEventListener("click", (e) => {
 function renderLogin() {
   loginSection.innerHTML = "";
   if (loggedInUser) return;
-  const params = new URLSearchParams(window.location.search);
-  const code = params.get("code");
-  if (code) { window.history.replaceState({}, "", "/discord"); exchangeCode(code); }
 }
 
 
@@ -226,7 +223,7 @@ function renderSettings() {
       </div>`;
     document.getElementById("settings-login-yes").addEventListener("click", () => {
       localStorage.setItem("settings_pending", "1");
-      window.location.href = `https://discord.com/oauth2/authorize?client_id=${CLIENT_ID}&redirect_uri=${encodeURIComponent("https://crygup.com/discord")}&response_type=code&scope=identify`;
+      window.location.href = `https://discord.com/oauth2/authorize?client_id=${CLIENT_ID}&redirect_uri=${encodeURIComponent("https://crygup.com")}&response_type=code&scope=identify`;
     });
     document.getElementById("settings-login-no").addEventListener("click", () => {
       hideSettingsPanel();
@@ -386,23 +383,6 @@ async function saveOptOuts() {
   } catch { /* silently fail */ }
 }
 
-async function exchangeCode(code) {
-  loginSection.innerHTML = '<p class="login-status">Logging in…</p>';
-  try {
-    const res = await fetch(`${FISHIE_API}/oauth/exchange?code=${encodeURIComponent(code)}`, { method: "POST" });
-    if (!res.ok) throw new Error("Login failed");
-    const data = await res.json();
-    localStorage.setItem("discord_user", JSON.stringify(data.user));
-    localStorage.setItem("discord_token", data.access_token);
-    loggedInUser = data.user; accessToken = data.access_token;
-    input.value = String(loggedInUser.id);
-    renderLogin();
-    if (localStorage.getItem("settings_pending")) {
-      localStorage.removeItem("settings_pending");
-      showSettingsPanel();
-    }
-  } catch { loginSection.innerHTML = '<p class="login-status">Login failed. Refresh to try again.</p>'; }
-}
 
 document.getElementById("search-form").addEventListener("submit", e => {
   e.preventDefault();

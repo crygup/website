@@ -10,7 +10,7 @@
   <link rel="stylesheet" href="style.css?s=13">
   <link rel="icon" type="image/x-icon" href="images/pfp.ico">
 </head>
-<body>
+<body data-page="">
   <header>
     <h1 id="name"></h1>
     <p id="tagline"></p>
@@ -20,19 +20,11 @@
       <button class="tab-btn active" data-tab="bio">About Me</button>
       <button class="tab-btn" data-tab="projects">Projects</button>
       <button class="tab-btn" data-tab="videos">Videos</button>
-      <a href="/discord" class="tab-btn nav-link">Discord Tools</a>
-      <a href="/fishie" class="tab-btn nav-link">Fishie</a>
-      <div class="dropdown-wrapper" id="mudae-dropdown">
-        Mudae
-        <div class="dropdown-menu">
-          <a href="/oc">OC Solver</a>
-          <a href="/oq">OQ Solver</a>
-        </div>
-      </div>
     </nav>
     <section class="tab-panel bio-card" id="bio-panel">
     <section id="now-playing"></section>
       <p id="bio"></p>
+      <div id="socials"></div>
     </section>
     <section class="tab-panel projects-card hidden" id="projects-panel">
       <ul id="project-list"></ul>

@@ -47,7 +47,8 @@ app = FastAPI(lifespan=lifespan)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
-    allow_methods=["GET"],
+    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_headers=["*"],
 )
 
 async def resolve_user_id(query: str) -> int:
@@ -143,6 +144,8 @@ async def get_avatars(
     ]
 
     return {"avatars": avatars, "total": total, "page": page, "pages": pages}
+
+
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)

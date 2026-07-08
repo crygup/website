@@ -1,3 +1,128 @@
+// ── sidebar ──
+(function(){
+  const page = document.body.dataset.page || "";
+
+  const links = [
+    { label: "Home",     href: "/",            match: "" },
+    { label: "Discord",  href: "/discord",     match: "discord" },
+    { label: "Fishie",   href: "/fishie",      match: "fishie" },
+    { label: "Messages", href: "/messages",    match: "messages" },
+    { label: "Mudae",    match: "mudae",
+      subs: [
+        { label: "OC Solver", href: "/oc" },
+        { label: "OQ Solver", href: "/oq" },
+      ]},
+  ];
+
+  // hamburger button
+  const btn = document.createElement("button");
+  btn.className = "hamburger";
+  btn.innerHTML = "\u2630";
+  btn.setAttribute("aria-label", "Menu");
+  document.body.prepend(btn);
+
+  // overlay
+  const overlay = document.createElement("div");
+  overlay.className = "sidebar-overlay";
+  document.body.prepend(overlay);
+
+  // sidebar
+  const CLIENT_ID = "876391494485950504";
+  const OAUTH_URL = `https://discord.com/oauth2/authorize?client_id=${CLIENT_ID}&redirect_uri=${encodeURIComponent("https://crygup.com")}&response_type=code&scope=identify`;
+
+  const sidebar = document.createElement("nav");
+  sidebar.className = "sidebar";
+
+  let html = "";
+
+  function buildLoginSection() {
+    const user = JSON.parse(localStorage.getItem("discord_user") || "null");
+    let section = "";
+    if (user) {
+      const avatarUrl = user.avatar
+        ? `https://cdn.discordapp.com/avatars/${user.id}/${user.avatar}.png?size=64`
+        : "https://cdn.discordapp.com/embed/avatars/0.png";
+      section += `<div class="sidebar-user">`;
+      section += `<img src="${avatarUrl}" alt="" class="sidebar-avatar">`;
+      section += `<span class="sidebar-username">${user.global_name || user.username}</span>`;
+      section += `<button class="sidebar-logout">Logout</button>`;
+      section += `</div>`;
+    } else {
+      section += `<a href="${OAUTH_URL}" class="sidebar-login">Login with Discord</a>`;
+    }
+    section += `<div class="sidebar-divider"></div>`;
+    return section;
+  }
+
+  html += buildLoginSection();
+
+  // nav links
+  for (const item of links) {
+    if (item.subs) {
+      const expanded = page === item.match ? ' expanded' : '';
+      html += `<button class="sidebar-expand${expanded}">${item.label}<span class="sidebar-arrow"></span></button>`;
+      html += `<div class="sidebar-subs${expanded}">`;
+      for (const sub of item.subs) {
+        html += `<a href="${sub.href}" class="sidebar-sub">${sub.label}</a>`;
+      }
+      html += `</div>`;
+    } else {
+      const active = page === item.match ? ' active' : '';
+      html += `<a href="${item.href}" class="${active}">${item.label}</a>`;
+    }
+  }
+  sidebar.innerHTML = html;
+  document.body.prepend(sidebar);
+
+  function bindLogout() {
+    const btn = sidebar.querySelector(".sidebar-logout");
+    if (btn) {
+      btn.addEventListener("click", () => {
+        localStorage.removeItem("discord_user");
+        localStorage.removeItem("discord_token");
+        window.location.reload();
+      });
+    }
+  }
+  bindLogout();
+
+
+  function rebuildLogin() {
+    const userEl = sidebar.querySelector(".sidebar-user, .sidebar-login");
+    const divider = sidebar.querySelector(".sidebar-divider");
+    if (userEl) userEl.remove();
+    if (divider) divider.remove();
+    sidebar.insertAdjacentHTML("afterbegin", buildLoginSection());
+    bindLogout();
+  }
+  window.addEventListener("discord-login", rebuildLogin);
+
+  function open() {
+    rebuildLogin();
+    sidebar.classList.add("open");
+    overlay.classList.add("open");
+  }
+  function close() {
+    sidebar.classList.remove("open");
+    overlay.classList.remove("open");
+  }
+
+  btn.addEventListener("click", () => sidebar.classList.contains("open") ? close() : open());
+  overlay.addEventListener("click", close);
+  sidebar.addEventListener("click", (e) => { if (e.target.tagName === "A") close(); });
+
+  // Mudae expand toggle
+  const expandBtn = sidebar.querySelector(".sidebar-expand");
+  const subsDiv = sidebar.querySelector(".sidebar-subs");
+  if (expandBtn && subsDiv) {
+    expandBtn.addEventListener("click", () => {
+      expandBtn.classList.toggle("expanded");
+      subsDiv.classList.toggle("expanded");
+    });
+  }
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape") close(); });
+})();
+
 const YOUTUBE_PROXY = "https://youtube.crygup.com";
 const YOUTUBE_CHANNEL = "@crygup";
 const LASTFM_PROXY = "https://lastfm.crygup.com";
@@ -57,7 +182,19 @@ Check it out <a href="/discord" target="_blank" rel="noopener">here</a>`,
 <a href="https://github.com/crygup/headless-tracker" target="_blank" rel="noopener">Get it here.</a>`,
     },
   ],
-};
+
+  socials: [
+    { name: "Discord",   url: "https://discord.gg/rM9u4MRFBE" },
+    { name: "Twitter",   url: "https://x.com/crygup" },
+    { name: "Instagram", url: "https://instagram.com/crygup" },
+    { name: "YouTube",   url: "https://youtube.com/@crygup" },
+    { name: "Letterboxd",url: "https://letterboxd.com/fluttershy" },
+    { name: "AniList",   url: "https://anilist.co/user/fluttershy" },
+    { name: "Steam",     url: "https://steamcommunity.com/profiles/76561199034626559/" },
+    { name: "Last.fm",   url: "https://www.last.fm/user/crygup" },
+    { name: "Spotify",   url: "https://open.spotify.com/user/ndbz2vxohhd8y09292dtz5lbz" },
+  ],
+ };
 
 if (document.getElementById("bio-panel")) {
   document.querySelectorAll(".tab-btn[data-tab]").forEach((btn) => {
@@ -100,6 +237,13 @@ if (bio) {
     }
   });
 }
+
+const socialsEl = document.getElementById("socials");
+if (socialsEl) {
+  socialsEl.innerHTML = profile.socials
+    .map(s => `<a href="${s.url}" target="_blank" rel="noopener" class="social-link">${s.name}</a>`)
+    .join(" · ");
+}
 const list = document.getElementById("project-list");
 if (list) {
   profile.projects.forEach((p) => {
@@ -139,7 +283,10 @@ async function fetchTrackPlays(artist, track) {
   );
   if (!res.ok) return null;
   const data = await res.json();
-  return Number(data.track?.userplaycount) || null;
+  return {
+    plays: Number(data.track?.userplaycount) || null,
+    loved: data.track?.userloved === "1",
+  };
 }
 
 async function fetchTotalScrobbles() {
@@ -163,7 +310,10 @@ function timeAgo(ts) {
   return new Date(ts).toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
-function renderNowPlaying(track, trackPlays, totalScrobbles) {
+function renderNowPlaying(track, trackInfo, totalScrobbles) {
+  const trackPlays = trackInfo?.plays ?? null;
+  const loved = trackInfo?.loved ?? false;
+
   const label = track.playing
     ? "Now Playing"
     : `Last Played &middot; ${timeAgo(track.playedAt)}`;
@@ -178,11 +328,13 @@ function renderNowPlaying(track, trackPlays, totalScrobbles) {
     : "";
   const placeholder = `<div class="np-cover placeholder np-cover-placeholder" style="${track.cover ? 'display:none' : ''}"></div>`;
 
+  const heart = loved ? ' <span class="np-loved">\u2665</span>' : "";
+
   npSection.innerHTML = `
     ${cover}${placeholder}
     <div class="np-info">
       <span class="np-label">${label}</span>
-      <span class="np-track" title="${escapeHtml(track.name)}">${escapeHtml(track.name)}</span>
+      <span class="np-track" title="${escapeHtml(track.name)}">${escapeHtml(track.name)}${heart}</span>
       <span class="np-artist">${escapeHtml(track.artist)}</span>
       ${playsLine ? `<span class="np-plays">${playsLine}</span>` : ""}
     </div>`;
@@ -206,11 +358,11 @@ async function fetchSpotifyCover(artist, name) {
 if (npSection) {
   fetchNowPlaying()
     .then(async (track) => {
-      const [trackPlays, totalScrobbles] = await Promise.all([
+      const [trackInfo, totalScrobbles] = await Promise.all([
         fetchTrackPlays(track.artist, track.name),
         fetchTotalScrobbles(),
       ]);
-      renderNowPlaying(track, trackPlays, totalScrobbles);
+      renderNowPlaying(track, trackInfo, totalScrobbles);
     })
     .catch(() => npSection.classList.add("hidden"));
 }
@@ -339,3 +491,24 @@ if (videoContainer) {
 function escapeHtml(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;'); }
 
 
+
+// ── OAuth exchange (runs on any page with ?code=) ──
+(function(){
+  const qp = new URLSearchParams(window.location.search);
+  const code = qp.get("code");
+  if (!code) return;
+  window.history.replaceState({}, "", window.location.pathname);
+
+  const FISHIE_API = "https://api.crygup.com/fishie";
+  fetch(`${FISHIE_API}/oauth/exchange?code=${encodeURIComponent(code)}`, { method: "POST" })
+    .then(r => { if (!r.ok) throw new Error("Login failed"); return r.json(); })
+    .then(data => {
+      localStorage.setItem("discord_user", JSON.stringify(data.user));
+      localStorage.setItem("discord_token", data.access_token);
+      window.dispatchEvent(new CustomEvent("discord-login"));
+      if (localStorage.getItem("settings_pending")) {
+        window.location.href = "/discord";
+      }
+    })
+    .catch(() => {});
+})();
