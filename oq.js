@@ -152,5 +152,6 @@ document.getElementById("oq-emoji-toggle").addEventListener("click", () => {
   renderGrid();
 });
 
+  renderGrid();
 
 })();

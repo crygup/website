@@ -199,5 +199,6 @@ document.getElementById("oc-emoji-toggle").addEventListener("click", () => {
   renderGrid();
 });
 
+  renderGrid();
 
 })();

@@ -595,6 +595,16 @@ if (wantsSettings) {
   } else if (!localStorage.getItem("settings_pending")) {
     showSettingsPanel();
   }
-} else if (q) { setActiveQuery(q); input.value = q; fetchData(); }
-else if (loggedInUser && currentTab === "user") { input.value = String(loggedInUser.id); }
-if (loggedInUser && accessToken) loadManagedGuilds();
+} else if (q) {
+  setActiveQuery(q);
+  input.value = q;
+  if (loggedInUser && accessToken) {
+    loadManagedGuilds().then(() => fetchData());
+  } else {
+    fetchData();
+  }
+}
+else if (loggedInUser && currentTab === "user") {
+  input.value = String(loggedInUser.id);
+}
+if (loggedInUser && accessToken && !q) loadManagedGuilds();
