@@ -10,6 +10,14 @@
   font-weight: 600;
 }
 
+#oc-status {
+  text-align: center;
+  font-size: 0.85rem;
+  color: #94a3b8;
+  margin: 1rem 0 0.5rem;
+  min-height: 1.25rem;
+}
+
 #oc-grid {
   display: grid;
   grid-template-columns: repeat(5, 1fr);

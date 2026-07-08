@@ -18,9 +18,9 @@ from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from discord.ext import commands
 from discord.http import Route
-from dotenv import load_dotenv
+import dotenv
 
-load_dotenv(os.path.join(os.path.dirname(__file__), "config", ".env"))
+dotenv.load_dotenv(os.path.join(os.path.dirname(__file__), "config", ".env"))
 
 TOKEN = os.getenv("DISCORD_BOT_TOKEN")
 GUILD_ID = int(os.getenv("DISCORD_GUILD_ID", "0") or "0")

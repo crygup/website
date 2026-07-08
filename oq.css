@@ -54,6 +54,13 @@
   box-shadow: inset 0 0 0 2px #f8fafc;
 }
 
+.oq-cell.safe {
+  background: #166534;
+}
+.oq-cell.purple-hint {
+  box-shadow: inset 0 0 0 2px #a855f7;
+}
+
 #oq-status {
   text-align: center;
   font-size: 0.85rem;

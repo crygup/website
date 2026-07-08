@@ -1,4 +1,3 @@
-// ── messages ──
 const API = "https://api.crygup.com/fishie";
 const user = JSON.parse(localStorage.getItem("discord_user") || "null");
 

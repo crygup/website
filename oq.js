@@ -85,7 +85,6 @@ function bestClicks() {
 }
 
 function renderGrid() {
-  // Auto-reveal: if we know all 4 purples, mark the 4th as red
   const { mustBe, purples } = solve();
   if (purples.size >= GOAL && mustBe.size === 1) {
     for (const pos of mustBe) {
@@ -97,7 +96,6 @@ function renderGrid() {
   grid.className = useEmoji ? "oq-grid-emoji" : "";
   const best = new Set(bestClicks());
   const { safe } = solve();
-  // Re-solve after potential auto-reveal
   const st = solve();
 
   for (let i = 0; i < TOTAL; i++) {

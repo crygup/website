@@ -23,6 +23,19 @@ header h1 {
   font-size: 2.5rem;
   color: #f8fafc;
   margin-bottom: 0.5rem;
+  position: relative;
+  display: inline-block;
+}
+
+.drpepper-gif {
+  position: fixed;
+  height: 2.5rem;
+  cursor: grab;
+  z-index: 999;
+  user-select: none;
+}
+.drpepper-gif.dragging {
+  cursor: grabbing;
 }
 
 header #tagline {
@@ -30,7 +43,6 @@ header #tagline {
   color: #94a3b8;
 }
 
-/* ── hamburger + sidebar ── */
 .hamburger {
   position: fixed;
   top: 1rem;
@@ -561,7 +573,6 @@ footer {
   margin-top: 0.35rem;
 }
 
-/* ── Account ──────────────────────────────────────────── */
 .account-status {
   text-align: center;
   color: #94a3b8;
@@ -639,9 +650,6 @@ footer {
   margin-top: 0.75rem;
 }
 
-/* ── Mobile ─────────────────────────────────────────── */
-
-/* ── Narrow screens: shrink before wrapping ──────────── */
 @media (max-width: 640px) {
   .tab-btn,
   .dropdown-wrapper {
@@ -650,7 +658,6 @@ footer {
   }
 }
 
-/* ── Mobile ─────────────────────────────────────────── */
 @media (max-width: 480px) {
   header {
     padding: 2rem 1rem 1.25rem;

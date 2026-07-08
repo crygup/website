@@ -1,4 +1,3 @@
-// ── sidebar ──
 (function(){
   const page = document.body.dataset.page || "";
 
@@ -14,19 +13,16 @@
       ]},
   ];
 
-  // hamburger button
   const btn = document.createElement("button");
   btn.className = "hamburger";
   btn.innerHTML = "\u2630";
   btn.setAttribute("aria-label", "Menu");
   document.body.prepend(btn);
 
-  // overlay
   const overlay = document.createElement("div");
   overlay.className = "sidebar-overlay";
   document.body.prepend(overlay);
 
-  // sidebar
   const CLIENT_ID = "876391494485950504";
   const OAUTH_URL = `https://discord.com/oauth2/authorize?client_id=${CLIENT_ID}&redirect_uri=${encodeURIComponent("https://crygup.com")}&response_type=code&scope=identify`;
 
@@ -56,7 +52,6 @@
 
   html += buildLoginSection();
 
-  // nav links
   for (const item of links) {
     if (item.subs) {
       const expanded = page === item.match ? ' expanded' : '';
@@ -111,7 +106,6 @@
   overlay.addEventListener("click", close);
   sidebar.addEventListener("click", (e) => { if (e.target.tagName === "A") close(); });
 
-  // Mudae expand toggle
   const expandBtn = sidebar.querySelector(".sidebar-expand");
   const subsDiv = sidebar.querySelector(".sidebar-subs");
   if (expandBtn && subsDiv) {
@@ -130,7 +124,7 @@ const LASTFM_USER = "crygup";
 
 const profile = {
   name: "crygup",
-  tagline: "video editor & backend developer",
+  tagline: "did you know rawr means i love you in dinosaur",
   bio: `<strong>hey!</strong> my name's zil, but you can call me z, crygup, cry, or whatever you want. i don't really mind.
 
 i'm a part-time video editor for a few different overwatch streamers. you can check out some of my work in the <a href="#" data-tab="videos">videos</a> tab.
@@ -221,7 +215,68 @@ if (mudaeDropdown) {
 }
 
 const nameEl = document.getElementById("name");
-if (nameEl) nameEl.textContent = profile.name;
+if (nameEl) nameEl.innerHTML = `${profile.name} <img src="images/drpepper-150.gif" alt="" class="drpepper-gif"> `;
+
+const dp = document.querySelector(".drpepper-gif");
+if (dp) {
+  const nameRect = nameEl.getBoundingClientRect();
+  dp.style.left = (nameRect.right + 4) + "px";
+  dp.style.top = (nameRect.top + nameRect.height / 2 - dp.offsetHeight / 2) + "px";
+
+  let dragging = false, startX, startY, startLeft, startTop;
+  let lastX, lastY, lastTime, vx = 0, vy = 0;
+  let animFrame;
+
+  dp.addEventListener("mousedown", e => {
+    e.preventDefault();
+    dragging = true;
+    cancelAnimationFrame(animFrame);
+    startX = e.clientX;
+    startY = e.clientY;
+    startLeft = dp.offsetLeft;
+    startTop = dp.offsetTop;
+    lastX = e.clientX;
+    lastY = e.clientY;
+    lastTime = performance.now();
+    dp.classList.add("dragging");
+  });
+  document.addEventListener("mousemove", e => {
+    if (!dragging) return;
+    const dx = e.clientX - startX;
+    const dy = e.clientY - startY;
+    dp.style.left = Math.max(0, Math.min(window.innerWidth - dp.offsetWidth, startLeft + dx)) + "px";
+    dp.style.top = Math.max(0, Math.min(window.innerHeight - dp.offsetHeight, startTop + dy)) + "px";
+    const now = performance.now();
+    const dt = now - lastTime;
+    if (dt > 0) {
+      vx = (e.clientX - lastX) / dt * 0.5;
+      vy = (e.clientY - lastY) / dt * 0.5;
+    }
+    lastX = e.clientX;
+    lastY = e.clientY;
+    lastTime = now;
+  });
+  document.addEventListener("mouseup", () => {
+    dragging = false;
+    dp.classList.remove("dragging");
+    if (Math.abs(vx) > 0.01 || Math.abs(vy) > 0.01) {
+      (function animate() {
+        vx *= 0.94;
+        vy *= 0.94;
+        if (Math.abs(vx) < 0.01 && Math.abs(vy) < 0.01) return;
+        let left = dp.offsetLeft + vx * 16;
+        let top = dp.offsetTop + vy * 16;
+        if (left <= 0) { left = 0; vx = -vx * 0.5; }
+        if (left >= window.innerWidth - dp.offsetWidth) { left = window.innerWidth - dp.offsetWidth; vx = -vx * 0.5; }
+        if (top <= 0) { top = 0; vy = -vy * 0.5; }
+        if (top >= window.innerHeight - dp.offsetHeight) { top = window.innerHeight - dp.offsetHeight; vy = -vy * 0.5; }
+        dp.style.left = left + "px";
+        dp.style.top = top + "px";
+        animFrame = requestAnimationFrame(animate);
+      })();
+    }
+  });
+}
 const taglineEl = document.getElementById("tagline");
 if (taglineEl) taglineEl.textContent = profile.tagline;
 const yearEl = document.getElementById("year");
@@ -492,8 +547,6 @@ if (videoContainer) {
 function escapeHtml(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;'); }
 
 
-
-// ── OAuth exchange (runs on any page with ?code=) ──
 (function(){
   const qp = new URLSearchParams(window.location.search);
   const code = qp.get("code");

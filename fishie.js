@@ -22,7 +22,6 @@ async function loadTab(tab) {
 function renderAbout() {
   content.innerHTML = `
     <div class="fishie-card">
-      <h2>Fishie</h2>
       <p class="fishie-desc">Avatar tracking, leveling, mudae help, poketwo help & more.</p>
       <div class="fishie-links">
         <a class="fishie-btn" href="https://discord.com/oauth2/authorize?client_id=${CLIENT_ID}&scope=bot+applications.commands&permissions=138513074240" target="_blank">Invite to Server</a>
