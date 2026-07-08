@@ -51,6 +51,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
 async def resolve_user_id(query: str) -> int:
     """Accept a raw Discord ID or a username (requires guild)."""
     q = query.strip()
@@ -58,7 +59,10 @@ async def resolve_user_id(query: str) -> int:
         return int(q)
 
     if not GUILD_ID:
-        raise HTTPException(400, "Username lookup requires DISCORD_GUILD_ID to be set. Use your Discord ID instead.")
+        raise HTTPException(
+            400,
+            "Username lookup requires DISCORD_GUILD_ID to be set. Use your Discord ID instead.",
+        )
 
     guild = bot.get_guild(GUILD_ID)
     if not guild:
@@ -67,12 +71,16 @@ async def resolve_user_id(query: str) -> int:
     # Search members by name
     members = await guild.query_members(q, limit=5)
     for m in members:
-        if m.name.lower() == q.lower() or (m.global_name and m.global_name.lower() == q.lower()):
+        if m.name.lower() == q.lower() or (
+            m.global_name and m.global_name.lower() == q.lower()
+        ):
             return m.id
     if members:
         return members[0].id
 
-    raise HTTPException(404, f'No guild member matched "{q}". Try your Discord ID instead.')
+    raise HTTPException(
+        404, f'No guild member matched "{q}". Try your Discord ID instead.'
+    )
 
 
 async def refresh_urls(urls: list[str]) -> list[str]:
@@ -144,7 +152,6 @@ async def get_avatars(
     ]
 
     return {"avatars": avatars, "total": total, "page": page, "pages": pages}
-
 
 
 if __name__ == "__main__":

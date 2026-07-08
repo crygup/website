@@ -280,7 +280,6 @@ if (dp) {
     }
   }
 
-  // ── desktop (mouse) ──
   dp.addEventListener("mousedown", e => {
     e.preventDefault();
     dragging = true;
@@ -295,8 +294,6 @@ if (dp) {
     dragging = false;
     endDrag();
   });
-
-  // ── mobile (touch) ──
   let touchScrolling = false;
   dp.addEventListener("touchstart", e => {
     const pos = getPos(e);

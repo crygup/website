@@ -24,7 +24,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         if self._blocked(path):
             self.send_error(404)
             return
-        
+
         candidates = [path]
         if not path.endswith(".html") and "." not in os.path.basename(path):
             candidates += [path + ".html", path + "/index.html"]
@@ -38,7 +38,9 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             if not (full.startswith(ROOT_REAL + os.sep) or full == ROOT_REAL):
                 continue
             if os.path.isfile(full):
-                self.path = p + ("?" + self.path.split("?", 1)[1] if "?" in self.path else "")
+                self.path = p + (
+                    "?" + self.path.split("?", 1)[1] if "?" in self.path else ""
+                )
                 return super().do_GET()
 
         return super().do_GET()
@@ -46,7 +48,8 @@ class Handler(http.server.SimpleHTTPRequestHandler):
     def end_headers(self):
         self.send_header("X-Content-Type-Options", "nosniff")
         self.send_header("X-Frame-Options", "DENY")
-        self.send_header("Content-Security-Policy",
+        self.send_header(
+            "Content-Security-Policy",
             "default-src 'none'; "
             "script-src 'self' 'unsafe-inline'; "
             "style-src 'self' 'unsafe-inline'; "
@@ -56,7 +59,8 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             "font-src 'self'; "
             "manifest-src 'self'; "
             "base-uri 'self'; "
-            "form-action 'self'")
+            "form-action 'self'",
+        )
         super().end_headers()
 
 
