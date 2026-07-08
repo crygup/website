@@ -227,42 +227,45 @@ if (dp) {
   let lastX, lastY, lastTime, vx = 0, vy = 0;
   let animFrame;
 
-  dp.addEventListener("mousedown", e => {
-    e.preventDefault();
-    dragging = true;
+  function getPos(e) {
+    if (e.touches) return { x: e.touches[0].clientX, y: e.touches[0].clientY };
+    return { x: e.clientX, y: e.clientY };
+  }
+
+  function beginDrag(pos) {
     cancelAnimationFrame(animFrame);
-    startX = e.clientX;
-    startY = e.clientY;
+    startX = pos.x;
+    startY = pos.y;
     startLeft = dp.offsetLeft;
     startTop = dp.offsetTop;
-    lastX = e.clientX;
-    lastY = e.clientY;
+    lastX = pos.x;
+    lastY = pos.y;
     lastTime = performance.now();
+    vx = 0; vy = 0;
     dp.classList.add("dragging");
-  });
-  document.addEventListener("mousemove", e => {
-    if (!dragging) return;
-    const dx = e.clientX - startX;
-    const dy = e.clientY - startY;
-    dp.style.left = Math.max(0, Math.min(window.innerWidth - dp.offsetWidth, startLeft + dx)) + "px";
-    dp.style.top = Math.max(0, Math.min(window.innerHeight - dp.offsetHeight, startTop + dy)) + "px";
+  }
+
+  function doMove(pos) {
+    const moveX = pos.x - startX;
+    const moveY = pos.y - startY;
+    dp.style.left = Math.max(0, Math.min(window.innerWidth - dp.offsetWidth, startLeft + moveX)) + "px";
+    dp.style.top = Math.max(0, Math.min(window.innerHeight - dp.offsetHeight, startTop + moveY)) + "px";
     const now = performance.now();
     const dt = now - lastTime;
     if (dt > 0) {
-      vx = (e.clientX - lastX) / dt * 0.5;
-      vy = (e.clientY - lastY) / dt * 0.5;
+      vx = (pos.x - lastX) / dt * 0.5;
+      vy = (pos.y - lastY) / dt * 0.5;
     }
-    lastX = e.clientX;
-    lastY = e.clientY;
+    lastX = pos.x;
+    lastY = pos.y;
     lastTime = now;
-  });
-  document.addEventListener("mouseup", () => {
-    dragging = false;
+  }
+
+  function endDrag() {
     dp.classList.remove("dragging");
     if (Math.abs(vx) > 0.01 || Math.abs(vy) > 0.01) {
       (function animate() {
-        vx *= 0.94;
-        vy *= 0.94;
+        vx *= 0.94; vy *= 0.94;
         if (Math.abs(vx) < 0.01 && Math.abs(vy) < 0.01) return;
         let left = dp.offsetLeft + vx * 16;
         let top = dp.offsetTop + vy * 16;
@@ -275,6 +278,68 @@ if (dp) {
         animFrame = requestAnimationFrame(animate);
       })();
     }
+  }
+
+  // ── desktop (mouse) ──
+  dp.addEventListener("mousedown", e => {
+    e.preventDefault();
+    dragging = true;
+    beginDrag({ x: e.clientX, y: e.clientY });
+  });
+  document.addEventListener("mousemove", e => {
+    if (!dragging) return;
+    doMove({ x: e.clientX, y: e.clientY });
+  });
+  document.addEventListener("mouseup", () => {
+    if (!dragging) return;
+    dragging = false;
+    endDrag();
+  });
+
+  // ── mobile (touch) ──
+  let touchScrolling = false;
+  dp.addEventListener("touchstart", e => {
+    const pos = getPos(e);
+    dragging = false;
+    touchScrolling = false;
+    beginDrag(pos);
+  }, { passive: false });
+
+  dp.addEventListener("touchmove", e => {
+    const pos = getPos(e);
+    const dx = pos.x - startX;
+    const dy = pos.y - startY;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+
+    if (!dragging) {
+      if (dist < 8) return;
+      if (Math.abs(dy) > Math.abs(dx) * 1.5) {
+        touchScrolling = true;
+        dp.classList.remove("dragging");
+        return;
+      }
+      dragging = true;
+      startX = pos.x - dx;
+      startY = pos.y - dy;
+      startLeft = dp.offsetLeft;
+      startTop = dp.offsetTop;
+    }
+
+    if (touchScrolling) return;
+    e.preventDefault();
+    doMove(pos);
+  }, { passive: false });
+
+  function touchEnd() {
+    dp.classList.remove("dragging");
+    if (!dragging) return;
+    dragging = false;
+    endDrag();
+  }
+  dp.addEventListener("touchend", touchEnd);
+  dp.addEventListener("touchcancel", touchEnd);
+  document.addEventListener("touchend", () => {
+    if (dragging) touchEnd();
   });
 }
 const taglineEl = document.getElementById("tagline");
