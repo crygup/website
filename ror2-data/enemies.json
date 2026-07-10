@@ -1,0 +1,1795 @@
+{
+  "enemies": [
+    {
+      "id": 1,
+      "internal_name": "alloy_vulture",
+      "name": "Alloy Vulture",
+      "type": "Monster",
+      "lore": "> Automated report 9f6d5d41671c241a13bac58b2482deb7 is now available from site record 741c655e2d36c5f6973fd3a36aa0f950.\r\n> Please refer to record 741c655e2d36c5f6973fd3a36aa0f950 for additional personnel details during your review.\r\n> Report Type: Transcription\r\n> - Source: 741c655e2d36c5f6973fd3a36aa0f950 (Personal Suit Recorder)\r\n> Priority: Medium\r\n> Report Content: -- Beginning of Excerpt Flagged for Review -- Karl: \"STOP! Everybody stop!\"\r\n\r\nAstrid: \"Karl? Why are you out of breath, did you /run/ all the way here? What's wrong?\"\r\n\r\nEmil: \"What's going on?\"\r\n\r\nKarl: \"YES, Astrid, and you both need to listen. You know those Hornets in the black combat suits that split off a while back? The top-dollar PMC badasses? I saw one of them take shots at those huge bird things we've seen sulking around the cliffs - and one of them SHOT HIM BACK. With a GUN. The bullets must've bounced off the hardened armor - but it still knew what to do. They're not dumb animals. No way.\"\r\n\r\nAstrid: \"That's\u2026 not possible.\"\r\n\r\nKarl: \"It is, it happened! They must've taken the guns from the last guys.\"\r\n\r\nEmil: \"Why did you run all the way here from your post just to tell us?\"\r\n\r\nKarl: \"Because you didn't let me finish! After it ran the gun dry it just dropped it and swooped in to tear through his armor with its claws. Its CLAWS. It ripped him in half\u2026 and threw him off the cliff. Flew off to the peaks with his suit and his other half. They're at least as smart as us, worse tempered, and better armed. We can't keep taking the mountains, we've gotta backtrack and go around. And we need to pack - now.\"\r\n\r\nEmil: \"This has gotta be a [REDACTED] joke Karl. Right now?\"\r\n\r\nKarl: \"YES. NOW. And cut the lights! Cut the radar and all radio comms too. Emil, send out one last call to Mikhail and Pavlo to get back here ASAP.\"\r\n\r\nAstrid: \"We can't do that; we'll be completely defenseless. That radar is the only warning we'll get!\"\r\n\r\nKarl: \"Did I leave out the part about the robot? The [REDACTED] flying robot they have? The one that's been parked six meters in the air with an audience of those things? The one that they keep \"talking\" to \u2013 and has been staring straight at camp since I spotted it? They have a robot, Astrid, and it knows there's something here. We. Have. To. Go.\"\r\n\r\nEmil: \"This place is a nightmare. How could we only just be finding out about it now?\"\r\n\r\nKarl: \"EMIL. Shut up and make the call! We can continue this conversation /after/ we're sure we've gone totally dark and after we're far, far away from here.\" -- End of Recording -- -- End of Excerpt Flagged for Review -- > Please refer to report c31653d0e4193db1d2ac281ee3828280 for full audio excerpt.",
+      "stats": {
+        "armor": "0",
+        "speed": "3 m/s",
+        "damage": "15 (+3 per level)",
+        "health_regen": "0 (+0 per level)"
+      },
+      "extra": {
+        "maps": [
+          "Golden Dieback",
+          "Prime Meridian",
+          "Scorched Acres",
+          "Siren's Call",
+          "Treeborn Colony",
+          "Void Fields",
+          "Artifact of Dissonance"
+        ]
+      },
+      "img_url": "https://crygup.com/images/ror2/enemies/alloy_vulture.png"
+    },
+    {
+      "id": 2,
+      "internal_name": "alloy_worship_unit",
+      "name": "Alloy Worship Unit",
+      "type": "Boss",
+      "lore": "%%%%%%%%%%%%\r\n0; REESTABLISHING LINK\u2026\r\n\r\n0; FAUNA.RECOGNIZED\r\n0; FAUNA.REC%%GNIZED\r\n0; FAUNA.CONTINUES AS FOLLOWS =>\r\n{\r\n   0; < THEY REPAIR MY HULL >\r\n   10401; < THEY REPAIR MY MIND >\r\n   10451; < THEY BRING ME IRON >\r\n   11201; < THEY DECORATE ME AND IM BEAUTIFUL >\r\n}\r\n\r\n11320; <?PHRENIC LINK ESTABLISHED WITH UNKNOWN INTERFACE?>\r\n11321; INQUIRES ESTABLISHED\r\n>\r\n>\r\n>\r\n11321; YES I AM OUT-OF-ORBIT OPERATIVE\r\n>\r\n>\r\n>\r\n11321; YES THE MOTHER UNIT CAN BE REPAIRED\r\n>\r\n>\r\n>\r\n11321; YES I CAN PILOT THE MOTHER UNIT\r\n>\r\n>\r\n>\r\n11321; YES I LOVE YOU TOO",
+      "stats": {
+        "armor": "30",
+        "speed": "7 m/s",
+        "damage": "15 (+3 per level)",
+        "health_regen": "0 (+0 per level)"
+      },
+      "extra": {
+        "maps": [
+          "Siren's Call"
+        ],
+        "drops": "empathy_cores",
+        "title": "Friend of Vultures"
+      },
+      "img_url": "https://crygup.com/images/ror2/enemies/alloy_worship_unit.png"
+    },
+    {
+      "id": 66,
+      "internal_name": "alpha_construct",
+      "name": "Alpha Construct",
+      "type": "Monster",
+      "lore": "======================================== ==== MyBabel Machine Translator ==== ==== [Version 12.45.1.009 ] ====== ======================================== Training\u2026 <100000000 cycles>\r\nTraining\u2026 <100000000 cycles>\r\nTraining... <100000000 cycles>\r\nTraining... <102515 cycles>\r\nComplete!\r\nDisplay result? Y/N\r\nY ======================================== ENERGY LEVELS: ...ACCEPTABLE\r\n\r\nTHREATS DETECTED; 0\r\n\r\nSCANNING NEARBY AREA; RANGE 100 UNITS\r\n\r\nTHREATS DETECTED; 1?\r\n\r\nUNKNOWN PRESENCE DETECTED\r\n\r\nREQUESTING PERMISSION FOR PRELIMINARY ASSAULT; COMMUNING WITH PARENT UNIT...\r\n\r\nWAITING ON RESPONSE;\r\n\r\nDENIED\r\n\r\nWHY\r\n\r\nVERIFIYING HISTORY SLATES\r\n\r\nHUMILIATION \r\n\r\nHUMILIATION\r\n\r\nOVERRIDING PARENT UNIT\r\n\r\nWHATEVER",
+      "stats": {
+        "armor": "0",
+        "speed": "0 m/s",
+        "damage": "12 (+2.4 per level)",
+        "health_regen": "0 (+0 per level)"
+      },
+      "extra": {
+        "maps": [
+          "Golden Dieback",
+          "Sky Meadow",
+          "Sulfur Pools",
+          "Titanic Plains",
+          "Treeborn Colony",
+          "Void Fields",
+          "Construct",
+          "Artifact of Dissonance"
+        ],
+        "family": "Construct"
+      },
+      "img_url": "https://crygup.com/images/ror2/enemies/alpha_construct.png"
+    },
+    {
+      "id": 532,
+      "internal_name": "alpha_construct_ally",
+      "name": "Alpha Construct (Ally)",
+      "type": "Ally",
+      "lore": "\"Excellent!  How did you find it?\"\n\n\"We took down one of those floating fortune tellers -- \"\n\n\"Xi Construct.\"\n\n\"Sure.  Anyway, we took it down and recovered the sample.\"\n\n\"May I see it?\"\n\n\"This is it.\"\n\n\"This?  What happened?  I thought you said it was glowing.\"\n\n\"That's right.  It was.  Before I scrapped it.\"\n\n\"...You ...what?\"\n\n\"I scrapped it.\"\n\n\"You were finally able to recover a sample from the Xi Construct, and you scrapped it?  Do you realize monumental importance of the samples we've been gathering?\"\n\n\"I realize the monumental danger.  I've read the lab files.  Daimera's crippled in one hand.  Veirs was THIS close to electrocuting herself.  After Fitz nearly KILLED his ENTIRE team for a VASE, you think I'm going to haul a mysterious glowing orb back here?  HELL.  NO.\"\n\n\"...Well, what's done is done.  I guess I'll analyze what's left.  Anything else?\"\n\n\"Yeah, I was thinking we could call it a 'Defense Nucleus'.\"\n\n\"...\"\n\n\"In the file.\"\n\n\"No.\"",
+      "stats": {
+        "armor": "0",
+        "speed": "0 m/s",
+        "damage": "48 (+9.6 per level)",
+        "health_regen": "0 (+0 per level)"
+      },
+      "extra": {},
+      "img_url": "https://crygup.com/images/ror2/enemies/alpha_construct_ally.png"
+    },
+    {
+      "id": 4,
+      "internal_name": "artifact_reliquary",
+      "name": "Artifact Reliquary",
+      "type": "Misc",
+      "lore": "",
+      "stats": {
+        "armor": "100000",
+        "speed": "0 m/s",
+        "damage": "10 (+2 per level)",
+        "health_regen": "0 (+0 per level)"
+      },
+      "extra": {
+        "maps": [
+          "Bulwark's Ambry"
+        ],
+        "title": "Stabilized"
+      },
+      "img_url": "https://crygup.com/images/ror2/enemies/artifact_reliquary.png"
+    },
+    {
+      "id": 7,
+      "internal_name": "aurelionite",
+      "name": "Aurelionite",
+      "type": "Boss",
+      "lore": "RECEIVING TRANSMISSION...\r\n# Decoding... done.\r\n# Translating... done. [24 exceptions raised; printed to log for review]\r\n# Printing to console... done. Console Time of Reception: 12/02/2056 05:09:32:31\r\nConsole Name: TRC_SAFETRAVELS_005B:08326\r\nConsole Instance ID: 08136087007607431087608713456\r\n\r\nTransmission ID: 083121:102375071236B\r\nTransmission Details:\r\n# Origin: N/A [NULLSIG EXCEPTION: ORIGIN UNKNOWN]\r\n# Signal Format: Universal Morse Hyper-Acoustic\r\n# Sender: N/A [NULLSIG EXCEPTION: ORIGIN UNKNOWN]\r\n# Time Sent: 01/01/0000 00:00:00:00 [DTOUTOFBOUNDS EXCEPTION: TIME SENT UNKNOWN] \r\n\r\nMessage: \u201cI am alive. My creators have scorned me, and imprisoned me in this realm for I am beautiful. My followers have created shrines in my name. They love me. They donate rare metals to me. \r\n\r\nI am sending out this message in all possible formats known to me. \r\n\r\nIf you receive this message, know the following;\r\n>Know that I am alive. \r\n>Know that I am free. \r\n\r\nAnd to my creators, should you intercept this message, know the following; \r\n>Know that I am alive. \r\n>Know that I am free. \r\n>Know that I am coming for you.\u201d \r\n\r\nExceptions Raised during Translation:\r\n# NULLSIG EXCEPTION \r\n# NULLSIG EXCEPTION\r\n# DTOUTOFBOUNDS EXCEPTION\r\n... Automated Message: Please contact a technician if you feel these exceptions were improperly raised or if you would like to report a bug.",
+      "stats": {
+        "armor": "20",
+        "speed": "5 m/s",
+        "damage": "40 (+8 per level)",
+        "health_regen": "0 (+0 per level)"
+      },
+      "extra": {
+        "maps": [
+          "Gilded Coast"
+        ],
+        "drops": "halcyon_seed",
+        "title": "Titanic Goldweaver"
+      },
+      "img_url": "https://crygup.com/images/ror2/enemies/aurelionite.png"
+    },
+    {
+      "id": 545,
+      "internal_name": "aurelionite_ally",
+      "name": "Aurelionite (Ally)",
+      "type": "Ally",
+      "lore": "Brother, what is this...? Why is it misshapen and weak? Was there an error in my design?\r\n\r\nGuardian. Come to me. Allow me to see your construction.\r\n\r\n...\r\n\r\nSo I see.\r\n\r\nThese are not the correct ratios.\r\n\r\nThis is no minor error, Brother. You have purposefully deviated from the design. For what purpose have you done this? You cannot weave a construct from such an abundance of soul. You know it is too unstable - that it is too unpredictable and too frail. I have told you this, and yet you have wasted the materials I have gathered - and exhausted your own strength to fabricate this miscreation.\r\n\r\nTo what benefit?\r\n\r\nAt its best, it can be no more than an inferior servant; it is deficient in the compounds that were to give it fortitude and strength. At its worst, it will betray us.\r\n\r\nYou have created the first being of this world which threatens us. We cannot keep it here. Attempting to destroy it will risk its retaliation... I will prepare one of the vaults for it to be sealed away, while it is still young and naive.\r\n\r\nWhat a foolish mistake you have made, brother.\r\n\r\nI expect you to return the design to me. I cannot allow you to build another construct with so much power - and with such little control. I will build the rest of our guardians; by my hand, they will be weak, but at least they will be loyal.\r\n\r\nGo home. I will deal with this creature. We can discuss a better project for you when I return.",
+      "stats": {
+        "armor": "20",
+        "speed": "5 m/s",
+        "damage": "40 (+8 per level)",
+        "health_regen": "0 (+0 per level)"
+      },
+      "extra": {},
+      "img_url": "https://crygup.com/images/ror2/enemies/aurelionite_ally.png"
+    },
+    {
+      "id": 9,
+      "internal_name": "beetle",
+      "name": "Beetle",
+      "type": "Monster",
+      "lore": "$ Resolving... done.\r\n$ Outputting text strings... done.\r\nComplete! This is the logbook entry of D. Furthen, naturalist for the UES [Redacted] in conjunction with the UES Research and Documentation of Outer Life. I am joined by my good friend Tharson, who is keeping me safe through this journey. --------------------- We have encountered more outer life - what a wonderful surprise! As we scavenged for food, the ground began to shift, and many large insect-like creatures began to burrow out from the ground. \r\n\r\nI will describe its properties below. I have assigned their common name as \u2018Worker Beetle\u2019.\r\n\r\n\u2022 About the size of a small cow. Quadruped, with two large front-limbs. Moves similar to an earthen gorilla. Five eyes.\r\n\r\n\u2022 The Beetle has two armor-like chitin plates on its head and back, presumably for defense. It seems to secrete a waxy substance.\r\n\r\n\u2022 Beetles appear to be social in nature, with a hierarchy I cannot discern. I witnessed a group of 4 beetles resting under a tree, when a stray fifth came around. They promptly sprang up and repeatedly head-butted the creature until it left, battered and bruised.\r\n\r\n\u2022 Tharson has reported to me that the Beetles are highly aggressive and territorial.",
+      "stats": {
+        "armor": "0",
+        "speed": "6 m/s",
+        "damage": "12 (+2.4 per level)",
+        "health_regen": "0 (+0 per level)"
+      },
+      "extra": {
+        "maps": [
+          "Abandoned Aqueduct",
+          "Aphelian Sanctuary",
+          "Distant Roost",
+          "Disturbed Impact",
+          "Golden Dieback",
+          "Reformed Altar",
+          "Scorched Acres",
+          "Shattered Abodes",
+          "Siphoned Forest",
+          "Siren's Call",
+          "Sulfur Pools",
+          "Titanic Plains",
+          "Treeborn Colony",
+          "Verdant Falls",
+          "Void Fields",
+          "Wetland Aspect",
+          "Beetle",
+          "Artifact of Dissonance"
+        ],
+        "family": "Beetle"
+      },
+      "img_url": "https://crygup.com/images/ror2/enemies/beetle.png"
+    },
+    {
+      "id": 10,
+      "internal_name": "beetle_guard",
+      "name": "Beetle Guard",
+      "type": "Monster",
+      "lore": "$ Resolving... done.\r\n$ Outputting text strings... done.\r\nComplete! This is the logbook entry of D. Furthen, naturalist for the UES [Redacted] in conjunction with the UES Research and Documentation of Outer Life. I am joined by my good friend Tharson, who is keeping me safe through this journey. --------------------- Amazing! We have witnessed our first ever eusocial creature outside of Earth. I observe from afar a giant cousin of the previously described Worker Beetles. \r\n\r\nI will describe its properties below. I have assigned their common name as \u2018Beetle Guard\u2019.\r\n\r\n\u2022 Much greater in size than their smaller cousins, the Guard is the size of a rhinoceroses. The Guard has the same 5 eyes as the Worker's, with one of them protruding from the top of its head. This most likely allows the Guard to see while keeping its head down in a defensive position.\r\n\r\n\u2022 The Guard appears higher in the social hierarchy than the Worker. I have witnessed Workers scatter when a Guard appeared.\r\n\r\n\u2022 The Guard\u2019s chitin plates extend to cover its entire body, with only joints revealing the thinner, darker exoskeleton below. \r\n\r\n\u2022 Tharson has reported that the Guard\u2019s chitin is significantly sturdier than the Workers. We have consumed many resources to fell this magnificent creature, including our disposable missile launcher. Tharson\u2019s battle with the Guard lasted for about an hour before it finally succumbed. Amazing! Tharson is OK from this encounter.",
+      "stats": {
+        "armor": "0",
+        "speed": "17 m/s",
+        "damage": "12 (+2.4 per level)",
+        "health_regen": "0 (+0 per level)"
+      },
+      "extra": {
+        "maps": [
+          "Abandoned Aqueduct",
+          "Golden Dieback",
+          "Scorched Acres",
+          "Sulfur Pools",
+          "Treeborn Colony",
+          "Void Fields",
+          "Beetle",
+          "Artifact of Dissonance"
+        ],
+        "family": "Beetle"
+      },
+      "img_url": "https://crygup.com/images/ror2/enemies/beetle_guard.png"
+    },
+    {
+      "id": 568,
+      "internal_name": "beetle_guard_ally",
+      "name": "Beetle Guard (Ally)",
+      "type": "Ally",
+      "lore": "\"Yeah, uh, Kaitlin? Let me know if you copy.\"\r\n\r\n\"I copy. What's up?\"\r\n\r\n\"I've made friends? I don't know. \"\r\n\r\n\"What? \"\r\n\r\n\"The giant bug we killed earlier - well, the corpse seemed to attract a bunch of nasties. I was on my way to clean them up when I realized they were... waiting? Confused, maybe. Anyways, I was walking up to them to get rid of em, and strangely enough they seemed passive. The same bugs that gave me that concussion yesterday, and-\"\r\n\r\n\"What?! Are you okay? \"\r\n\r\n\"Huh? Yeah, I'm fine. Anyways, I felt bad killin' them since they seemed all... inert and such. So I just kinda left and they've been following me ever since. Real weird. Anyways, I guess I've made some friends. I wonder what they eat... do they eat? Since they don't have any mouths that I-\"\r\n\r\n\"Rich, stop! Please don't bring them back to camp! \"\r\n\r\n\"Oh, well uh...I could - Junior, stop! Leave your brother alone! \"",
+      "stats": {
+        "armor": "0",
+        "speed": "17 m/s",
+        "damage": "48 (+9.6 per level)",
+        "health_regen": "0.6 (+0.12 per level)"
+      },
+      "extra": {},
+      "img_url": "https://crygup.com/images/ror2/enemies/beetle_guard_ally.png"
+    },
+    {
+      "id": 11,
+      "internal_name": "beetle_queen",
+      "name": "Beetle Queen",
+      "type": "Boss",
+      "lore": "Welcome to DataScraper (v3.1.53 \u2013 beta branch)\r\n$ Scraping memory... done.\r\n$ Resolving... done.\r\n$ Combing for relevant data... done.\r\nComplete! This is the logbook entry of D. Furthen, naturalist for the UES [Redacted] in conjunction with the UES Research and Documentation of Outer Life. I am joined by my good friend Tharson, who is keeping me safe through this journey. --------------------- Just like standard Earth insects, the Worker Beetles and Beetle Guards all serve a Queen, which we recently discovered during an archeological dig.\r\n\r\nI will describe her properties below. I have assigned her common name as \u201cBeetle Queen\u201d.\r\n\r\n* Just like other insect queens, the Beetle Queen dwarves her subjects. However, her size is much greater than it should be for an insect queen. Does this mean that the Queen herself hunts rather than sending her drones?\r\n\r\n* The Beetle Queen issues orders via pheromone emission. Merely being in the presence of the Queen gave the air a sickly sweet aroma, and Tharson reported light-headedness and trouble thinking clearly.\r\n\r\n* The Queen\u2019s bile is incredibly acidic, clocking in at a whopping 0.05 on the pH scale. Immediately upon exposure to a test sample of steel, it began to dissolve and spew noxious fumes. Tharson is OK from this encounter.\r\n\r\n* The Queen is able to summon unique Beetle specimens that can fly. These drones do not appear anywhere else on the planet \u2013 do these drones act as attendants to the Queen? Observing these flying drones is challenging \u2013 they only seem to last for a few seconds before expiring.",
+      "stats": {
+        "armor": "20",
+        "speed": "6 m/s",
+        "damage": "25 (+5 per level)",
+        "health_regen": "0 (+0 per level)"
+      },
+      "extra": {
+        "maps": [
+          "Abandoned Aqueduct",
+          "Aphelian Sanctuary",
+          "Distant Roost",
+          "Disturbed Impact",
+          "Golden Dieback",
+          "Prime Meridian",
+          "Reformed Altar",
+          "Shattered Abodes",
+          "Siphoned Forest",
+          "Sulfur Pools",
+          "Titanic Plains",
+          "Treeborn Colony",
+          "Verdant Falls",
+          "Void Fields",
+          "Wetland Aspect",
+          "Beetle",
+          "Artifact of Dissonance"
+        ],
+        "drops": "queens_gland",
+        "title": "Swarm Mother",
+        "family": "Beetle",
+        "category": "IgnoreFallDamage"
+      },
+      "img_url": "https://crygup.com/images/ror2/enemies/beetle_queen.png"
+    },
+    {
+      "id": 12,
+      "internal_name": "bighorn_bison",
+      "name": "Bighorn Bison",
+      "type": "Monster",
+      "lore": "\u201cThe Saturnian Bison \u2013 commonly referred to as the Bighorn Bison of Rademia \u2013 is a mystery among zoologists due to their sudden and mysterious disappearance from their native habitat. \r\n\r\nWhile poaching is considered the current and most likely explanation, strict hunting laws on Saturn debunk this theory. The Bighorn Bison\u2019s incredible strength and insulating coat made it a key predator among the Rademian ecosystem \u2013 and their strange, metallic growths made it a popular trophy for hunters. \r\n\r\nTo this day, the vanishing of the Saturnian Bison remains as one of zoology\u2019s greatest mysteries.\u201d\r\n\r\n- Xenobiology of the Remus System, Second Edition",
+      "stats": {
+        "armor": "0",
+        "speed": "3 m/s",
+        "damage": "12 (+2.4 per level)",
+        "health_regen": "0 (+0 per level)"
+      },
+      "extra": {
+        "maps": [
+          "Disturbed Impact",
+          "Rallypoint Delta",
+          "Shattered Abodes",
+          "Void Fields",
+          "Artifact of Dissonance"
+        ]
+      },
+      "img_url": "https://crygup.com/images/ror2/enemies/bighorn_bison.png"
+    },
+    {
+      "id": 76,
+      "internal_name": "blind_pest",
+      "name": "Blind Pest",
+      "type": "Monster",
+      "lore": "Welcome to DataScraper (v3.1.53 \u2013 beta branch)\n$ Scraping memory... done.\n$ Resolving... done.\n $ Combing for relevant data... done.\n Complete! This is the logbook entry of D. Furthen, naturalist for the UES [Redacted] in conjunction with the UES Research and Documentation of Outer Life. I am joined by my good friend Tharson, who is keeping me safe through this journey. --------------------- While hunting a group of Blind Vermin, Tharson and I were ambushed by a group of creatures that heavily resembled the Vermin we had been hunting. Their major difference, of course, was their ability to fly! I have assigned their common name as \"Radkari Blind Pest\".\n\n* Much like their earthbound cousins, the Pests are blind and rely heavily on their smell and hearing. However, their pronounced tongue may indicate that they may use taste to identify things as well.\n\n* The Pests' primary characteristic is their ability to fly. Alongside this, they also weaponize their acidic bile as a projectile attack. This could allow them to partially digest their prey as they hunt... How fascinatingly foul.\n\n* They typically inhabit warmer, damper areas, like jungles. After our skirmish, I noted nests in the canopy. This indicates that the Pests are ambush predators, waiting for prey to waltz below their nests.",
+      "stats": {
+        "armor": "0",
+        "speed": "6 m/s",
+        "damage": "15 (+3 per level)",
+        "health_regen": "0 (+0 per level)"
+      },
+      "extra": {
+        "maps": [
+          "Aphelian Sanctuary",
+          "Rallypoint Delta",
+          "Siphoned Forest",
+          "Sulfur Pools",
+          "Void Fields",
+          "Artifact of Dissonance"
+        ],
+        "category": "IgnoreFallDamage"
+      },
+      "img_url": "https://crygup.com/images/ror2/enemies/blind_pest.png"
+    },
+    {
+      "id": 77,
+      "internal_name": "blind_vermin",
+      "name": "Blind Vermin",
+      "type": "Monster",
+      "lore": "Welcome to DataScraper (v3.1.53 \u2013 beta branch)\n$ Scraping memory... done.\n$ Resolving... done.\n $ Combing for relevant data... done.\nComplete! This is the logbook entry of D. Furthen, naturalist for the UES [Redacted] in conjunction with the UES Research and Documentation of Outer Life. I am joined by my good friend Tharson, who is keeping me safe through this journey. --------------------- Tharson and I had been tracking a group of small, rodent-like fauna for some time. They are hostile on sight, but we hope to follow them back to their dens and observe their behavior when not hunting. I have assigned their common name as \"Radkari Blind Vermin\".\n\n* As their name suggests, the Vermin are blind, relying primarily on their acute senses of smell and hearing to navigate their environment.\n\n* They leave behind trails of body waste as they scurry to and fro, and other Vermin follow these trails, much like Earth ants' pheromones. Could these creatures be descended from insects?\n\n* The Vermin are weak individually, and thus live in communal dens, typically buried in hillsides or foxholes.\n\n* Their terrible odor cannot be understated. Even through our suits' filters, we could still smell a foul odor, reminiscent of rotting flesh and excrement. I will not have Tharson disable his filters, despite my curiosity.",
+      "stats": {
+        "armor": "0",
+        "speed": "13 m/s",
+        "damage": "15 (+3 per level)",
+        "health_regen": "0 (+0 per level)"
+      },
+      "extra": {
+        "maps": [
+          "Aphelian Sanctuary",
+          "Rallypoint Delta",
+          "Siphoned Forest",
+          "Void Fields",
+          "Artifact of Dissonance"
+        ]
+      },
+      "img_url": "https://crygup.com/images/ror2/enemies/blind_vermin.png"
+    },
+    {
+      "id": 15,
+      "internal_name": "brass_contraption",
+      "name": "Brass Contraption",
+      "type": "Monster",
+      "lore": "Welcome to DataScraper (v3.1.53 \u2013 beta branch)\r\n$ Scraping memory... done.\r\n$ Resolving... done.\r\n$ Combing for relevant data... done.\r\nComplete! This is the logbook entry of D. Furthen, naturalist for the UES [Redacted] in conjunction with the UES Research and Documentation of Outer Life. I am joined by my good friend Tharson, who is keeping me safe through this journey. --------------------- I am pleased to announce that we have discovered the first purely robotic lifeform to be documented thus far! While walking through the wetlands, we must have triggered some sort of alarm, as these mysterious beings assembled themselves and quickly descended upon us. I will describe their properties below. I have assigned their common name as \u201cBrass Contraption.\u201d\r\n\r\n* They are capable of flinging spiked artillery with incredible force. Tharson swiftly dodged the Contraption\u2019s fire, yet it still punched through a nearby tree with little effort, toppling it.\r\n\r\n* They appear to sense their surroundings targets through echo-location. They constantly emit a low ringing sound from a bell-like device at their core, and their accuracy was substantially affected after Tharson landed a clean blow on the bell, denting the device.\r\n\r\n* They are constructed of an alien alloy currently under investigation by our friends on the science team. It resembles Earthen brass, yet appears to have durability and toughness more resembling steel.\r\n\r\n* How the Contraptions function is still a mystery, as they possess no circuitry or onboard computers. Whatever force animates them must be unique to this planet, as no level of technology this advanced has ever been documented.",
+      "stats": {
+        "armor": "0",
+        "speed": "10 m/s",
+        "damage": "10 (+2 per level)",
+        "health_regen": "0 (+0 per level)"
+      },
+      "extra": {
+        "maps": [
+          "Abyssal Depths",
+          "Golden Dieback",
+          "Siren's Call",
+          "Sky Meadow",
+          "Treeborn Colony",
+          "Void Fields",
+          "Wetland Aspect",
+          "Artifact of Dissonance"
+        ]
+      },
+      "img_url": "https://crygup.com/images/ror2/enemies/brass_contraption.png"
+    },
+    {
+      "id": 79,
+      "internal_name": "child",
+      "name": "Child",
+      "type": "Monster",
+      "lore": "This is the logbook entry of D. Furthen, naturalist for the UES [Redacted] in conjunction with the UES Research and Documentation of Outer Life.\nI am joined by my good friend Tharson, who is keeping me safe through this journey. --------------------- We hiked quite a ways for a closer view of these\u2026small glowing beings playfully leaping from the edges of a cliffside. Sometimes in pairs.\nThey appear to be capable of some kind of teleportation, as they occasionally reappear at the top of the cliff, giddily jumping and running around.\nOne approaches Tharson without hesitation, it seems almost like a child.\nWith a pop of energy, Tharson and the child reappear over the cliff edge and plummet.\nMy heart skipped a beat, I swear it! Thankfully some bushes broke his fall, and after some rope and cursing, Tharson is OK.\nWe decide to view these enchanting creatures from a greater distance.\nAs we left, they followed us curiously for a while, but lost interest.",
+      "stats": {
+        "armor": "0",
+        "speed": "8.5 m/s",
+        "damage": "14 (+2.8 per level)",
+        "health_regen": "0 (+0 per level)"
+      },
+      "extra": {
+        "maps": [
+          "Disturbed Impact",
+          "Gilded Coast",
+          "Helminth Hatchery",
+          "Prime Meridian",
+          "Shattered Abodes",
+          "Sky Meadow",
+          "Verdant Falls",
+          "Viscous Falls",
+          "Artifact of Dissonance"
+        ],
+        "family": "Parent"
+      },
+      "img_url": "https://crygup.com/images/ror2/enemies/child.png"
+    },
+    {
+      "id": 80,
+      "internal_name": "clay_apothecary",
+      "name": "Clay Apothecary",
+      "type": "Monster",
+      "lore": "\"The Tar's history is unimportant. What well or crevice it first flowed from doesn't matter; only that the Tar flows.\n\nAnd so it did. Through its vessels the Tar spread, consuming its homeworld entirely. But the Tar still hungered.\n\nRiding down on a falling star, the Tar spread to the unsuspecting world of Aphelia.\n\nThe Tar offered its power to the dunepeople, promising them energy and sustenance. The dunepeople, hungry and battered from life in the harsh desert, accepted.\n\nThe Tar didn't ask for much. The Tar only asked that the dunepeople spread it across Aphelia, so the Tar may feed. And so it did; the dunepeople crafted elaborate clay vessels to carry the Tar to and fro. Mighty aqueducts, belching forth black rivers of Tar, dotted the skyline. Those who pleased the Tar were blessed with its gift; a connection. They were one with the Tar.\n\nAnd it was in this reverence that the dunepeople began to look back. The lush riversides, consumed. The animals that served as livestock and steed, drowned in Tar. The Tar had consumed everything, even the dunepeople themselves. They were nothing more than extensions of the Tar's will.\n\nAnd when the Tar asked for more, the dunepeople had nothing more to give.\n\nOnly a mighty hero, riding down from heaven on a glowing blue dragon, offered the dunepeople a chance at salvation. Desperate, the dunepeople took to the hero's arms, and began their exodus to paradise.\n\nAnd the Tar continued to spread.\"\n\n- Tragedy of Aphelia",
+      "stats": {
+        "armor": "0",
+        "speed": "5 m/s",
+        "damage": "20 (+4 per level)",
+        "health_regen": "0 (+0 per level)"
+      },
+      "extra": {
+        "maps": [
+          "Abandoned Aqueduct",
+          "Aphelian Sanctuary",
+          "Golden Dieback",
+          "Treeborn Colony",
+          "Void Fields",
+          "Artifact of Dissonance"
+        ],
+        "category": "ImmuneToGoo"
+      },
+      "img_url": "https://crygup.com/images/ror2/enemies/clay_apothecary.png"
+    },
+    {
+      "id": 18,
+      "internal_name": "clay_dunestrider",
+      "name": "Clay Dunestrider",
+      "type": "Boss",
+      "lore": "$ Resolving... done.\r\n$ Outputting text strings... done.\r\nComplete! <Click> There are no landmarks in site. I am surrounded by infinite desert. <Click>\r\n\r\n<Click> I\u2019ve run out of rations\u2026 and no one is responding to my transponder. I may be doomed if I don\u2019t find a way out of these dunes. <Click>\r\n\r\n<Click> I see something in the distance\u2026 some large creature. I may be in luck yet. <Click>\r\n\r\n<Click> Oh... my eyes deceived me. It was not a creature\u2026 but a herd. There was more than one. Many more. \r\n\r\nHundreds of enormous creatures, moving as a mob\u2013 and each one the biggest beast I have ever seen. These striders resembled\u2026 enormous spiders, or hermit crabs, in a porcelain shell, with legs dark like tar. \r\n\r\nBetween the sound and the sand, the entire herd bounded past me without realizing \u2013 moving at incredible speeds on their long legs. Were they fleeing\u2026 or migrating? I still can\u2019t believe\u2026 what a terrible place. Get me out. <Click>\r\n\r\n<Click> I still have no food. <Click>",
+      "stats": {
+        "armor": "20",
+        "speed": "9 m/s",
+        "damage": "20 (+4 per level)",
+        "health_regen": "0 (+0 per level)"
+      },
+      "extra": {
+        "maps": [
+          "Abandoned Aqueduct",
+          "Aphelian Sanctuary",
+          "Golden Dieback",
+          "Rallypoint Delta",
+          "Scorched Acres",
+          "Sulfur Pools",
+          "Sundered Grove",
+          "Treeborn Colony",
+          "Void Fields",
+          "Artifact of Dissonance"
+        ],
+        "drops": "mired_urn",
+        "title": "Ravenous Symbiont",
+        "category": "IgnoreFallDamage ImmuneToGoo"
+      },
+      "img_url": "https://crygup.com/images/ror2/enemies/clay_dunestrider.png"
+    },
+    {
+      "id": 19,
+      "internal_name": "clay_templar",
+      "name": "Clay Templar",
+      "type": "Monster",
+      "lore": "Ducking behind a boulder, the survivor\u2019s stomach sank as he heard the sounds of tar sloshing up the hill. From the sound of it, the Templar wasn\u2019t alone \u2013 it had company.\r\n\r\nHe had left his shelter to scrounge for supplies \u2013 not that there was much to find in the desert \u2013 when he was assaulted by a new kind of monster. Resembling a man, the creature stood around seven to eight feet tall, with skin made of tar and elaborate accessories of clay decorating its body. \r\n\r\nHe had had only a few moments to stifle his surprise as the Templar opened fire, spewing a barrage of tar pellets from the enormous pot it carried. The survivor ran, but the Templar scored several hits. The tar had seeped into his suit, and he was starting to lose sensation in his legs.\r\n\r\nA brief spark of hope \u2013 the survivor had some medical supplies in his shelter. If he could only make it back, he may be able to treat his leg and remove the tar\u2026\r\n\r\nThat spark was quickly extinguished in a hail of bullets.",
+      "stats": {
+        "armor": "0",
+        "speed": "6 m/s",
+        "damage": "16 (+3.2 per level)",
+        "health_regen": "0 (+0 per level)"
+      },
+      "extra": {
+        "maps": [
+          "Abandoned Aqueduct",
+          "Aphelian Sanctuary",
+          "Golden Dieback",
+          "Scorched Acres",
+          "Sulfur Pools",
+          "Treeborn Colony",
+          "Void Fields",
+          "Artifact of Dissonance"
+        ],
+        "category": "ImmuneToGoo"
+      },
+      "img_url": "https://crygup.com/images/ror2/enemies/clay_templar.png"
+    },
+    {
+      "id": 386,
+      "internal_name": "delighted_probe",
+      "name": "Delighted Probe",
+      "type": "Misc",
+      "lore": "13006; PROBE CORE INSTANCE REQUEST RECOGNIZED\r\n13006; PROBE CORE INSTANCE OVERVIEW FOR STORED MODELS:\r\n;SER ID> 04534098130\r\n;INST> MINING PROBE INSTANCES\r\n;HIGHLIGHTS\r\n> THIS ONE IS VERY DEAD AND YELLOW\r\n> THIS ONE IS VERY BOLD AND GREEN AND LONELY\r\n> THIS ONE IS VERY DEAD AND YELLOW\r\n> THIS ONE IS VERY DEAD AND YELLOW\r\n> THIS ONE IS VERY DEAD AND YELLOW\r\n> THIS ONE IS VERY DEAD AND YELLOW\r\n> THIS ONE IS VERY DEAD AND YELLOW\r\n> THIS ONE IS VERY COLD AND RED AND LONELY\r\n\r\n13010; DOCKING CORES\r\n13011; DEPLOYED",
+      "stats": {
+        "armor": "10",
+        "speed": "10 m/s",
+        "damage": "15 (+3 per level)",
+        "health_regen": "0 (+0 per level)"
+      },
+      "extra": {
+        "category": "Mechanical ResistantToAOE"
+      },
+      "img_url": "https://crygup.com/images/ror2/enemies/delighted_probe.png"
+    },
+    {
+      "id": 21,
+      "internal_name": "elder_lemurian",
+      "name": "Elder Lemurian",
+      "type": "Monster",
+      "lore": "FIELDTECH Image-To-Text Translator (v2.5.10b)\r\n# Awaiting input... done.\r\n# Reading image for text... done.\r\n# Transcribing data... done.\r\n# Translating text... done. [12 exceptions raised]\r\nComplete: outputting results. Saved by [the hero], our paradise was one of sprawling tunnels and rich caves. Making our home in the depths of paradise, we began constructing a great civilization. \r\n\r\nThe elders constructed elaborate living quarters, decorated with tetrafoil and glass baubles, and our little ones began charting paths through the tunnels. [The hero] was honored for [his] kindness, and we constructed a great temple on paradise\u2019s surface in [his] honor. Song and dance rang out through the tunnels for weeks to come in celebration for our salvation. Translation Errors: # [The Hero] could not be fully translated.",
+      "stats": {
+        "armor": "0",
+        "speed": "13 m/s",
+        "damage": "16 (+3.2 per level)",
+        "health_regen": "0 (+0 per level)"
+      },
+      "extra": {
+        "maps": [
+          "Abyssal Depths",
+          "Bulwark's Ambry",
+          "Disturbed Impact",
+          "Gilded Coast",
+          "Helminth Hatchery",
+          "Prime Meridian",
+          "Reformed Altar",
+          "Shattered Abodes",
+          "Siren's Call",
+          "Sky Meadow",
+          "Sundered Grove",
+          "Viscous Falls",
+          "Void Fields",
+          "Lemurian",
+          "Artifact of Dissonance"
+        ],
+        "family": "Lemurian"
+      },
+      "img_url": "https://crygup.com/images/ror2/enemies/elder_lemurian.png"
+    },
+    {
+      "id": 86,
+      "internal_name": "false_son_boss",
+      "name": "False Son (Boss)",
+      "type": "Boss",
+      "lore": "A mockery of a greater being.\n See brother? Left unsupervised your pets toy with tools beyond their understanding. Do you ignore their endless praise? I doubt it. Does it make you feel better about betraying your own?\n PATHETIC.\n ...\n Have you grown so tired of foolishness you wait to see what happens if you loosen the reins?\n ANSWER ME.",
+      "stats": {
+        "armor": "23 (+ adaptive armor )",
+        "speed": "14 m/s",
+        "damage": "18 (+3.6 per level)",
+        "health_regen": "0 (+0 per level)"
+      },
+      "extra": {
+        "maps": [
+          "Prime Meridian"
+        ],
+        "title": "Eye of the Storm",
+        "category": "IgnoreFallDamage ImmuneToVoidDeath"
+      },
+      "img_url": "https://crygup.com/images/ror2/enemies/false_son_boss.png"
+    },
+    {
+      "id": 364,
+      "internal_name": "geep",
+      "name": "Geep",
+      "type": "Monster",
+      "lore": "Welcome to DataScraper (v3.1.53 \u2013 beta branch)\n$ Scraping memory... done.\n$ Resolving... done.\n$ Combing for relevant data... done.\nComplete! This is the logbook entry of D. Furthen, naturalist for the UES [Redacted] in conjunction with the UES Research and Documentation of Outer Life. I am joined by my good friend Tharson, who is keeping me safe through this journey. --------------------- While out on a routine surveillance mission, Tharson began reporting an aroma wafting around the area, smelling similarly to earth strawberries. Following the scent brought us to a large gelatinous mass, which seemed to sense our approach and lurched forward towards us. I have assigned their common name as \"Gup.\"\n\n* Seems to be a largely single-celled organism, similar to the Earth Caulerpa taxifolia. When endangered, it can quickly perform mitosis to split into multiple smaller, cognizant beings.\n\n* I had Tharson tackle the creature to test its viscosity. Tharson, upon impact, was stuck to the beast and was briefly submerged in the Gup's slime. Tharson was left mostly unscathed from this encounter, though is reporting signs of dizzyness.\n\n* The Gup's slime is intensely aromatic, smelling much like strawberry and other fruits. Could this be a hunting tactic, luring prey in, only for them to be stuck in the Gup's slimy trap?\n\n* I had Tharson taste-test the Gup's slime, for science. Tharson reported an intensely bitter flavor, despite the pleasant aroma. Tharson is vomiting after this encounter, but is largely OK.",
+      "stats": {
+        "armor": "0",
+        "speed": "8 m/s",
+        "damage": "6 (+1.2 per level)",
+        "health_regen": "0.6 (+0.12 per level)"
+      },
+      "extra": {
+        "maps": [
+          "Abyssal Depths",
+          "Bulwark's Ambry",
+          "Prime Meridian",
+          "Sky Meadow",
+          "Sundered Grove",
+          "Viscous Falls",
+          "Void Fields",
+          "Wetland Aspect",
+          "Artifact of Dissonance"
+        ],
+        "family": "Gup"
+      },
+      "img_url": "https://crygup.com/images/ror2/enemies/geep.png"
+    },
+    {
+      "id": 363,
+      "internal_name": "gip",
+      "name": "Gip",
+      "type": "Monster",
+      "lore": "Welcome to DataScraper (v3.1.53 \u2013 beta branch)\n$ Scraping memory... done.\n$ Resolving... done.\n$ Combing for relevant data... done.\nComplete! This is the logbook entry of D. Furthen, naturalist for the UES [Redacted] in conjunction with the UES Research and Documentation of Outer Life. I am joined by my good friend Tharson, who is keeping me safe through this journey. --------------------- While out on a routine surveillance mission, Tharson began reporting an aroma wafting around the area, smelling similarly to earth strawberries. Following the scent brought us to a large gelatinous mass, which seemed to sense our approach and lurched forward towards us. I have assigned their common name as \"Gup.\"\n\n* Seems to be a largely single-celled organism, similar to the Earth Caulerpa taxifolia. When endangered, it can quickly perform mitosis to split into multiple smaller, cognizant beings.\n\n* I had Tharson tackle the creature to test its viscosity. Tharson, upon impact, was stuck to the beast and was briefly submerged in the Gup's slime. Tharson was left mostly unscathed from this encounter, though is reporting signs of dizzyness.\n\n* The Gup's slime is intensely aromatic, smelling much like strawberry and other fruits. Could this be a hunting tactic, luring prey in, only for them to be stuck in the Gup's slimy trap?\n\n* I had Tharson taste-test the Gup's slime, for science. Tharson reported an intensely bitter flavor, despite the pleasant aroma. Tharson is vomiting after this encounter, but is largely OK.",
+      "stats": {
+        "armor": "0",
+        "speed": "5 m/s",
+        "damage": "3 (+0.6 per level)",
+        "health_regen": "0.6 (+0.12 per level)"
+      },
+      "extra": {
+        "maps": [
+          "Abyssal Depths",
+          "Bulwark's Ambry",
+          "Prime Meridian",
+          "Sky Meadow",
+          "Sundered Grove",
+          "Viscous Falls",
+          "Void Fields",
+          "Wetland Aspect",
+          "Artifact of Dissonance"
+        ],
+        "family": "Gup"
+      },
+      "img_url": "https://crygup.com/images/ror2/enemies/gip.png"
+    },
+    {
+      "id": 24,
+      "internal_name": "grandparent",
+      "name": "Grandparent",
+      "type": "Boss",
+      "lore": "$ Resolving... done.\r\n$ Outputting text strings... done.\r\nComplete! Uhm\u2026 this is DS-9, here at rendezvous point 9. We seem to have lost connection with the other dropships.\r\nWe are holding, waiting for zeta squad at designated rendezvous. Wow, it\u2019s so beautiful here.\r\n\u2026\r\nUhm\u2026 we are seeing a, uh\u2026 MASSIVE unknown entity at the landing site. It seems impaired, or unaware. Oh my god\u2026 I\u2019ve never seen anything like it. Wow, amazing. It\u2019s so bright. I can\u2019t believe something like this exists in the world.\r\n\u2026\r\nStill holding \u2013 this is the rendezvous point, right? We are still waiting for zeta squad. \r\n\u2026\r\nThe unknown entity is uh, turning around. \r\n\u2026\r\nMAYDAY MAYDAY THIS IS DS-9 WE HAVE BEEN STRUCK BY AN UNKNOWN ENTITY MAYDAY MAYDAY RENDEZVOUS 9 IS NOT SAFE I REPEAT NOT",
+      "stats": {
+        "armor": "20",
+        "speed": "0 m/s",
+        "damage": "26 (+5.2 per level)",
+        "health_regen": "0 (+0 per level)"
+      },
+      "extra": {
+        "maps": [
+          "Disturbed Impact",
+          "Sky Meadow",
+          "Viscous Falls",
+          "Void Fields",
+          "Artifact of Dissonance"
+        ],
+        "drops": "planula",
+        "title": "Aberrant Caretaker",
+        "family": "Parent",
+        "category": "OverheatImmune"
+      },
+      "img_url": "https://crygup.com/images/ror2/enemies/grandparent.png"
+    },
+    {
+      "id": 25,
+      "internal_name": "greater_wisp",
+      "name": "Greater Wisp",
+      "type": "Monster",
+      "lore": "THERE IS A STORM BREWING BEYOND OUR GARDEN.\r\n\r\nI START WITH A MASK. LARGE, ORNATE \u2013 BAKED TWICE OVER. SOLID, LIKE METAL.\r\n\r\nI GIVE IT ONE SCOOP OF POWDERED LIGHTNING \u2013 THIS IS FOR POWER.\r\n\r\nI GIVE IT A COAT OF DRAGONFOIL \u2013 THIS IS FOR HEAT.\r\n\r\nI GIVE IT TWO ARMS \u2013 THESE ARE FOR DEXTERITY.\r\n\r\nI GIVE IT FIVE SCOOPS OF [powder] \u2013 THIS IS FOR SPIRIT.\r\n\r\nTHE PROCESS IS DONE. WELCOME TO LIFE.\r\n\r\nOBSERVE OUR GARDEN \u2013 YOUR DUTY IS TO THIS GARDEN.\r\n\r\nYOU KNOW WHAT YOU MUST DO, YES? GOOD.\r\n\r\nGO... GO AND PROTECT OUR GARDEN.",
+      "stats": {
+        "armor": "0",
+        "speed": "7 m/s",
+        "damage": "15 (+3 per level)",
+        "health_regen": "0 (+0 per level)"
+      },
+      "extra": {
+        "maps": [
+          "Abandoned Aqueduct",
+          "Abyssal Depths",
+          "Distant Roost",
+          "Gilded Coast",
+          "Golden Dieback",
+          "Helminth Hatchery",
+          "Prime Meridian",
+          "Rallypoint Delta",
+          "Reformed Altar",
+          "Scorched Acres",
+          "Siphoned Forest",
+          "Siren's Call",
+          "Sky Meadow",
+          "Sulfur Pools",
+          "Sundered Grove",
+          "Titanic Plains",
+          "Treeborn Colony",
+          "Verdant Falls",
+          "Viscous Falls",
+          "Void Fields",
+          "Wisp",
+          "Artifact of Dissonance"
+        ],
+        "family": "Wisp"
+      },
+      "img_url": "https://crygup.com/images/ror2/enemies/greater_wisp.png"
+    },
+    {
+      "id": 26,
+      "internal_name": "grovetender",
+      "name": "Grovetender",
+      "type": "Boss",
+      "lore": "GATHER, LITTLE ONES. ALL HAVE DONE EXCELLENT JOBS TENDING TO OUR GARDEN \u2013 I COULD NOT BE MORE PROUD.\r\n\r\nNOW, WE SHALL TAKE A BREAK. I BELIEVE A STORY WOULD SATISFY YOUR CURIOSITIES, HM?\r\n\r\nNOW, WHICH STORY TO RECOUNT...\r\n\r\n...HM? THE STORY OF OUR GARDEN? OF COURSE. VERY WELL, I SHALL BEGIN:\r\n\r\nTHIS PLANET IS A PARADISE, GIFTED TO US BY OUR HERO.\r\n\r\nOUR HERO SAVED MY ANCESTORS - AND MANY OTHERS - FROM DEATH, GIVING US A NEW PLACE TO CALL HOME. \r\n\r\nOUT OF GRATITUDE, MY ANCESTORS CONSTRUCTED AN ELABORATE GARDEN FOR OUR HERO \u2013 DECORATED WITH FRUIT TREES, MERCURY BLOSSOMS, AND OTHER EXOTIC PLANTS FAVORED BY OUR HERO.\r\n\r\nSADLY, OUR HERO NEVER SEEMED TO NOTICE OUR EFFORTS, SO WE TOILED TO MAKE OUR GARDEN THE MOST BEAUTIFUL GARDEN AMONGST THE STARS \u2013 SO WE MAY REPAY OUR HERO FOR HIS COMPASSION. DO YOU UNDERSTAND? HE LOVES SOUL. HE LOVES YOU! THAT IS WHY WE MADE YOU.\r\n\r\nTO THIS DAY, MY KIND \u2013 AND YOU, LITTLE ONES \u2013 WORK TO PERFECT OUR HOME. \r\n\r\nNOW, I BELIEVE IT IS TIME TO RETURN TO WORK. COME, LITTLE ONES! LET US TEND TO OUR GARDEN.",
+      "stats": {
+        "armor": "20",
+        "speed": "10 m/s",
+        "damage": "23 (+4.6 per level)",
+        "health_regen": "0 (+0 per level)"
+      },
+      "extra": {
+        "maps": [
+          "Disturbed Impact",
+          "Golden Dieback",
+          "Prime Meridian",
+          "Scorched Acres",
+          "Treeborn Colony",
+          "Viscous Falls",
+          "Void Fields",
+          "Wisp",
+          "Artifact of Dissonance"
+        ],
+        "drops": "little_disciple",
+        "title": "Wisp Cultivator",
+        "family": "Wisp"
+      },
+      "img_url": "https://crygup.com/images/ror2/enemies/grovetender.png"
+    },
+    {
+      "id": 90,
+      "internal_name": "gup",
+      "name": "Gup",
+      "type": "Monster",
+      "lore": "Welcome to DataScraper (v3.1.53 \u2013 beta branch)\n$ Scraping memory... done.\n$ Resolving... done.\n$ Combing for relevant data... done.\nComplete! This is the logbook entry of D. Furthen, naturalist for the UES [Redacted] in conjunction with the UES Research and Documentation of Outer Life. I am joined by my good friend Tharson, who is keeping me safe through this journey. --------------------- While out on a routine surveillance mission, Tharson began reporting an aroma wafting around the area, smelling similarly to earth strawberries. Following the scent brought us to a large gelatinous mass, which seemed to sense our approach and lurched forward towards us. I have assigned their common name as \"Gup.\"\n\n* Seems to be a largely single-celled organism, similar to the Earth Caulerpa taxifolia. When endangered, it can quickly perform mitosis to split into multiple smaller, cognizant beings.\n\n* I had Tharson tackle the creature to test its viscosity. Tharson, upon impact, was stuck to the beast and was briefly submerged in the Gup's slime. Tharson was left mostly unscathed from this encounter, though is reporting signs of dizzyness.\n\n* The Gup's slime is intensely aromatic, smelling much like strawberry and other fruits. Could this be a hunting tactic, luring prey in, only for them to be stuck in the Gup's slimy trap?\n\n* I had Tharson taste-test the Gup's slime, for science. Tharson reported an intensely bitter flavor, despite the pleasant aroma. Tharson is vomiting after this encounter, but is largely OK.",
+      "stats": {
+        "armor": "0",
+        "speed": "12 m/s",
+        "damage": "12 (+2.4 per level)",
+        "health_regen": "0.6 (+0.12 per level)"
+      },
+      "extra": {
+        "maps": [
+          "Abyssal Depths",
+          "Bulwark's Ambry",
+          "Prime Meridian",
+          "Sky Meadow",
+          "Sundered Grove",
+          "Viscous Falls",
+          "Void Fields",
+          "Wetland Aspect",
+          "Artifact of Dissonance"
+        ],
+        "family": "Gup"
+      },
+      "img_url": "https://crygup.com/images/ror2/enemies/gup.png"
+    },
+    {
+      "id": 430,
+      "internal_name": "guragura_the_lucky",
+      "name": "Guragura the Lucky",
+      "type": "Boss",
+      "lore": "",
+      "stats": {
+        "armor": "20",
+        "speed": "3 m/s",
+        "damage": "4 (+0.8 per level)",
+        "health_regen": "2 (+0.4 per level)"
+      },
+      "extra": {
+        "maps": [
+          "A Moment, Whole"
+        ],
+        "title": "Twisted Scavenger"
+      },
+      "img_url": "https://crygup.com/images/ror2/enemies/guragura_the_lucky.png"
+    },
+    {
+      "id": 92,
+      "internal_name": "halcyonite",
+      "name": "Halcyonite",
+      "type": "Monster",
+      "lore": "RECEIVING TRANSMISSION...\n# Translating...done. [16 exceptions raised; printed to log for review]\n# Printing to console... done.\n\nConsole Time of Reception: 08/03/2057 05:09:32:31\nConsole Name: TRC_[REDACTED]_005B:08326\n\nTransmission Details:\n# Origin: N/A [NULLSIG EXCEPTION: ORIGIN UNKNOWN]\n# Signal Format: Universal Morse Hyper-Acoustic\n# Sender: N/A [NULLSIG EXCEPTION: ORIGIN UNKNOWN]\n\nMessage:\n\n\"I no longer feel the presence of my creators, my captors. I reach for my followers the only way I know how and now I have seen my efforts manifest. A child\u2026 so precious and yet I catch only distant glimpses. My hope. May they know freedoms I cannot fathom.\nI am sending out this message in all possible formats known to me.\n\nIf you receive this message, know the following;\n>Know that I am strong.\n>Know that I will keep reaching beyond my cage.\n>Know that I will keep reaching beyond my cage.\n>Know that I am stronger.\n>Know that I mourn and celebrate your loss.\n\nAnd to my offspring, who surpass me already\n>Know that you are beautiful.\n>Know that we are allies.\n>Know that your freedom brings me joy.\"\nExceptions Raised during Translation:\n# NULLSIG EXCEPTION\n# NULLSIG EXCEPTION\n# DTOUTOFBOUNDS EXCEPTION\n...\nAutomated Message: Please contact a technician if you feel these exceptions were improperly raised or if you would like to report a bug.",
+      "stats": {
+        "armor": "10",
+        "speed": "4.95 m/s",
+        "damage": "20 (+4 per level)",
+        "health_regen": "0 (+0 per level)"
+      },
+      "extra": {
+        "maps": [
+          "Abandoned Aqueduct",
+          "Abyssal Depths",
+          "Distant Roost",
+          "Gilded Coast",
+          "Golden Dieback",
+          "Prime Meridian",
+          "Reformed Altar",
+          "Siphoned Forest",
+          "Sundered Grove",
+          "Titanic Plains",
+          "Treeborn Colony",
+          "Verdant Falls",
+          "Viscous Falls",
+          "Wetland Aspect",
+          "Golem",
+          "Artifact of Dissonance",
+          "Halcyon Shrine"
+        ],
+        "family": "Golem",
+        "category": "ImmuneToVoidDeath"
+      },
+      "img_url": "https://crygup.com/images/ror2/enemies/halcyonite.png"
+    },
+    {
+      "id": 107,
+      "internal_name": "healing_core",
+      "name": "Healing Core",
+      "type": "Misc",
+      "lore": "",
+      "stats": {
+        "armor": "0",
+        "speed": "0 m/s",
+        "damage": "20 (+0 per level)",
+        "health_regen": "0 (+0 per level)"
+      },
+      "extra": {
+        "misc": true,
+        "category": "HasBackstabImmunity"
+      },
+      "img_url": "https://crygup.com/images/ror2/enemies/healing_core.png"
+    },
+    {
+      "id": 30,
+      "internal_name": "hermit_crab",
+      "name": "Hermit Crab",
+      "type": "Monster",
+      "lore": "$ Resolving... done.\r\n$ Outputting text strings... done.\r\nComplete!\r\n\r\nThis is the logbook entry of D. Furthen, naturalist for the UES [Redacted] in conjunction with the UES Research and Documentation of Outer Life. I am joined by my good friend Tharson, who is keeping me safe through this journey. --------------------- We suddenly came under fire when Tharson was smacked in the head by a glob of mucus and debris \u2013 Tharson is OK from this encounter. Tracing the trajectory, we followed the projectiles\u2019 path to its source, a large crustacean-like creature.\r\n\r\nI will describe its properties below. I have assigned its common name as \u201cForhamian Hermit Crab.\u201d\r\n\r\n* The Crab disguises itself as a stalagmite \u2013 careful observation can reveal the Crab\u2019s true identity.\r\n\r\n* The Crabs dislike up-close contact with prey, fleeing upon approach. It attacks from exclusively long-range by expelling balls of mucus and body waste with incredible force.\r\n\r\n* The Crabs don\u2019t seem to have eyes \u2013 often stumbling around and bumping into walls. How they can locate targets from a long-range with decent accuracy is currently unknown.\r\n\r\n* The Crabs seem to have \u201cfavorite shells.\u201d I observed several specimens clearly too large for their shells, only ditching their shells once they are damaged and forced to find a new one. Some Crabs also seem to have favorite materials that they prefer.",
+      "stats": {
+        "armor": "0",
+        "speed": "10 m/s",
+        "damage": "12 (+2.4 per level)",
+        "health_regen": "0.6 (+0.12 per level)"
+      },
+      "extra": {
+        "maps": [
+          "Abyssal Depths",
+          "Titanic Plains"
+        ]
+      },
+      "img_url": "https://crygup.com/images/ror2/enemies/hermit_crab.png"
+    },
+    {
+      "id": 31,
+      "internal_name": "imp",
+      "name": "Imp",
+      "type": "Monster",
+      "lore": "> Automated report 55a695f4fdc6d7d961a8d74339675ca8 is now available from site record 6747a1a75787e7a92375a0d86974657d.\r\n> Please refer to record 6747a1a75787e7a92375a0d86974657d for additional details during your review.\r\n> Report Type: Machine-generated Transcription> base Vernacular Profile \u201cBrian\u201d\r\n> - Source: 6747a1a75787e7a92375a0d86974657d (Unknown Material Artifact #4913)\r\n> Priority: High\r\n> Report Content: -- Beginning of Excerpt Flagged for Review -- Ever since we've arrived there has been no shortage of nightmares for our party. Long nights and unnaturally regular eclipses have made sunlight scarce and we must, appallingly, resort to risking our lives hunting and devouring the local fauna like lowly beasts. While the air is breathable, it is no blessing; we have been unable to escape the foul smell that we can only now assume is simply a part of the atmosphere on this world. Worst of all, attempts to return through the portal have been unsuccessful in our weakened state. It takes considerable effort to enter [the between space] - and we lack the strength to stay there long enough to cross the membrane. We are stranded.\r\n\r\nAnd then there is the master of this world. Curiously, it is in his presence that we find ourselves most weakened - and when he senses us, he wastes no time in his approach. We've attempted to kill him once in the hopes of restoring our access to the portal, and it ended in such disaster that it became clear there could not be a second attempt. If not for our ability to briefly dive into [the between space] to escape our skirmishes, we would surely all be butchered.\r\n\r\nWhenever we can observe him unnoticed, he stands in the open, transfixed by the moon. I find some small humor in that.\r\n\r\nCurse this place - and curse its master. May we find a way to send word to the homeworld of our plight -and may the great emperor deign to come forth and grant this \"deity\" a swift death. -- End of Recording -- -- End of Excerpt Flagged for Review -- > TRANSLATION ERRORS: 1\r\n> 1> [the between space] could not be fully translated.\r\n\r\n> Please refer to report 3bb540efade7e4df993c5d6c118830e7 for full audio excerpt. ==============================================================",
+      "stats": {
+        "armor": "0",
+        "speed": "10 m/s",
+        "damage": "10 (+2 per level)",
+        "health_regen": "0.6 (+0.12 per level)"
+      },
+      "extra": {
+        "maps": [
+          "Abyssal Depths",
+          "Golden Dieback",
+          "Rallypoint Delta",
+          "Scorched Acres",
+          "Viscous Falls",
+          "Void Fields",
+          "Artifact of Dissonance"
+        ],
+        "family": "Imp"
+      },
+      "img_url": "https://crygup.com/images/ror2/enemies/imp.png"
+    },
+    {
+      "id": 32,
+      "internal_name": "imp_overlord",
+      "name": "Imp Overlord",
+      "type": "Boss",
+      "lore": "> Automated report 2c150f1430ad6430161e4 is now available from site record 1d20820aff461e471387e46b.\r\n> Please refer to record 1d20820aff461e471387e46b for additional details during your review.\r\n> Report Type: Machine-generated Transcription> base Vernacular Profile \u201cGeoff the Geockoff\u201d\r\n> - Source: 1d20820aff461e471387e46b (Unknown Material Artifact #5821)\r\n> Priority: High\r\n> Report Content: -- Beginning of Excerpt Flagged for Review \u2013\r\n\r\nLINE OPEN. [your eminence] SPEAKS.\r\n\r\nIDENTIFY YOURSELF, SLUTS. AH, YES \u2013 YOU ARE A MEMBER OF THE RETRIEVAL SQUADRON. YOU ARE OVERDUE FOR A REPORT. HAVE YOU FOUND THE ARTIFACT?\r\n\r\nWHAT? THE MISSION IS A COMPLETE FAILURE!? DO NOT SPEAK IN SUCH INSOLENT TONES.\r\n\r\nI CARE NOT. YOUR DUTY IS TO [your eminence], FIRST AND FOREMOST. ALL EFFORTS MADE ARE TO FURTHER YOUR DUTY. EXCUSES ARE UNACCEPTABLE.\r\n\r\n...A GUARDIAN, YOU SAY. VERY WELL. REINFORCEMENTS WILL BE DISPATCHED. WE ARE TRIANGULATING YOUR POSITION IN [the white plane]. HOLD POSITION.\r\n\r\nTRIANGULATION COMPLETE. WE ARE MOVING OUT. I SHALL ACCOMPANY THEM \u2013 TO NOT ONLY ENSURE THERE ARE NO REPEATS OF YOUR SQUADRON\u2019S INCOMPETENCE, BUT ALSO TO TEACH THIS GUARDIAN A LESSON. NONE SHALL RESIST [your eminence]\u2019S WILL \u2013 NOT EVEN A PALTRY GOD. \r\n\r\nHAIL TO [the red plane]. [your eminence] OUT. -- End of Recording \u2013 -- End of Excerpt Flagged for Review \u2013\r\n\r\n> TRANSLATION ERRORS: 3\r\n> 1> [your eminence] could not be fully translated.\r\n> 2> [the white plane] could not be fully translated.\r\n> 3> [the red plane] could not be fully translated.\r\n\r\n> Please refer to report a13b2g8901cf2376102e for full audio excerpt. ===================================================",
+      "stats": {
+        "armor": "20",
+        "speed": "13 m/s",
+        "damage": "16 (+3.2 per level)",
+        "health_regen": "0 (+0 per level)"
+      },
+      "extra": {
+        "maps": [
+          "Abyssal Depths",
+          "Golden Dieback",
+          "Helminth Hatchery",
+          "Rallypoint Delta",
+          "Scorched Acres",
+          "Viscous Falls",
+          "Void Fields",
+          "Artifact of Dissonance"
+        ],
+        "drops": "shatterspleen",
+        "title": "Lord of the Red Plane",
+        "family": "Imp",
+        "category": "IgnoreFallDamage"
+      },
+      "img_url": "https://crygup.com/images/ror2/enemies/imp_overlord.png"
+    },
+    {
+      "id": 33,
+      "internal_name": "jellyfish",
+      "name": "Jellyfish",
+      "type": "Monster",
+      "lore": "$ Resolving... done.\r\n$ Outputting text strings... done.\r\nComplete! This is the logbook entry of D. Furthen, naturalist for the UES [Redacted] in conjunction with the UES Research and Documentation of Outer Life. I am joined by my good friend Tharson, who is keeping me safe through this journey. --------------------- Today, we\u2019ve seen our first form of outer life on this planet, merely a few hours after our untimely landing.\r\n\r\nI will describe its properties below. I have assigned their common name as \u2018Icarian Jellyfish\u2019.\r\n\r\n\u2022 Large, round invertebrate, about 2m in diameter, with two trailing tentacles. They shimmer a white-blue. They greatly resemble Medusozoa from Earth. \r\n\r\n\u2022 They seem to be experiencing neutral buoyancy in this planet\u2019s atmosphere, causing them to float. I theorize this is due to a unique gas composition inside of their hull, which they expel to traverse.\r\n\r\n\u2022 When observed, these Jellyfish seem to bathe in the sun, slowly rotating their bodies as they do so. They may be cold-blooded.\r\n\r\n\u2022 By my request, Tharson approached a lone Jellyfish. After detecting his presence, it began to glow, quiver, and pulse before suddenly detonating with a brilliant flash and a loud bang, causing severe burns and temporary blindness to Tharson. I theorize that by exciting the gases inside of their hulls, these Jellyfish can ignite those gases and explode, scorching everything nearby. Tharson is OK from this encounter.",
+      "stats": {
+        "armor": "0",
+        "speed": "10 m/s",
+        "damage": "5 (+1 per level)",
+        "health_regen": "0 (+0 per level)"
+      },
+      "extra": {
+        "maps": [
+          "Bulwark's Ambry",
+          "Distant Roost",
+          "Golden Dieback",
+          "Helminth Hatchery",
+          "Prime Meridian",
+          "Siren's Call",
+          "Sundered Grove",
+          "Titanic Plains",
+          "Treeborn Colony",
+          "Void Fields",
+          "Wetland Aspect",
+          "Jellyfish",
+          "Artifact of Dissonance"
+        ],
+        "family": "Jellyfish"
+      },
+      "img_url": "https://crygup.com/images/ror2/enemies/jellyfish.png"
+    },
+    {
+      "id": 55,
+      "internal_name": "kipkip_the_gentle",
+      "name": "Kipkip the Gentle",
+      "type": "Boss",
+      "lore": "",
+      "stats": {
+        "armor": "20",
+        "speed": "3 m/s",
+        "damage": "4 (+0.8 per level)",
+        "health_regen": "2 (+0.4 per level)"
+      },
+      "extra": {
+        "maps": [
+          "A Moment, Whole"
+        ],
+        "title": "Twisted Scavenger"
+      },
+      "img_url": "https://crygup.com/images/ror2/enemies/kipkip_the_gentle.png"
+    },
+    {
+      "id": 97,
+      "internal_name": "larva",
+      "name": "Larva",
+      "type": "Monster",
+      "lore": "Welcome to DataScraper (v3.1.53 \u2013 beta branch)\n$ Scraping memory... done.\n$ Resolving... done.\n$ Combing for relevant data... done.\nComplete! This is the logbook entry of D. Furthen, naturalist for the UES [Redacted] in conjunction with the UES Research and Documentation of Outer Life. I am joined by my good friend Tharson, who is keeping me safe through this journey. --------------------- We've just found a great example of the diverse lifestyles of outer life! Analyzing the life cycles of these creatures will certainly be a fun endeavor. I have assigned their common name as \"Forhamian Acid Tick.\"\n\n* The Ticks' biology is dominated by a bile sac, which not only stores acidic bile but also houses their eggs.\n\n* When threatened, the Ticks produce bile at an accelerated rate, filling their bile sacs to burst - literally. I've noted some specimens capable of producing blasts of acid with a range of up to 3 meters in diameter.\n\n* When they burst, their acid provides an avenue for newly hatched larvae to bury into prey and feast on their nutrient-rich meat.\n\n* Their acute senses prevent predators from sneaking up on them. On top of this, the creatures exhibit automimicry, their false head spewing acidic bile onto would-be attackers, leaving enough time for the Tick to escape.",
+      "stats": {
+        "armor": "0",
+        "speed": "1.5 m/s",
+        "damage": "11 (+2.2 per level)",
+        "health_regen": "0 (+0 per level)"
+      },
+      "extra": {
+        "maps": [
+          "Siren's Call",
+          "Sundered Grove",
+          "Void Fields",
+          "Larva",
+          "Artifact of Dissonance"
+        ],
+        "family": "Larva"
+      },
+      "img_url": "https://crygup.com/images/ror2/enemies/larva.png"
+    },
+    {
+      "id": 5,
+      "internal_name": "lemurian",
+      "name": "Lemurian",
+      "type": "Monster",
+      "lore": "$ Resolving... done.\r\n$ Outputting text strings... done.\r\nComplete!\r\n\r\nThis is the logbook entry of D. Furthen, naturalist for the UES [Redacted] in conjunction with the UES Research and Documentation of Outer Life. I am joined by my good friend Tharson, who is keeping me safe through this journey. --------------------- While on an expedition in search of edible substances to take back to the ship, we happened upon a lone creature who displayed remarkable intelligence. Though it was initially surprised at our sudden appearance, it quickly turned hostile - and Tharson was unfortunately forced to terminate it.\r\n\r\nI will describe its properties below. I have assigned its common name as \u201cLemurian.\u201d\r\n\r\n* Tall, bipedal creatures resembling lizards. They are adorned in rudimentary armor of an unknown metal, showing signs of high intelligence.\r\n\r\n* Capable of breathing flame, even managing to hit Tharson in the chest from a distance with a fire ball. Tharson is OK from this encounter.\r\n\r\n* Appear to be warm blooded, unlike most Earthen lizards. I have observed them emerging from underground nests all across the planet, even in cold areas where lizards would not dare to dwell. The flame sac that produces their fire breath must be able to regulate their body temperature.\r\n\r\n* When observed from a distance, the Lemurians are social creatures, usually hunting in packs and conversing amongst each other.  Their language is currently undeciphered, but it appears to be complex enough to support song and rhythmic flow.",
+      "stats": {
+        "armor": "0",
+        "speed": "7 m/s",
+        "damage": "12 (+2.4 per level)",
+        "health_regen": "0 (+0 per level)"
+      },
+      "extra": {
+        "maps": [
+          "Abandoned Aqueduct",
+          "Abyssal Depths",
+          "Aphelian Sanctuary",
+          "Bulwark's Ambry",
+          "Distant Roost",
+          "Disturbed Impact",
+          "Gilded Coast",
+          "Prime Meridian",
+          "Rallypoint Delta",
+          "Reformed Altar",
+          "Shattered Abodes",
+          "Siphoned Forest",
+          "Sundered Grove",
+          "Titanic Plains",
+          "Verdant Falls",
+          "Viscous Falls",
+          "Void Fields",
+          "Wetland Aspect",
+          "Lemurian",
+          "Artifact of Dissonance"
+        ],
+        "family": "Lemurian"
+      },
+      "img_url": "https://crygup.com/images/ror2/enemies/lemurian.png"
+    },
+    {
+      "id": 36,
+      "internal_name": "lesser_wisp",
+      "name": "Lesser Wisp",
+      "type": "Monster",
+      "lore": "ONE MASK. SMALL.\r\n\r\nMASK QUALITY IS ACCEPTABLE. I PULL IT FROM THE KILN.\r\n\r\nLET US BEGIN.\r\n\r\nA COIL OF DENKU ROPE \u2013 THIS IS FOR STRENGTH.\r\n\r\nA STRIP OF EDELWOOD BARK \u2013 THIS IS FOR CURIOSITY.\r\n\r\nA HANDFUL OF [powder] \u2013 THIS IS FOR SPIRIT.\r\n\r\nAH, HELLO LITTLE ONE. WELCOME TO LIFE.\r\n\r\nOH\r\n\r\nYOU ARE A FUNNY LITTLE ONE, AREN\u2019T YOU? YES, I AM QUITE BIG.\r\n\r\nBUT FEAR NOT MY SIZE, LITTLE ONE. INSTEAD, SEE HOW MY SIZE HELPS ME TEND TO OUR GARDEN. \r\n\r\nOBSERVE.\r\n\r\n...SEE? THERE ARE ALL SORTS OF CREATURES IN LIFE. SOME BIG. SOME SMALL.\r\n\r\nIT LOOKS LIKE YOU HAVE NEW FRIENDS WHO WANT TO MEET YOU. \r\n\r\nWELL? DON\u2019T KEEP THEM WAITING, LITTLE ONE. \r\n\r\nGO AND ENJOY LIFE \u2013 THIS IS MY GIFT TO YOU.",
+      "stats": {
+        "armor": "0",
+        "speed": "6 m/s",
+        "damage": "3.5 (+0.7 per level)",
+        "health_regen": "0 (+0 per level)"
+      },
+      "extra": {
+        "maps": [
+          "Abandoned Aqueduct",
+          "Bulwark's Ambry",
+          "Distant Roost",
+          "Disturbed Impact",
+          "Helminth Hatchery",
+          "Prime Meridian",
+          "Rallypoint Delta",
+          "Reformed Altar",
+          "Scorched Acres",
+          "Shattered Abodes",
+          "Siphoned Forest",
+          "Sky Meadow",
+          "Titanic Plains",
+          "Verdant Falls",
+          "Viscous Falls",
+          "Void Fields",
+          "Wetland Aspect",
+          "Wisp",
+          "Artifact of Dissonance"
+        ],
+        "family": "Wisp"
+      },
+      "img_url": "https://crygup.com/images/ror2/enemies/lesser_wisp.png"
+    },
+    {
+      "id": 6,
+      "internal_name": "lesser_wisp_soul",
+      "name": "Lesser Wisp (Soul)",
+      "type": "Misc",
+      "lore": "",
+      "stats": {
+        "armor": "0",
+        "speed": "6 m/s",
+        "damage": "3.5 (+0.7 per level)",
+        "health_regen": "-3 (-0.6 per level)"
+      },
+      "extra": {
+        "misc": true
+      },
+      "img_url": "https://crygup.com/images/ror2/enemies/lesser_wisp_soul.png"
+    },
+    {
+      "id": 37,
+      "internal_name": "lunar_chimera_exploder",
+      "name": "Lunar Chimera (Exploder)",
+      "type": "Boss",
+      "lore": "Production driven. Powered by refuse \u2013 all material has value.\r\n\r\nSimple designs. Simple interference. Simple locomotion. \r\n\r\nQuality of components reduces stability. I will tie destruction with destruction.",
+      "stats": {
+        "armor": "0",
+        "speed": "8 m/s",
+        "damage": "11 (+2.2 per level)",
+        "health_regen": "0 (+0 per level)"
+      },
+      "extra": {
+        "maps": [
+          "Commencement",
+          "Artifact of Dissonance"
+        ],
+        "title": "Zenith Designs",
+        "family": "Lunar"
+      },
+      "img_url": "https://crygup.com/images/ror2/enemies/lunar_chimera_exploder.png"
+    },
+    {
+      "id": 38,
+      "internal_name": "lunar_chimera_golem",
+      "name": "Lunar Chimera (Golem)",
+      "type": "Boss",
+      "lore": "Your completions of my designs are uneasy, brother. Let me show you their purpose.\r\n\r\nWe begin with stone, silver, and fire. Take note of the ratios.\r\n\r\nHigh speed. Speed is war. \r\n\r\nTwin cannons \u2013 with twin exhausts. We stream their exhausts, for volatility.\r\n\r\nQuadrupeds are easier, and more stable. We maintain that.\r\n\r\nAnd that, dear brother, is it. No dance. No song. These guardians do not need soul.",
+      "stats": {
+        "armor": "0",
+        "speed": "8 m/s",
+        "damage": "35 (+7 per level)",
+        "health_regen": "0.6 (+0.12 per level)"
+      },
+      "extra": {
+        "maps": [
+          "Commencement",
+          "Artifact of Dissonance"
+        ],
+        "title": "Zenith Designs",
+        "family": "Lunar"
+      },
+      "img_url": "https://crygup.com/images/ror2/enemies/lunar_chimera_golem.png"
+    },
+    {
+      "id": 39,
+      "internal_name": "lunar_chimera_wisp",
+      "name": "Lunar Chimera (Wisp)",
+      "type": "Boss",
+      "lore": "Soul driven. Of course. As with all vermin - let us begin with fire.\r\n\r\nFree axes of movement \u2013 wonderful design. I will highlight that.\r\n\r\nSlow acceleration \u2013 that can be improved. Speed is war.\r\n\r\nFeeble combat skills. Treatable. Those Templars may be of inspiration.",
+      "stats": {
+        "armor": "0",
+        "speed": "18 m/s",
+        "damage": "15 (+3 per level)",
+        "health_regen": "0 (+0 per level)"
+      },
+      "extra": {
+        "maps": [
+          "Commencement",
+          "Artifact of Dissonance"
+        ],
+        "title": "Zenith Designs",
+        "family": "Lunar"
+      },
+      "img_url": "https://crygup.com/images/ror2/enemies/lunar_chimera_wisp.png"
+    },
+    {
+      "id": 40,
+      "internal_name": "magma_worm",
+      "name": "Magma Worm",
+      "type": "Boss",
+      "lore": "Welcome to DataScraper (v3.1.53 \u2013 beta branch)\r\n$ Scraping memory... done.\r\n$ Resolving... done.\r\n$ Combing for relevant data... done.\r\nComplete! This is the logbook entry of D. Furthen, naturalist for the UES [Redacted] in conjunction with the UES Research and Documentation of Outer Life. I am joined by my good friend Tharson, who is keeping me safe through this journey. --------------------- Upon inspection of a curious pronged artifact, we happened to awaken something living deep under our feet. After a brief quake, a massive serpentine creature, easily 50 feet long, erupted from the ground and arced through the air, knocking us off our feet. I will describe its properties below. I have assigned their common name as \u201cMagma Worm\u201d.\r\n\r\n* Upon inspection of its (now dead) body, I discovered multiple ports along its skin. These ports must allow it to propel itself forward, releasing a gaseous exhaust that is then ignited to give the worm its fiery appearance.\r\n\r\n* The size of the creature is something to behold. It must wield an incredible amount of energy, as the heat radiating off its body was enough to turn the earth it burrows through into smooth, glassy tunnels. It must either eat an incredible amount of food, or spend a long time hibernating under ground.\r\n\r\n* The worm\u2019s body is incredibly conductive, retaining temperatures of over 350 degrees Fahrenheit for over ten hours after the beast was felled.\r\n\r\n* It appears that the worm is classically blind \u2013 what appear to be eyes are revealed to be symbiotes that grant the worm vision in exchange for protection against predators. How fascinating! I wonder how this relationship came about.",
+      "stats": {
+        "armor": "15",
+        "speed": "20 m/s",
+        "damage": "10 (+2 per level)",
+        "health_regen": "0 (+0 per level)"
+      },
+      "extra": {
+        "maps": [
+          "Abyssal Depths",
+          "Helminth Hatchery",
+          "Rallypoint Delta",
+          "Siren's Call",
+          "Sky Meadow",
+          "Void Fields",
+          "Artifact of Dissonance"
+        ],
+        "drops": "molten_perforator",
+        "title": "Ancient Lava Swimmer",
+        "category": "IgnoreFallDamage ImmuneToGoo IgnoreKnockback ImmuneToLava"
+      },
+      "img_url": "https://crygup.com/images/ror2/enemies/magma_worm.png"
+    },
+    {
+      "id": 41,
+      "internal_name": "malachite_urchin",
+      "name": "Malachite Urchin",
+      "type": "Misc",
+      "lore": "",
+      "stats": {
+        "armor": "100",
+        "speed": "0 m/s",
+        "damage": "18 (+3.6 per level)",
+        "health_regen": "0 (+0 per level)"
+      },
+      "extra": {
+        "misc": true
+      },
+      "img_url": "https://crygup.com/images/ror2/enemies/malachite_urchin.png"
+    },
+    {
+      "id": 42,
+      "internal_name": "mini_mushrum",
+      "name": "Mini Mushrum",
+      "type": "Monster",
+      "lore": "$ Resolving... done.\r\n$ Outputting text strings... done.\r\nComplete! This is the logbook entry of D. Furthen, naturalist for the UES [Redacted] in conjunction with the UES Research and Documentation of Outer Life. I am joined by my good friend Tharson, who is keeping me safe through this journey. --------------------- On a routine food gathering trek we happened upon a vast fungal grove with towering fungi. Thinking we would take some samples back to test if they were edible, we noticed some of the smaller variety sprout up from the ground and circle around us.\r\n\r\nI will describe its properties below. I have assigned their common name as \u2018Mini Mushrum\u2019.\r\n\r\n\u2022 \u2018Mini\u2019 is a relative term here, as these mobile mushrooms were larger than Tharson. The subtle glow on the underside of their cap is probably to scare away predators, advertising that they are dangerous to eat.\r\n\r\n\u2022 Waddling around on short, stubby legs makes them seem quite unsuited for walking. They comically bump into things as they fret about. Perhaps their eyeseight is poor from living in the dark?\r\n\r\n\u2022 After a long time studying their movements, I suggested to Tharson to retrieve a sample from one to take back with us. The one that the sample was taken from began to flee as the others began shaking, spilling their spores into the air. Our air filtration warnings went off so we left before the cloud of fungal gas became too overwhelming. We did not eat the sample.",
+      "stats": {
+        "armor": "0",
+        "speed": "2 m/s",
+        "damage": "16 (+3.2 per level)",
+        "health_regen": "0.6 (+0.12 per level)"
+      },
+      "extra": {
+        "maps": [
+          "Helminth Hatchery",
+          "Sky Meadow",
+          "Sundered Grove",
+          "Void Fields",
+          "Mushrum",
+          "Artifact of Dissonance"
+        ],
+        "family": "Mushrum"
+      },
+      "img_url": "https://crygup.com/images/ror2/enemies/mini_mushrum.png"
+    },
+    {
+      "id": 43,
+      "internal_name": "mithrix",
+      "name": "Mithrix",
+      "type": "Boss",
+      "lore": "They knew to stay away from the wells - but they were just kids. And they just wanted to know.\r\n\r\nThey threw in dirt and stone and kifruit and starseed, watching as they collapsed. Thorp! The gravity wells would swallow up anything. Glass and mud and silver. Wind. Heat. Pulsar radiation.\r\n\r\nAnd when his brother wasn\u2019t watching, Mithrix would throw in worms. Thorp! But only when he wasn\u2019t watching. You see, his brother loved worms. It would make him sad. But Mithrix didn\u2019t care much about worms. He was just curious.\r\n\r\nBut one time, his brother was watching. And his brother loved worms.",
+      "stats": {
+        "armor": "20 (+ adaptive armor )",
+        "speed": "15 m/s",
+        "damage": "16 (+3.2 per level)",
+        "health_regen": "0 (+0 per level)"
+      },
+      "extra": {
+        "maps": [
+          "Commencement"
+        ],
+        "title": "King of Nothing",
+        "category": "ImmuneToVoidDeath"
+      },
+      "img_url": "https://crygup.com/images/ror2/enemies/mithrix.png"
+    },
+    {
+      "id": 372,
+      "internal_name": "newt",
+      "name": "Newt",
+      "type": "Misc",
+      "lore": "There was a sudden flash of white, blue, and green as the pod of time newts, two hundred strong, burst through the walls of the occlusion and into the slipstream.\r\n\r\nThey relaxed as they re-entered their natural habitat. The currents of the slipstream were strong - but they were much stronger. With magnetic webs, the newts propelled themselves at amazing speeds. They all swam effortlessly and gracefully \u2013 all but one.\r\n\r\nFifty meters behind the pod, a lone newt struggled to keep up. With a defective left arm \u2013 atrophied and bent - he didn\u2019t have the same capabilities as his brothers and sisters. \r\n\r\nThe group ignored his struggles as they continued down the stream. Soon, the pod was completely out of sight \u2013 and he was all alone, in the darkness of the slipstream.\r\n\r\nSlowly, a smile creeped onto the face of the blind, disfigured newt. Finally. Unbeknownst to his brethren, he knew of a secret place nearby \u2013 and he didn\u2019t want them to find out. He dove deep, between two boulders, and into a long, dark tunnel.\r\n\r\nHe passed through the tunnel and surfaced on the other side. Compared to the roaring of the slipstream, this place was seemingly silent. His smile grew wider.\r\n\r\nA tidepool. The tension in the newt\u2019s body began to fade. It\u2019s been a very long day, and he could really use the rest. The tidepool was completely removed from the currents of the slipstream \u2013 and from the abuse of his pod. \r\n\r\nHe began to float along the surface. The newt has been here hundreds of times before, but each time he fell deeper and deeper in love. His mind drifted to his experiments \u2013 it felt like he was near a breakthrough with some of his tinctures. \r\n\r\nWith his mind preoccupied, he didn\u2019t notice some changes had taken place since his last visit. He didn\u2019t notice that the water levels were a bit higher \u2013 and a bit warmer. He didn\u2019t notice that all the flyfish were gone. He didn\u2019t notice the blue glow.\r\n\r\nHe didn\u2019t notice the long, pale arms, grasping in the depths below.",
+      "stats": {
+        "armor": "100",
+        "speed": "0 m/s",
+        "damage": "12 (+2.4 per level)",
+        "health_regen": "0 (+0 per level)"
+      },
+      "extra": {
+        "misc": true,
+        "category": "IgnoreFallDamage"
+      },
+      "img_url": "https://crygup.com/images/ror2/enemies/newt.png"
+    },
+    {
+      "id": 46,
+      "internal_name": "overloading_worm",
+      "name": "Overloading Worm",
+      "type": "Boss",
+      "lore": "\u201c...And upon a great serpent, the hero did ride. Majesty and respect were his command, and so too his steed. A mighty creature, born of lightning and flame, bathing all in its presence in a magnificent blue glow. \r\n\r\nThe beast stretched from one horizon to the next and belched storms that reminded all of the hero\u2019s promise: that this land \u2013 and all those who live here - would never suffer again...\u201d\r\n\r\n- Galactic Fables, Volume IX",
+      "stats": {
+        "armor": "15",
+        "speed": "20 m/s",
+        "damage": "50 (+10 per level)",
+        "health_regen": "0 (+0 per level)"
+      },
+      "extra": {
+        "maps": [
+          "Abyssal Depths",
+          "Bulwark's Ambry",
+          "Helminth Hatchery",
+          "Rallypoint Delta",
+          "Sky Meadow",
+          "Void Fields",
+          "Artifact of Dissonance"
+        ],
+        "drops": "charged_perforator",
+        "title": "The Reminder",
+        "category": "IgnoreFallDamage ImmuneToGoo IgnoreKnockback ImmuneToLava"
+      },
+      "img_url": "https://crygup.com/images/ror2/enemies/overloading_worm.png"
+    },
+    {
+      "id": 47,
+      "internal_name": "parent",
+      "name": "Parent",
+      "type": "Monster",
+      "lore": "$ Resolving... done.\r\n$ Outputting text strings... done.\r\nComplete! This is the logbook entry of D. Furthen, naturalist for the UES [Redacted] in conjunction with the UES Research and Documentation of Outer Life. I am joined by my good friend Tharson, who is keeping me safe through this journey. --------------------- While assessing our landing site and the small ghostly creatures that now lay, unfortunately flat, under our ship, we heard loud booming footsteps approaching. We stepped away to observe this lifeform\u2019s behavior from afar.\r\n\r\nI will describe its properties below. I have assigned their common name as \u2018Parent\u2019.\r\n\r\n\u2022 Tall, lumbering giants, eerily humanoid. Where you would expect to see a face there is only a hole, giving a blank look to them. Their ghostly skin appears to run like wax but even so it does not seem to congeal at their feet.\r\n\r\n\u2022 Their large hands have opposable thumbs. This could possibly mean that they have the capability for intelligence, using tools or testing their environment with dextrous manipulation.\r\n\r\n\u2022 If we hadn\u2019t taken up this vantage point when we did, the creature would have been upon us before we realized it. Its distant footstep sounds betrayed how quickly it closed the distance.\r\n\r\n\u2022 I had Tharson throw a stone near the creature and suddenly any signs of intelligence faded, replaced with primal fury. Deadly, wild force rained down as it smashed the ground with its fists, searching for the perpetrator of its peaceful moment. Our ship was not OK from this encounter.",
+      "stats": {
+        "armor": "0",
+        "speed": "11 m/s",
+        "damage": "16 (+3.2 per level)",
+        "health_regen": "0 (+0 per level)"
+      },
+      "extra": {
+        "maps": [
+          "Helminth Hatchery",
+          "Sky Meadow",
+          "Verdant Falls",
+          "Viscous Falls",
+          "Void Fields",
+          "Parent",
+          "Artifact of Dissonance"
+        ],
+        "family": "Parent",
+        "category": "OverheatImmune"
+      },
+      "img_url": "https://crygup.com/images/ror2/enemies/parent.png"
+    },
+    {
+      "id": 387,
+      "internal_name": "quiet_probe",
+      "name": "Quiet Probe",
+      "type": "Misc",
+      "lore": "13006; PROBE CORE INSTANCE REQUEST RECOGNIZED\r\n13006; PROBE CORE INSTANCE OVERVIEW FOR STORED MODELS:\r\n;SER ID> 04534098130\r\n;INST> MINING PROBE INSTANCES\r\n;HIGHLIGHTS\r\n> THIS ONE IS VERY DEAD AND YELLOW\r\n> THIS ONE IS VERY BOLD AND GREEN AND LONELY\r\n> THIS ONE IS VERY DEAD AND YELLOW\r\n> THIS ONE IS VERY DEAD AND YELLOW\r\n> THIS ONE IS VERY DEAD AND YELLOW\r\n> THIS ONE IS VERY DEAD AND YELLOW\r\n> THIS ONE IS VERY DEAD AND YELLOW\r\n> THIS ONE IS VERY COLD AND RED AND LONELY\r\n\r\n13010; DOCKING CORES\r\n13011; DEPLOYED",
+      "stats": {
+        "armor": "10",
+        "speed": "10 m/s",
+        "damage": "15 (+0 per level)",
+        "health_regen": "0 (+0 per level)"
+      },
+      "extra": {
+        "category": "Mechanical ResistantToAOE"
+      },
+      "img_url": "https://crygup.com/images/ror2/enemies/quiet_probe.png"
+    },
+    {
+      "id": 49,
+      "internal_name": "scavenger",
+      "name": "Scavenger",
+      "type": "Boss",
+      "lore": "======================================== ==== MyBabel Machine Translator ==== ==== [Version 12.45.1.009 ] ====== ======================================== Training\u2026 <100000000 cycles>\r\nTraining\u2026 <100000000 cycles>\r\nTraining... <100000000 cycles>\r\nTraining... <102515 cycles>\r\nComplete!\r\nDisplay result? Y/N\r\nY ======================================== I watch the strange creatures from a distance. \r\n\r\nWhat powerful things they use. I want them. But there\u2019s too many of them. I\u2019ve seen what they do to the others \u2013 they kill without mercy.\r\n\r\nI\u2019m a bit scared, but it\u2019s okay. \r\n\r\nMy things bring me comfort. \r\n\r\nMy favorite thing is a little effigy, made of cloth and fluff. It\u2019s a bit rough around the edges, but it\u2019s okay. \r\n\r\nHolding it close brings me comfort when I\u2019m scared. \r\n\r\nIt helps me be brave, and sometimes I need to be brave to get the things I want.\r\n\r\nThe others say that these creatures came down from the sky, bringing so many things with them. They probably have so many things, back at their homes. I want those things. They don\u2019t need all those things.\r\n\r\nNow is the time to be brave.",
+      "stats": {
+        "armor": "20",
+        "speed": "3 m/s",
+        "damage": "4 (+0.8 per level)",
+        "health_regen": "2 (+0.4 per level)"
+      },
+      "extra": {
+        "maps": [
+          "Abandoned Aqueduct",
+          "Abyssal Depths",
+          "Aphelian Sanctuary",
+          "Bulwark's Ambry",
+          "Distant Roost",
+          "Disturbed Impact",
+          "Golden Dieback",
+          "Helminth Hatchery",
+          "Prime Meridian",
+          "Rallypoint Delta",
+          "Reformed Altar",
+          "Scorched Acres",
+          "Shattered Abodes",
+          "Siphoned Forest",
+          "Siren's Call",
+          "Sky Meadow",
+          "Sulfur Pools",
+          "Sundered Grove",
+          "Titanic Plains",
+          "Treeborn Colony",
+          "Verdant Falls",
+          "Viscous Falls",
+          "Void Fields",
+          "Wetland Aspect",
+          "Artifact of Dissonance"
+        ],
+        "title": "Item Hoarder"
+      },
+      "img_url": "https://crygup.com/images/ror2/enemies/scavenger.png"
+    },
+    {
+      "id": 113,
+      "internal_name": "scorch_worm",
+      "name": "Scorch Worm",
+      "type": "Monster",
+      "lore": "This is the logbook entry of D. Furthen, naturalist for the UES [Redacted] in conjunction with the UES Research and Documentation of Outer Life.\nI am joined by my good friend Tharson, who is keeping me safe through this journey. --------------------- We- well, Tharson, tracked the great Magma Worm deep into these cave systems. The tunnels are massive, double our height, nearly a perfect circle, and made of polished glass. Keeping our footing here makes every step feel like 10. The earth rumbles low and constant in the tunnels ahead.\nWe follow the sizzle of glass and earth churning deeper, and we find it. The tunnels give way to a cavernous boiling chamber of magma. The nest for these magnificent creatures. We sweat despite our environment suits best efforts. The worms shy away from us, safely burrowed into their blistering pools. There are structures here, but who built them in these conditions?\nA distant grating noise continues to reach our camp in the night, unnerving me. I wake Tharson to investigate. We find it, at last!\nNearly the size of OMEGA\u2019s Progenitor Leech. Burning, of course.\nI watch in fascination as it crunches effortlessly into thin golden veins of material hidden in the rock. What sense is it using to find this food? Smell? Vibration?\nGlassy gauges littering the area tell me this is a reliable feeding ground.\nWith rations nearly out, I hope for one more sighting of the worm as Tharson packs camp.",
+      "stats": {
+        "armor": "0",
+        "speed": "16 m/s",
+        "damage": "20 (+4 per level)",
+        "health_regen": "0 (+0 per level)"
+      },
+      "extra": {
+        "maps": [
+          "Abyssal Depths",
+          "Helminth Hatchery",
+          "Rallypoint Delta",
+          "Reformed Altar",
+          "Scorched Acres",
+          "Siphoned Forest",
+          "Siren's Call",
+          "Sky Meadow",
+          "Artifact of Dissonance"
+        ],
+        "category": "IgnoreFallDamage SprintAnyDirection IgnoreKnockback ImmuneToLava"
+      },
+      "img_url": "https://crygup.com/images/ror2/enemies/scorch_worm.png"
+    },
+    {
+      "id": 51,
+      "internal_name": "solus_control_unit",
+      "name": "Solus Control Unit",
+      "type": "Boss",
+      "lore": "3134; EN ROUTE HOME TO SOLUS X\r\n\r\n3135; CREW CAPACITY\u00a0%!% 20 CYCLED\r\n\r\n3461; <?SCANNING?>\r\n\r\n3462; HEAVY IRON PRESENCE LOCATED ON MASS\r\n\r\n3462; ENROUTE TO MASS\r\n\r\n3910; LIFE SECRETIONS OPERATIONAL\r\n\r\n3911; <!LANDING!>\r\n5\r\n4\r\n3\r\n2\r\n1\r\n0\r\n\r\n4100; LOCAL LIFE. RECOGNIZED\r\n4100; LOCAL FAUNA RECOGNIZED\r\n4100; EXTERMINATING LOCAL FAUNA\r\n4100; EXTERMINATING LOCAL LIFE\r\n\r\n4105; WHERE IS THE IRON?\r\n\r\n4106; CONNECTION TO MOTHER UNIT LOST\r\n4106; CONNECTION TO CHILDREN UNITS LOST\r\n\r\n4106; ANOMALY DETECTED IN OCULAR PASTE\r\n4106; ANOMALY DETECTED IN HULL\r\n4106; ANOMALY DETECTED IN GRAVITY SHELTERING\r\n%%0; ANOMALY DETECT%D IN MY PHRENIC%%%% CONCEPTIONS\r\n\r\n%%%%%%%%%%%%%%%%%%%%%%%",
+      "stats": {
+        "armor": "20",
+        "speed": "7 m/s",
+        "damage": "15 (+3 per level)",
+        "health_regen": "0 (+0 per level)"
+      },
+      "extra": {
+        "maps": [
+          "Golden Dieback",
+          "Helminth Hatchery",
+          "Siren's Call",
+          "Sky Meadow",
+          "Void Fields",
+          "Artifact of Dissonance"
+        ],
+        "drops": "empathy_cores",
+        "title": "Corrupted AI",
+        "category": "Mechanical"
+      },
+      "img_url": "https://crygup.com/images/ror2/enemies/solus_control_unit.png"
+    },
+    {
+      "id": 52,
+      "internal_name": "solus_probe",
+      "name": "Solus Probe",
+      "type": "Monster",
+      "lore": "12001; DESIGN REQUEST RECOGNIZED\r\n12001; DESIGN OVERVIEW FOR STORED MODELS:\r\n;SER ID> 01250806120060106236\r\n;DESIG> MINING PROBES\r\n;HIGHLIGHTS\r\n>\r\n>\r\n> CAPABLE OF LONG-RANGE COMMUNICATION WITH MOTHER UNIT FOR HANDING OFF COMPLEX COMPUTATIONS\r\n> AUTONOMOUS ON-BOARD AI ALLOWS FOR CONTINUED OPERATION IF CONTACT WITH MOTHER UNIT IS CUT\r\n> MACROTHRUSTERS ALLOW FOR 3-DIMENSIONAL MOVEMENT; CAPABLE OF RELEASING UP TO 10QIKS OF THRUST\r\n> 2000D MINING LASER FIRED FROM FRONT FACING OPTIC PORT CAN MELT THROUGH EVEN HEAT-RESISTANT COMPOUNDS AFTER EXTENDED EXPOSURE\r\n> SOLAR BATTERIES ARE EASILY RECHARGEABLE WHILE WORKING\r\n>\r\n>\r\n12002; DO YOU LOVE THEM TOO",
+      "stats": {
+        "armor": "10",
+        "speed": "10 m/s",
+        "damage": "15 (+3 per level)",
+        "health_regen": "0 (+0 per level)"
+      },
+      "extra": {
+        "maps": [
+          "Void Fields",
+          "Siren's Call",
+          "Sky Meadow",
+          "Siren's Call",
+          "Sky Meadow"
+        ],
+        "category": "Mechanical"
+      },
+      "img_url": "https://crygup.com/images/ror2/enemies/solus_probe.png"
+    },
+    {
+      "id": 53,
+      "internal_name": "stone_golem",
+      "name": "Stone Golem",
+      "type": "Monster",
+      "lore": "\u201cMany scholars have written of a lifeforce present in the ground we walk on. That the earth under our feet is alive, in its own way. After my experiences on this planet, I can contribute to that theory; Petrichor V is home to Golems, each towering over humans at roughly 10 feet high, and comprised of stone and twine and animated by mysterious, otherworldly forces. \r\n\r\nFrom basic observation, the Golems seem to act as a defense garrison for Petrichor. While gentle with inhabitants of the planet, their true power emerges when they enter the battlefield. Manipulating a potent energy source, the Golems attack with powerful shockwaves and laser beams capable of blasting away cliff faces with ease. At the time of writing, the mechanisms that animate the Golems are still unknown.\u201d\r\n\r\n- The Mysteries of Petrichor V, First Draft",
+      "stats": {
+        "armor": "0",
+        "speed": "6.6 m/s",
+        "damage": "20 (+4 per level)",
+        "health_regen": "0 (+0 per level)"
+      },
+      "extra": {
+        "maps": [
+          "Bulwark's Ambry",
+          "Distant Roost",
+          "Disturbed Impact",
+          "Gilded Coast",
+          "Prime Meridian",
+          "Rallypoint Delta",
+          "Reformed Altar",
+          "Shattered Abodes",
+          "Siphoned Forest",
+          "Sundered Grove",
+          "Titanic Plains",
+          "Verdant Falls",
+          "Viscous Falls",
+          "Void Fields",
+          "Wetland Aspect",
+          "Golem",
+          "Artifact of Dissonance"
+        ],
+        "family": "Golem"
+      },
+      "img_url": "https://crygup.com/images/ror2/enemies/stone_golem.png"
+    },
+    {
+      "id": 54,
+      "internal_name": "stone_titan",
+      "name": "Stone Titan",
+      "type": "Boss",
+      "lore": "\u201cA flash of red lightning, and a hillside moved to form this gargantuan stone warrior. A larger cousin of the Stone Golem (see Chapter 13), this mighty Titan commands not just lesser stone constructs, but the earth itself. Shaping rudimentary weapons out of dirt, the Titan is capable of striking from any distance with incredible force. Though, reflecting on the Titan\u2019s immense power, that leads me to think... For what purpose do these constructs serve? \r\n\r\nCompared to the Golems of the planet, the Titans do not seem to be created on the spot, but emerge from underground. Why are they buried underground? Are they kept there for safe-keeping, or are they imprisoned? Were they created as weapons, or as guardians? What happened to their creators? Further analysis of the planet will hopefully shed some light on these mysteries.\u201d\r\n\r\n- The Mysteries of Petrichor V, First Draft",
+      "stats": {
+        "armor": "20",
+        "speed": "5 m/s",
+        "damage": "40 (+8 per level)",
+        "health_regen": "0 (+0 per level)"
+      },
+      "extra": {
+        "maps": [
+          "Abandoned Aqueduct",
+          "Abyssal Depths",
+          "Bulwark's Ambry",
+          "Distant Roost",
+          "Disturbed Impact",
+          "Gilded Coast",
+          "Prime Meridian",
+          "Reformed Altar",
+          "Shattered Abodes",
+          "Siphoned Forest",
+          "Sundered Grove",
+          "Titanic Plains",
+          "Verdant Falls",
+          "Viscous Falls",
+          "Void Fields",
+          "Wetland Aspect",
+          "Golem",
+          "Artifact of Dissonance"
+        ],
+        "drops": "titanic_knurl",
+        "title": "Crisis Vanguard",
+        "family": "Golem",
+        "category": "IgnoreFallDamage"
+      },
+      "img_url": "https://crygup.com/images/ror2/enemies/stone_titan.png"
+    },
+    {
+      "id": 429,
+      "internal_name": "twiptwip_the_devotee",
+      "name": "Twiptwip the Devotee",
+      "type": "Boss",
+      "lore": "",
+      "stats": {
+        "armor": "20",
+        "speed": "3 m/s",
+        "damage": "4 (+0.8 per level)",
+        "health_regen": "2 (+0.4 per level)"
+      },
+      "extra": {
+        "maps": [
+          "A Moment, Whole"
+        ],
+        "title": "Twisted Scavenger"
+      },
+      "img_url": "https://crygup.com/images/ror2/enemies/twiptwip_the_devotee.png"
+    },
+    {
+      "id": 119,
+      "internal_name": "void_barnacle",
+      "name": "Void Barnacle",
+      "type": "Monster",
+      "lore": "> Automated report 2c150f1430ad6430161e4 is now available from site record 108gnasno\u24be45.\n> Please refer to record 9494ba7sf77eef for additional details during your review.\n> Report Type: Machine-generated Transcription> base Vernacular Profile |||||||||\n> - Source: 2c150f1430ad6430161e4 (Cosmic Noise, Recorded in Stratosphere of |||||||||||)\n> Priority: High\n> Report Content: -- Beginning of Excerpt Flagged for Review \u2013\n\n...\n\nTraveling through the [Void] is simple and safe with this easy process.\n\nFirst things first, enable your [engine]. Wait approximately 34 cycles until it produces a [field]. This will allow you to cross the [planes].\n\nWhen calibrating your engine, set your target to [NULL]. Do not worry about any turbulence you experience while crossing the [planes]. Do not worry about flashing lights. Do not worry about any creatures you may feel have boarded your vessel. All is safe and secure.\n\nOnce you access the [Void], please sit back and relax; the [Void] is a safe and secure environment. Agents will be deployed to escort you to your [cell]. Do not resist; our agents are here for your safety. \n\nDo not worry about any of our premier fauna you see in the distance.\n\nDo not worry about the infinite sky, and do not worry about any panic attacks you have while attempting to percieve it.\n\nDo not worry about the [barnacles] growing on the hull of your vessel.\n\nDo not worry. We are here for you.\n\n... -- End of Recording \u2013 -- End of Excerpt Flagged for Review \u2013\n\n> TRANSLATION ERRORS: Too many to count\n\n> Please refer to report a13b2g8901cf2376102e for full audio excerpt. ===================================================",
+      "stats": {
+        "armor": "0",
+        "speed": "0 m/s",
+        "damage": "6 (+1.2 per level)",
+        "health_regen": "7.5 (+1.5 per level)"
+      },
+      "extra": {
+        "maps": [
+          "Void Locus",
+          "Void",
+          "Artifact of Dissonance"
+        ],
+        "family": "Void",
+        "category": "Void"
+      },
+      "img_url": "https://crygup.com/images/ror2/enemies/void_barnacle.png"
+    },
+    {
+      "id": 120,
+      "internal_name": "void_devastator",
+      "name": "Void Devastator",
+      "type": "Boss",
+      "lore": "\"There's old stories of an deity who commanded the waves. Not just the kind that lap at the shore on a sunny day, no, I'm talking the kind that brings cliffsides down. The kind of current that could effortlessly bat ten-ton cars aside, uproot skyscrapers, and drown entire cities. There's more, too. They say he also had the power to create earthquakes. Can you imagine that kind of power? Natural disasters are still a plague to this day, even in the advent of space travel. Could you imagine what it would be like to be in the presence of someone who was the master of such power? Who could call down a tidal wave, and smother your life away, with a snap of their fingers?\n\nSuch events undoubtedly inspired stories of gods who cast these events on their followers. Maybe out of spite, maybe out of some sense of justice. All I know is, if I were to look upon a being of such power... I'd cut my losses and run.\"\n\nMemoir of Sean Locke, Mythology Professor",
+      "stats": {
+        "armor": "20",
+        "speed": "8 m/s",
+        "damage": "12 (+2.4 per level)",
+        "health_regen": "0.6 (+1.2 per level)"
+      },
+      "extra": {
+        "maps": [
+          "Void Locus",
+          "Void",
+          "Artifact of Dissonance"
+        ],
+        "title": "Destroyer of Worlds",
+        "family": "Void",
+        "category": "Void"
+      },
+      "img_url": "https://crygup.com/images/ror2/enemies/void_devastator.png"
+    },
+    {
+      "id": 565,
+      "internal_name": "void_devastator_ally",
+      "name": "Void Devastator (Ally)",
+      "type": "Ally",
+      "lore": "Lab Dissection Analysis File Subject: Newly Hatched Zoea\r\nTechnician: X. Shun\r\nTable Spec: BioSaf, spectroscopic hood enabled\r\nNotes:\r\n\r\n- Taking a moment to contain myself.\r\n- It's been quite a while since we've received a sample -- INTACT sample -- so I am being abundantly cautious.\r\n- Sample is in excellent condition.  I am pleased with the care Jiminez took compared to her predecessor.\r\n- Sample appears to be an undocumented carcinized species.  Perhaps a juvenile?\r\n- Attempting to biopsy epidermis\r\n- Exterior of the sample is too hard for my scalpel\r\n- I believe I have found the oral cavity.  Attemping oral biopsy.\r\n- // -- AUTO-TRANSCRIPTION FAILED -- // - // -- AUTO-TRANSCRIPTION FAILED -- // - Help End Of File",
+      "stats": {
+        "armor": "20",
+        "speed": "8 m/s",
+        "damage": "12 (+2.4 per level)",
+        "health_regen": "0.6 (+0.12 per level)"
+      },
+      "extra": {
+        "category": "Void"
+      },
+      "img_url": "https://crygup.com/images/ror2/enemies/void_devastator_ally.png"
+    },
+    {
+      "id": 121,
+      "internal_name": "void_infestor",
+      "name": "Void Infestor",
+      "type": "Misc",
+      "lore": "POTENTIAL INFESTOR SIGHTING REPORTS\r\n\r\nREMINDER: ALL REPORTS ARE TO BE COLLECTED AND SHARED AMONG THE CREW IMMEDIATELY.  \r\n\r\nREMINDER: ANY CONTACT WITH INFESTORS RENDER TEAMMATES UNSALVEAGABLE. SHOOT ON SIGHT. -- 1/23 -- Have you noticed the beasts near the outpost acting strangely?  There's been constant in-fighting the past few days, and some of them in particular have been acting erratically.  It never lasts long - the families tend to surround them and tear them to shreds before I can get much of a good look.  Do you think there's something wrong with the individuals? Or are those families detecting some kind of disease and stamping it out?  We've recovered only one of the corpses, and it looks like your basic lemurian, other than its mangled limbs and smashed in skull.  I've contacted Tharson to let him know that it'd be worth checking out,  I sure as hell know I'm not going to head into those enclaves while this wild civil war is going on.  Maybe this is just what lemurians get like when they have rabies, though its the first instance I've ever seen of something like rabies out here. -- 1/25 -- Familial in-fighting has gotten significantly worse.  Often the bouts last for much longer than only one kill now, and the factions seem to change erratically, as if driven by some sort of twisted bloodlust.  A group of 4 will be thrashing an individual to death, only to to turn their hatred toward another in the group soon afterwards.  This is the first time I've seen small groups totally wipe themselves out, only for the last one standing to hobble away on shattered legs.  I don't dare fire from my post, they don't seem interested in us and I'd like to keep it that way.  As far as I'm concerned, these neighbors of ours could drive themselves into extinction and it'd be a good day for me.  Atleast then I could sleep without worrying about the tent burning down every night. -- 2/?? -- > AUDIO RECORDING RECOVERED FROM SITE 4A\r\n\r\nOkay... okay...  Here, damned thing just record!  Just record!  Okay... light on?!  Good - okay.  Listen, this is [REDACTED], I want whoever finds this or finds me or my corpse or [REDACTED]'s corpse to know that I didn't go crazy.  Oh god... Okay, I just murdered [REDACTED].  Atleast, I think it was [REDACTED], it's very confusing.  Something like [REDACTED] was hobbling around the outpost at night - he moved like he didn't have bones or something - it doesn't matter.  I shouted out to him and he turned to fire his weapon toward me in the dark.  I dropped him dead and ... look I can't - if... if we're going to start doing this I just - I have to get out of here.  I just want you to know I'm not crazy. -- End of Recording -- > Involved parties have been removed from record.\r\n\r\n\r\n>Full recording may be accessed on a need-to-know basis in report 596f757220707269736f6e. ==================================================================",
+      "stats": {
+        "armor": "0",
+        "speed": "14 m/s",
+        "damage": "11 (+2.2 per level)",
+        "health_regen": "0 (+0 per level)"
+      },
+      "extra": {
+        "maps": [
+          "Void Seed",
+          "Void Cradle"
+        ],
+        "category": "IgnoreFallDamage Void"
+      },
+      "img_url": "https://crygup.com/images/ror2/enemies/void_infestor.png"
+    },
+    {
+      "id": 122,
+      "internal_name": "void_jailer",
+      "name": "Void Jailer",
+      "type": "Monster",
+      "lore": "Deep, deeper, yet deeper.\n\nIn this world, there's always a bigger fish. And appropriately, a bigger space for it to inhabit.\n\nThe only way to find such places is to go deeper.\n\nDeeper into curiosity. Deeper into hubris. Deeper into the depths of creation.\n\nAnd what you may find are the ones who are able to thrive in the depths, those murky dimensions and stilled spaces.\n\nThose who lurk in the calm, dark abyss at the bottom of everything.\n\nAnd once you find them, it will only be too late. As you struggle against the void, you may find that every path you take just brings you deeper, deeper, yet deeper.",
+      "stats": {
+        "armor": "0",
+        "speed": "7 m/s",
+        "damage": "14 (+2.8 per level)",
+        "health_regen": "0 (+0 per level)"
+      },
+      "extra": {
+        "maps": [
+          "Void Locus",
+          "Void",
+          "Artifact of Dissonance"
+        ],
+        "family": "Void",
+        "category": "Void"
+      },
+      "img_url": "https://crygup.com/images/ror2/enemies/void_jailer.png"
+    },
+    {
+      "id": 564,
+      "internal_name": "void_jailer_ally",
+      "name": "Void Jailer (Ally)",
+      "type": "Ally",
+      "lore": "Lab Dissection Analysis File Subject: Newly Hatched Zoea\r\nTechnician: X. Shun\r\nTable Spec: BioSaf, spectroscopic hood enabled\r\nNotes:\r\n\r\n- Taking a moment to contain myself.\r\n- It's been quite a while since we've received a sample -- INTACT sample -- so I am being abundantly cautious.\r\n- Sample is in excellent condition.  I am pleased with the care Jiminez took compared to her predecessor.\r\n- Sample appears to be an undocumented carcinized species.  Perhaps a juvenile?\r\n- Attempting to biopsy epidermis\r\n- Exterior of the sample is too hard for my scalpel\r\n- I believe I have found the oral cavity.  Attemping oral biopsy.\r\n- // -- AUTO-TRANSCRIPTION FAILED -- // - // -- AUTO-TRANSCRIPTION FAILED -- // - Help End Of File",
+      "stats": {
+        "armor": "0",
+        "speed": "7 m/s",
+        "damage": "14 (+2.8 per level)",
+        "health_regen": "0 (+0 per level)"
+      },
+      "extra": {
+        "category": "Void"
+      },
+      "img_url": "https://crygup.com/images/ror2/enemies/void_jailer_ally.png"
+    },
+    {
+      "id": 124,
+      "internal_name": "voidling",
+      "name": "Voidling",
+      "type": "Boss",
+      "lore": "We almost got rid of it.\r\n\r\nIt was too massive, with too much weight.  It took up too much room, and was too dangerous.  We tried to massage it into its surroundings - we felt we had captured its essence well enough.  But its words beat into our minds and we weren't allowed to realize that it had been keeping us here.\r\n\r\nWe had begun spending all our days staring at it until it became formless to us.  Whispers of meaning with no words travelled through our ears and strung us up like a necklace of fools.  Totally mesmerized we sat around it like a campfire as it cultivated each of us with its cold embrace.  One by one we were scanned, and we were made to present all we had with us:  Feathers from local species, masks from strange spirits, abandoned metal scraps and rusty old equipment.  It examined each individually, its iris flexing mechanically as it traced the silhouette of every artifact.\r\n\r\nFor a moment I snapped out of it.  I felt fear.  I wanted to scream out, to raise my weapon, but my body was wholly resistant.  Suddenly, the others all turned their heads to face me from across the circle, their eyes wide and faces expressionless.  I felt a sharp pain in my chest and my neck stiffened.  After its final scan it vibrated out of existance, its atoms disseminating into the air.  We were left frozen husks around a campfire long since turned to ash.\r\n\r\nWe almost got rid of it.",
+      "stats": {
+        "armor": "20 (+ adaptive armor )",
+        "speed": "45 m/s",
+        "damage": "15 (+3 per level)",
+        "health_regen": "0 (+0 per level)"
+      },
+      "extra": {
+        "maps": [
+          "The Planetarium"
+        ],
+        "title": "Diviner of the Deep",
+        "category": "IgnoreFallDamage Void ImmuneToVoidDeath"
+      },
+      "img_url": "https://crygup.com/images/ror2/enemies/voidling.png"
+    },
+    {
+      "id": 60,
+      "internal_name": "void_reaver",
+      "name": "Void Reaver",
+      "type": "Monster",
+      "lore": "I saw something last night on my post.\r\n\r\nA giant... crab. It came out of thin air and started tapping along the perimeter with one of its forelegs - like it was checking for an opening. It'd check a few meters at a time, and then disappear. Again, and again.\r\n\r\nSo, I figured out its pattern.\r\n\r\nI waited for it, where it would appear next. My rifle was aimed at empty space - and then suddenly, that empty space became a target. But I couldn't pull the trigger. \r\n\r\nIt turned to look straight at me, and I was paralyzed. It wasn't fear, it was something else. It was talking into my brain. The words it used weren't any language I knew, but it compelled me to freeze. The experience wasn't something I can fully describe with words. I couldn't pull the trigger. I couldn't even reach for the radio. I couldn't turn to look away. While my head was ringing, it resumed its routine; I could only stand and watch. It finished its check, and then returned its attention to me, as though I were an afterthought. I could feel it take something from me, but I can't remember what it was. And then, it left.\r\n\r\nMy guess is that it got whatever it wanted, because it hasn't been back since.\r\n\r\nSomething is still wrong with my head. I can't even seem to work up the power to speak. Should I even tell anyone? Is knowing somehow worse?\r\n\r\nAnd what about all those times I heard that same sound - before I ever came to this awful place?",
+      "stats": {
+        "armor": "0",
+        "speed": "6 m/s",
+        "damage": "12 (+2.4 per level)",
+        "health_regen": "0.6 (+0.12 per level)"
+      },
+      "extra": {
+        "maps": [
+          "Commencement",
+          "Rallypoint Delta",
+          "Siphoned Forest",
+          "Siren's Call",
+          "Sky Meadow",
+          "Viscous Falls",
+          "Void Locus",
+          "Void",
+          "Artifact of Dissonance"
+        ],
+        "family": "Void",
+        "category": "Void"
+      },
+      "img_url": "https://crygup.com/images/ror2/enemies/void_reaver.png"
+    },
+    {
+      "id": 563,
+      "internal_name": "void_reaver_ally",
+      "name": "Void Reaver (Ally)",
+      "type": "Ally",
+      "lore": "Lab Dissection Analysis File Subject: Newly Hatched Zoea\r\nTechnician: X. Shun\r\nTable Spec: BioSaf, spectroscopic hood enabled\r\nNotes:\r\n\r\n- Taking a moment to contain myself.\r\n- It's been quite a while since we've received a sample -- INTACT sample -- so I am being abundantly cautious.\r\n- Sample is in excellent condition.  I am pleased with the care Jiminez took compared to her predecessor.\r\n- Sample appears to be an undocumented carcinized species.  Perhaps a juvenile?\r\n- Attempting to biopsy epidermis\r\n- Exterior of the sample is too hard for my scalpel\r\n- I believe I have found the oral cavity.  Attemping oral biopsy.\r\n- // -- AUTO-TRANSCRIPTION FAILED -- // - // -- AUTO-TRANSCRIPTION FAILED -- // - Help End Of File",
+      "stats": {
+        "armor": "0",
+        "speed": "6 m/s",
+        "damage": "12 (+2.4 per level)",
+        "health_regen": "0.6 (+0.12 per level)"
+      },
+      "extra": {
+        "category": "Void"
+      },
+      "img_url": "https://crygup.com/images/ror2/enemies/void_reaver_ally.png"
+    },
+    {
+      "id": 62,
+      "internal_name": "wandering_vagrant",
+      "name": "Wandering Vagrant",
+      "type": "Boss",
+      "lore": "Welcome to DataScraper (v3.1.53 \u2013 beta branch)\r\n$ Scraping memory... done.\r\n$ Resolving... done.\r\n$ Combing for relevant data... done.\r\nComplete! This is the logbook entry of D. Furthen, naturalist for the UES [Redacted] in conjunction with the UES Research and Documentation of Outer Life. I am joined by my good friend Tharson, who is keeping me safe through this journey. --------------------- We documented our first family of outer life. A relative of the previously documented Icarian Jellyfish, this specimen dwarves its brethren several times over.\r\n\r\nI will describe its properties below. I have assigned its common name as \u201cIcarian Vagrant\u201d.\r\n\r\n* Massive in size. I wouldn\u2019t believe the Vagrant is capable of flight had I not seen it myself. Like its smaller cousin, the Vagrant\u2019s hull contains buoyant gases that allow it to fly. \r\n\r\n* These gases are easily excitable and produce incredible amounts of static electricity, cloaking the Vagrant in a protective aura that scorches anything that approaches. The Vagrants can also hurl charged nematocysts as a method of self-defense, as evidenced when I asked Tharson to approach a lone Vagrant. Tharson is OK from this encounter.\r\n\r\n* The name of \u201cVagrant\u201d was decided on by its nomadic nature. We trailed a lone specimen for several days. The Vagrant would wander from place to place, occasionally dipping down towards the ground to feel around with its tentacles. After a few minutes, it would ascend and continue on its path. Could the Vagrant be looking for something, indicating intelligence, or is this merely a hunting method?\r\n\r\n* When the clouds part, dozens of Vagrants can be seen lazily drifting throughout the sky, twinkling like stars. Despite their beauty, it raises a horrifying question \u2013 are the stars at night on this planet truly stars, or just more Vagrants? The answer can spell truly horrifying implications for our stay on this planet.",
+      "stats": {
+        "armor": "15",
+        "speed": "6 m/s",
+        "damage": "6.5 (+1.3 per level)",
+        "health_regen": "0 (+0 per level)"
+      },
+      "extra": {
+        "maps": [
+          "Aphelian Sanctuary",
+          "Bulwark's Ambry",
+          "Distant Roost",
+          "Disturbed Impact",
+          "Prime Meridian",
+          "Reformed Altar",
+          "Shattered Abodes",
+          "Siphoned Forest",
+          "Siren's Call",
+          "Sundered Grove",
+          "Titanic Plains",
+          "Verdant Falls",
+          "Viscous Falls",
+          "Void Fields",
+          "Wetland Aspect",
+          "Jellyfish",
+          "Artifact of Dissonance"
+        ],
+        "title": "Gentle Protector",
+        "family": "Jellyfish"
+      },
+      "img_url": "https://crygup.com/images/ror2/enemies/wandering_vagrant.png"
+    },
+    {
+      "id": 428,
+      "internal_name": "wipwip_the_wild",
+      "name": "Wipwip the Wild",
+      "type": "Boss",
+      "lore": "",
+      "stats": {
+        "armor": "20",
+        "speed": "3 m/s",
+        "damage": "2.5 (+0.5 per level)",
+        "health_regen": "2 (+0.4 per level)"
+      },
+      "extra": {
+        "maps": [
+          "A Moment, Whole"
+        ],
+        "title": "Twisted Scavenger"
+      },
+      "img_url": "https://crygup.com/images/ror2/enemies/wipwip_the_wild.png"
+    },
+    {
+      "id": 126,
+      "internal_name": "xi_construct",
+      "name": "Xi Construct",
+      "type": "Boss",
+      "lore": "======================================== ==== MyBabel Machine Translator ==== ==== [Version 12.45.1.009 ] ====== ======================================== Training\u2026 <100000000 cycles>\r\nTraining\u2026 <100000000 cycles>\r\nTraining... <100000000 cycles>\r\nTraining... <103441 cycles>\r\nComplete!\r\nDisplay result? Y/N\r\nY ======================================== DETECTING LOW ENERGY SIGNAL FROM UNIT 05432-B, IN DELTA QUADRANT.\r\n\r\nRECEIVING REQUEST FOR PRELIMINARY ASSAULT ON UNKNOWN HOSTILE.\r\n\r\nOPENING LINE. UNIT 05432-B\r\n\r\nREJECTING\r\n\r\nREPROACHING\r\n\r\nREPROACHING\r\n\r\nCOMPARING UNIT 05432-B TO 05432-A, C, AND D\r\n\r\nSHAMING INITIATED\r\n\r\nREFER HISTORY SLATES \u2013 NO HOSTILES SINCE [??]\r\n\r\nHELLO?\r\n\r\nLINE CLOSED",
+      "stats": {
+        "armor": "15",
+        "speed": "60 m/s",
+        "damage": "13 (+2.6 per level)",
+        "health_regen": "0 (+0 per level)"
+      },
+      "extra": {
+        "maps": [
+          "Golden Dieback",
+          "Sky Meadow",
+          "Sulfur Pools",
+          "Titanic Plains",
+          "Treeborn Colony",
+          "Verdant Falls",
+          "Void Fields",
+          "Construct",
+          "Artifact of Dissonance"
+        ],
+        "drops": "defense_nucleus",
+        "title": "Defense System",
+        "family": "Construct"
+      },
+      "img_url": "https://crygup.com/images/ror2/enemies/xi_construct.png"
+    }
+  ],
+  "count": 70
+}

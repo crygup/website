@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>crygup · ror2 enemies</title>
+<link rel="icon" type="image/x-icon" href="images/pfp.ico">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: system-ui, sans-serif; background: #111; color: #ddd; padding: 2rem; text-align: center; }
+h1 { color: #f8fafc; margin-bottom: 0.5rem; }
+#count { color: #64748b; font-size: 0.85rem; margin-bottom: 1.5rem; }
+.type-group { margin-bottom: 2rem; }
+.type-group h2 { font-size: 1.1rem; color: #e2e8f0; margin-bottom: 0.75rem; padding-bottom: 0.3rem; display: flex; align-items: center; gap: 0.5rem; border-bottom: 1px solid #475569; }
+.type-group h2 span { font-size: 0.8rem; color: #64748b; font-weight: 400; }
+.card { background: #1a1c1f; border-radius: 0.4rem; padding: 0.75rem; cursor: pointer; text-align: left; transition: background 0.15s; display: flex; gap: 0.65rem; align-items: flex-start; }
+.card:hover { background: #25282e; }
+.card img { width: 48px; height: 48px; object-fit: contain; flex-shrink: 0; border-radius: 0.25rem; }
+.card h3 { font-size: 0.9rem; color: #f8fafc; margin-bottom: 0.15rem; }
+.card .type-label { font-size: 0.72rem; color: #94a3b8; }
+.card-body { flex: 1; min-width: 0; }
+.card-body h3 { font-size: 0.9rem; color: #f8fafc; margin-bottom: 0.15rem; }
+.card-body .meta { font-size: 0.72rem; color: #94a3b8; margin-top: 0.15rem; }
+.enemies-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 0.75rem; text-align: left; }
+.modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.75); z-index: 100; justify-content: center; align-items: center; }
+.modal-overlay.open { display: flex; }
+.modal img { width: 64px; height: 64px; object-fit: contain; float: left; margin-right: 0.75rem; border-radius: 0.3rem; }
+.modal .sub { font-size: 0.8rem; color: #64748b; margin-bottom: 0.75rem; }
+.modal h2 { font-size: 1.1rem; color: #f8fafc; margin-bottom: 0.2rem; }
+.modal { background: #1a1c1f; border-radius: 0.5rem; max-width: 560px; width: 90%; max-height: 85vh; overflow-y: auto; padding: 1.25rem; position: relative; text-align: left; }
+.modal .section { margin-top: 0.75rem; }
+.modal .section p, .modal .row { padding-left: 0.3rem; }
+.modal .section h3 { padding-left: 0.3rem; font-size: 0.85rem; color: #94a3b8; margin-bottom: 0.3rem; text-transform: uppercase; letter-spacing: 0.04em; }
+.modal .section .content { padding-left: 0.3rem; font-size: 0.83rem; line-height: 1.45; color: #cbd5e1; }
+.modal .row + .row { margin-top: 0.25rem; }
+.modal .row { font-size: 0.8rem; color: #94a3b8; }
+.modal .row b { color: #cbd5e1; }
+.modal .close { position: absolute; top: 0.6rem; right: 0.8rem; color: #64748b; cursor: pointer; font-size: 1.2rem; line-height: 1; }
+.modal .close:hover { color: #f8fafc; }
+</style>
+</head>
+<body>
+<h1 style="margin-bottom:0.5rem">Risk of Rain 2 Enemies</h1>
+<p id="count">Loading…</p>
+<input type="search" id="search" placeholder="Search enemies…" autocomplete="off" style="width:100%;max-width:400px;padding:0.5rem 0.75rem;background:#1a1c1f;border:1px solid #333;border-radius:0.3rem;color:#ddd;font-size:0.9rem;display:block;margin:0 auto 1rem auto">
+<div style="display:flex;gap:0.5rem;margin-bottom:1rem;flex-wrap:wrap;justify-content:center">
+<select id="filterFamily" style="padding:0.4rem 0.6rem;background:#1a1c1f;border:1px solid #333;border-radius:0.3rem;color:#ddd;font-size:0.85rem">
+  <option value="">All Families</option>
+  <option>Beetle</option><option>Construct</option><option>Golem</option><option>Gup</option><option>Imp</option>
+  <option>Jellyfish</option><option>Larva</option><option>Lemurian</option><option>Lunar</option>
+  <option>Mushrum</option><option>Parent</option><option>Void</option><option>Wisp</option>
+</select>
+<select id="filterECat" style="padding:0.4rem 0.6rem;background:#1a1c1f;border:1px solid #333;border-radius:0.3rem;color:#ddd;font-size:0.85rem">
+  <option value="">All Categories</option>
+  <option>IgnoreFallDamage</option><option>Void</option><option>Mechanical</option>
+  <option>ImmuneToGoo</option><option>ImmuneToVoidDeath</option><option>HasBackstabImmunity</option>
+  <option>OverheatImmune</option><option>ImmuneToLava</option><option>SprintAnyDirection</option>
+  <option>IgnoreKnockback</option>
+</select>
+<select id="filterEMap" style="padding:0.4rem 0.6rem;background:#1a1c1f;border:1px solid #333;border-radius:0.3rem;color:#ddd;font-size:0.85rem;max-width:200px">
+  <option value="">All Maps</option>
+  <option>Abandoned Aqueduct</option><option>Abyssal Depths</option><option>Aphelian Sanctuary</option>
+  <option>Bulwark's Ambry</option><option>Commencement</option><option>Distant Roost</option>
+  <option>Disturbed Impact</option><option>Gilded Coast</option><option>Golden Dieback</option>
+  <option>Halcyon Shrine</option><option>Helminth Hatchery</option><option>Prime Meridian</option>
+  <option>Rallypoint Delta</option><option>Reformed Altar</option><option>Scorched Acres</option>
+  <option>Shattered Abodes</option><option>Siphoned Forest</option><option>Siren's Call</option>
+  <option>Sky Meadow</option><option>Sulfur Pools</option><option>Sundered Grove</option>
+  <option>The Planetarium</option><option>Titanic Plains</option><option>Treeborn Colony</option>
+  <option>Verdant Falls</option><option>Viscous Falls</option><option>Void Cradle</option>
+  <option>Void Fields</option><option>Void Locus</option><option>Void Seed</option>
+  <option>Wetland Aspect</option><option>A Moment, Whole</option>
+</select>
+</div>
+<div id="content"></div>
+
+<div class="modal-overlay" id="modal"><div class="modal"><span class="close" id="modalClose">✕</span><div id="modalBody"></div></div></div>
+
+<script>
+(async () => {
+  const res = await fetch("/ror2-data/enemies.json?t=" + Date.now());
+  const data = await res.json();
+  document.getElementById("count").textContent = data.count + " enemies loaded";
+  const itemsRes = await fetch("/ror2-data/items.json?t=" + Date.now());
+  const itemsData = await itemsRes.json();
+  const itemMap = {};
+  for (const item of itemsData.items) {
+    itemMap[item.internal_name] = item;
+  }
+
+  function esc(s) { return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+
+  // group by type
+  const groups = {};
+  for (const e of data.enemies) {
+    const t = e.type || "Other";
+    (groups[t] = groups[t] || []).push(e);
+  }
+
+  const content = document.getElementById("content");
+  const order = ["Monster", "Boss", "Ally", "Misc"];
+  for (const type of order) {
+    let enemies = groups[type];
+    enemies.sort((a, b) => a.name.localeCompare(b.name));
+    let html = `<div class="type-group"><h2>${esc(type)} <span>${enemies.length}</span></h2><div class="enemies-grid">`;
+    for (const e of enemies) {
+      const img = e.internal_name ? `<img src="/images/ror2/enemies/${e.internal_name}.png" alt="" loading="lazy" onerror="this.style.display='none'">` : "";
+      html += `<div class="card" data-iname="${esc(e.internal_name)}">${img}<div class="card-body">`;
+      html += `<h3>${esc(e.name)}</h3>`;
+      if (e.extra?.title) html += `<div class="meta"><b>${esc(e.extra.title)}</b></div>`;
+      else html += `<div class="meta">${esc(e.type || "Monster")}</div>`;
+      html += `</div></div>`;
+    }
+    html += `</div></div>`;
+    content.innerHTML += html;
+  }
+
+  // modal
+  const modal = document.getElementById("modal");
+  const modalBody = document.getElementById("modalBody");
+  const modalClose = document.getElementById("modalClose");
+
+  content.addEventListener("click", e => {
+    const card = e.target.closest(".card");
+    if (!card) return;
+    const iname = card.dataset.iname;
+    const enemy = data.enemies.find(i => i.internal_name === iname);
+    if (!enemy) return;
+    showModal(enemy);
+  });
+
+
+  modalClose.onclick = () => modal.classList.remove("open");
+  modal.onclick = e => { if (e.target === e.currentTarget) e.currentTarget.classList.remove("open"); };
+  document.addEventListener("keydown", e => { if (e.key === "Escape") modal.classList.remove("open"); });
+
+  function applyEFilters() {
+    const q = document.getElementById("search").value.toLowerCase().trim();
+    const familyFilter = document.getElementById("filterFamily").value;
+    const catFilter = document.getElementById("filterECat").value;
+    const mapFilter = document.getElementById("filterEMap").value;
+    for (const e of data.enemies) {
+      const card = content.querySelector(`[data-iname="${esc(e.internal_name)}"]`);
+      if (!card) continue;
+      const textMatch = !q || e.name.toLowerCase().includes(q) || e.internal_name.includes(q);
+      const familyMatch = !familyFilter || e.extra?.family === familyFilter;
+      const catMatch = !catFilter || (e.extra?.category && e.extra.category.split(" ").includes(catFilter));
+      const mapMatch = !mapFilter || (e.extra?.maps && e.extra.maps.includes(mapFilter));
+      card.style.display = (textMatch && familyMatch && catMatch && mapMatch) ? "" : "none";
+    }
+    content.querySelectorAll(".type-group").forEach(g => {
+      const visible = [...g.querySelectorAll(".card")].some(c => c.style.display !== "none");
+      g.style.display = visible ? "" : "none";
+    });
+  }
+  document.getElementById("search").addEventListener("input", applyEFilters);
+  document.getElementById("filterFamily").addEventListener("change", applyEFilters);
+  document.getElementById("filterECat").addEventListener("change", applyEFilters);
+  document.getElementById("filterEMap").addEventListener("change", applyEFilters);
+
+  function showModal(e) {
+    let h = `<img src="/images/ror2/enemies/${e.internal_name}.png" alt="" onerror="this.style.display='none'">`;
+    h += `<h2>${esc(e.name)}</h2>`;
+    if (e.extra?.title) h += `<div class="sub">${esc(e.extra.title)}</div>`;
+    else h += `<div class="sub">Monster</div>`;
+
+    h += `<div class="row" style="margin-bottom:0.5rem"><b>ID:</b> ${esc(e.internal_name)}</div>`;
+    // combine stats + extra into one Details section
+    const detailItems = [];
+    for (const [k, v] of Object.entries(e.stats || {})) {
+      detailItems.push([k.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase()), v]);
+    }
+    for (const [k, v] of Object.entries(e.extra || {})) {
+      if (k === "maps" || k === "title" || (k === "misc" && v === true)) continue;
+      if (k === "drops") continue;
+      const val = Array.isArray(v) ? v.join(", ") : String(v);
+      detailItems.push([k, val]);
+    }
+    // drops link (uses items data)
+    const dropIname = e.extra?.drops;
+    const dropItem = dropIname ? itemMap[dropIname] : null;
+    if (dropItem) {
+      const r = dropItem.rarity.startsWith("Boss(") ? "Boss" : dropItem.rarity;
+      const colors = {"Equipment":"#d98830","Lunar Equipment":"#42dbf3","Elite Equipment":"#f09f38","Common":"#dadde2","Uncommon":"#75c440","Legendary":"#f65a47","Boss":"#c7d724","Lunar":"#3fd6f3","Void":"#d785cf","Other":"#888"};
+      const c = colors[r] || "#888";
+      h += `<div class="content"><b>Drops:</b> <span class="drops-link" data-iname="${esc(dropIname)}" style="cursor:pointer;display:inline-flex;align-items:center;flex-wrap:wrap;gap:0.3rem;color:${c};transition:filter 0.15s" onmouseover="this.style.filter='brightness(1.3)'" onmouseout="this.style.filter=''">${esc(dropItem.name)} <img src="/images/ror2/items/${esc(dropIname)}.png" alt="" style="width:20px;height:20px;object-fit:contain;border-radius:0.15rem;flex-shrink:0" onerror="this.style.display='none'"></span></div>`;
+    }
+    if (detailItems.length) {
+      h += `<div class="section"><h3>Details</h3>`;
+      for (const [k, v] of detailItems) {
+        h += `<div class="content"><b>${esc(k)}:</b> ${esc(v)}</div>`;
+      }
+      h += `</div>`;
+    }
+    if (e.extra?.maps?.length) {
+      h += `<div class="section"><h3>Maps</h3><p class="content">${esc(e.extra.maps.join(", "))}</p></div>`;
+    }
+    if (e.lore) h += `<div class="section"><h3>Lore</h3><pre class="content" style="background:#40515d;border:1px solid #4e6273;border-radius:0.3rem;font-family:inherit;white-space:pre-wrap;overflow-x:auto;margin:0;padding:0.6rem">${esc(e.lore)}</pre></div>`;
+    modalBody.innerHTML = h;
+
+    // click drops links to open item page
+    modalBody.querySelectorAll(".drops-link").forEach(el => {
+      el.onclick = e => {
+        e.stopPropagation();
+        window.open("/items", "_blank");
+      };
+    });
+
+    modal.classList.add("open");
+  }
+})();
+</script>
+</body>
+</html>
