@@ -1,8 +1,7 @@
 const API = "https://api.crygup.com/fishie";
 const CLIENT_ID = "876391494485950504";
 const REDIRECT = "https://crygup.com/dashboard";
-
-function esc(s) { return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+function esc(s) { return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/'/g,"&#39;"); }
 
 // OAuth
 const params = new URLSearchParams(window.location.search);
