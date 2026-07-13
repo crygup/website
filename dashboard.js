@@ -3,7 +3,6 @@ const CLIENT_ID = "876391494485950504";
 const REDIRECT = "https://crygup.com/dashboard";
 function esc(s) { return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/'/g,"&#39;"); }
 
-// OAuth
 const params = new URLSearchParams(window.location.search);
 const code = params.get("code");
 
@@ -38,7 +37,6 @@ function showLogin() {
   document.getElementById("dashboardView").classList.remove("active");
 }
 
-// ── Tab switching ──────────────────────────────────────
 document.getElementById("dashboardTabs").addEventListener("click", function(e) {
   var btn = e.target.closest(".dashboard-tab");
   if (!btn) return;
@@ -48,7 +46,6 @@ document.getElementById("dashboardTabs").addEventListener("click", function(e) {
   document.getElementById("tab" + btn.dataset.tab.charAt(0).toUpperCase() + btn.dataset.tab.slice(1)).classList.add("active");
 });
 
-// ── Init ───────────────────────────────────────────────
 async function initDashboard() {
   document.getElementById("loginView").style.display = "none";
   document.getElementById("dashboardView").classList.add("active");
@@ -56,7 +53,6 @@ async function initDashboard() {
   var user = JSON.parse(localStorage.getItem("fishie_user") || "{}");
   var token = localStorage.getItem("fishie_token");
 
-  // User header with fishie user since
   var avatar = user.id ? "https://cdn.discordapp.com/avatars/" + user.id + "/" + user.avatar + ".png" : "";
   var headerHtml = avatar ? '<img src="' + avatar + '" alt="" style="width:48px;height:48px;border-radius:50%">' : "";
   headerHtml += '<div class="user-info"><h2>' + esc(user.global_name || user.username || "Unknown") + '</h2>';
@@ -66,7 +62,6 @@ async function initDashboard() {
   document.getElementById("userHeader").innerHTML = headerHtml + '<button class="logout-btn" id="logoutBtn">Logout</button>';
   document.getElementById("logoutBtn").onclick = function() { localStorage.removeItem("fishie_token"); localStorage.removeItem("fishie_user"); location.reload(); };
 
-  // Fetch first command date
   try {
     var fcRes = await fetch(API + "/user/" + user.id + "/first-command");
     var fcData = await fcRes.json();
@@ -76,12 +71,10 @@ async function initDashboard() {
     }
   } catch (_) {}
 
-  // Load content
   await loadUserSettings(user.id, token);
   await loadGuilds(user.id, token);
 }
 
-// ── User Settings ──────────────────────────────────────
 async function loadUserSettings(userId, token) {
   var div = document.getElementById("userSettingsContent");
   try {
@@ -150,7 +143,6 @@ async function loadUserSettings(userId, token) {
   } catch (e) { console.error("User settings error:", e); div.innerHTML = '<p style="color:#64748b">Failed to load settings.</p>'; }
 }
 
-// ── Toggle user tracking opt-out ───────────────────────
 async function togUserOpt(userId, item, enable) {
   var token = localStorage.getItem("fishie_token");
   try {
@@ -166,7 +158,6 @@ async function togUserOpt(userId, item, enable) {
   } catch (_) {}
 }
 
-// ── Save all accounts ──────────────────────────────────
 async function saveAllAccounts(userId) {
   var token = localStorage.getItem("fishie_token");
   var svcs = ["lastfm","steam","osu","roblox","genshin","letterboxd"];
@@ -181,7 +172,6 @@ async function saveAllAccounts(userId) {
   });
 }
 
-// ── Guild list ─────────────────────────────────────────
 async function loadGuilds(userId, token) {
   try {
     var res = await fetch(API + "/user/" + userId + "/guilds", { headers: { "Authorization": "Bearer " + token } });
@@ -215,7 +205,6 @@ function selectGuild(guildId) {
   loadGuildSettings(guildId, localStorage.getItem("fishie_token"));
 }
 
-// ── Custom dropdown toggle ────────────────────────────
 document.addEventListener("click", function(e) {
   var dd = document.getElementById("guildDropdown");
   var header = document.getElementById("guildDropdownHeader");
@@ -226,7 +215,6 @@ document.addEventListener("click", function(e) {
   } else if (!dd.contains(e.target)) {
     dd.classList.remove("open");
   }
-  // Handle item click
   var item = e.target.closest(".guild-dropdown-item");
   if (item && list && list.contains(item)) {
     var id = item.dataset.id;
@@ -239,14 +227,13 @@ document.addEventListener("click", function(e) {
   }
 });
 
-// ── Guild Settings ─────────────────────────────────────
+
 var _guildChannels = {};
 
 async function loadGuildSettings(guildId, token) {
   var div = document.getElementById("guildSettingsContent");
   div.innerHTML = '<p style="color:#64748b">Loading...</p>';
   try {
-    // Get guild info from the stored guilds
     var user = JSON.parse(localStorage.getItem("fishie_user") || "{}");
     var [gRes, setRes, optRes, preRes] = await Promise.all([
       fetch(API + "/user/" + user.id + "/guilds", { headers: { "Authorization": "Bearer " + token } }),
@@ -278,24 +265,14 @@ async function loadGuildSettings(guildId, token) {
     if (iconUrl) html += '<img src="' + iconUrl + '" alt="" style="width:40px;height:40px;border-radius:50%">';
     html += '<div><div style="font-size:0.95rem;color:#f8fafc;font-weight:600">' + esc(guildName) + '</div><div style="font-size:0.75rem;color:#64748b">ID: ' + guildId + '</div></div>';
     html += '</div>';
-    // Auto-download channel
     html += '<div class="setting-toggle"><div><div class="label">Auto-Download Channel</div><div class="desc">Messages with attachments are auto-forwarded here</div></div><div class="channel-input-group"><input type="text" class="text-input" id="gAutoDl" value="' + (autoDownload || "") + '" placeholder="Channel ID"><button class="btn-primary" onclick="saveGChan(' + "'" + guildId + "'" + ',\'auto_download\')">Save</button></div></div>';
-
-    // Honeypot channel
     html += '<div class="setting-toggle"><div><div class="label">Honeypot Channel</div><div class="desc">Deleted messages are logged here</div></div><div class="channel-input-group"><input type="text" class="text-input" id="gHoneypot" value="' + (honeypot || "") + '" placeholder="Channel ID"><button class="btn-primary" onclick="saveGChan(' + "'" + guildId + "'" + ',\'honeypot\')">Save</button></div></div>';
-
-    // Pinboard channel
     html += '<div class="setting-toggle"><div><div class="label">Pinboard Channel</div><div class="desc">Pinned message archives go here</div></div><div class="channel-input-group"><input type="text" class="text-input" id="gPinboard" value="' + (pinboard || "") + '" placeholder="Channel ID"><button class="btn-primary" onclick="saveGChan(' + "'" + guildId + "'" + ',\'pinboard\')">Save</button></div></div>';
-
-    html += '</div>'; // close settings-group
-
-    // Toggles
+    html += '</div>';
     html += '<div class="settings-group"><h4>Toggles</h4>';
     html += '<div class="setting-toggle"><div class="label">Auto Reactions</div><div class="toggle ' + (autoReactions ? "on" : "") + '" onclick="var t=this;t.classList.toggle(\'on\');togGSet(' + "'" + guildId + "'" + ',\'auto_reactions\',t.classList.contains(\'on\'))"></div></div>';
     html += '<div class="setting-toggle"><div class="label">PokéTwo Auto-Solve</div><div class="desc">Auto-solve PokéTwo spawns</div><div class="toggle ' + (poketwo ? "on" : "") + '" onclick="var t=this;t.classList.toggle(\'on\');togGSet(' + "'" + guildId + "'" + ',\'poketwo\',t.classList.contains(\'on\'))"></div></div>';
     html += '</div>';
-
-    // Prefixes
     html += '<div class="settings-group"><h4>Custom Prefixes</h4>';
     html += '<div class="prefix-list" id="prefixList">';
     if (prefixes.length === 0) {
@@ -309,7 +286,6 @@ async function loadGuildSettings(guildId, token) {
     html += '<div style="display:flex;gap:0.3rem"><input type="text" class="text-input" id="newPrefix" placeholder="Prefix (max 10 chars)" style="flex:1"><button class="btn-primary" onclick="addPrefix(' + "'" + guildId + "'" + ')">Add</button></div>';
     html += '</div>';
 
-    // Tracking opt-out
     html += '<div class="settings-group"><h4>Tracking Opt-Out</h4>';
     var tItems = [{k:"name",l:"Server name logging"},{k:"icon",l:"Server icon logging"}];
     for (var ti = 0; ti < tItems.length; ti++) {
@@ -320,7 +296,7 @@ async function loadGuildSettings(guildId, token) {
     html += '</div>';
 
 
-    html += '</div>'; // close card
+    html += '</div>';
 
     div.innerHTML = html;
   } catch (e) {
@@ -329,7 +305,6 @@ async function loadGuildSettings(guildId, token) {
   }
 }
 
-// ── Guild helpers ──────────────────────────────────────
 async function saveGChan(guildId, key) {
   var token = localStorage.getItem("fishie_token");
   var el = document.getElementById({auto_download:"gAutoDl",honeypot:"gHoneypot",pinboard:"gPinboard"}[key]);

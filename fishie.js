@@ -111,7 +111,6 @@ async function renderCommands() {
       });
     });
     
-    // Filter dropdown
     const filterBtn = document.getElementById("cmd-filter-btn");
     const filterDropdown = document.getElementById("cmd-filter-dropdown");
     filterBtn.onclick = (e) => {
