@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>crygup · dashboard</title>
+  <link rel="stylesheet" href="style.css?s=15">
+  <link rel="stylesheet" href="discord.css?s=24">
+  <link rel="icon" type="image/x-icon" href="images/pfp.ico">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <style>
+body { font-family: system-ui, sans-serif; background: #212327; color: #e2e8f0; padding: 2rem; text-align: center; }
+h1 { color: #f8fafc; margin-bottom: 0.5rem; }
+
+.login-card { background: #1a1d20; border-radius: 0.4rem; padding: 2rem; max-width: 400px; margin: 3rem auto; }
+.login-card h2 { color: #f8fafc; margin-bottom: 1rem; }
+.login-card p { color: #94a3b8; font-size: 0.9rem; line-height: 1.5; margin-bottom: 1.5rem; }
+.login-btn { display: inline-block; padding: 0.75rem 2rem; background: #5865f2; color: #fff; border-radius: 0.3rem; text-decoration: none; font-weight: 600; font-size: 0.95rem; transition: background 0.15s; cursor: pointer; user-select: none; -webkit-user-select: none; }
+.login-btn:hover { background: #4752c4; }
+
+.dashboard { display: none; max-width: 800px; margin: 0 auto; text-align: left; width: 100%; }
+.dashboard.active { display: block; min-width: 0; box-sizing: border-box; }
+
+.user-header .user-info h2 { color: #f8fafc; font-size: 1.1rem; }
+.user-header .user-info .sub { color: #94a3b8; font-size: 0.78rem; line-height: 1.5; }
+.user-header .user-info { flex: 1; text-align: left; }
+.user-header { display: flex; align-items: center; gap: 1rem; padding: 1rem; background: #1a1d20; border-radius: 0.4rem; margin-bottom: 1.5rem; width: 100%; max-width: 100%; box-sizing: border-box; }
+.logout-btn { padding: 0.3rem 0.7rem; background: transparent; border: 1px solid #333; color: #94a3b8; border-radius: 0.25rem; cursor: pointer; font-size: 0.8rem; font-family: inherit; transition: background 0.15s; }
+.logout-btn:hover { background: #2a2c2f; color: #cbd5e1; }
+
+/* Tab bar */
+.dashboard-tabs { display: flex; justify-content: center; gap: 0; border-bottom: 1px solid #1f292a; margin-bottom: 1rem; }
+.dashboard-tab { padding: 0.5rem 1rem; font-size: 0.88rem; font-family: inherit; color: #94a3b8; background: none; border: none; border-bottom: 2px solid transparent; cursor: pointer; transition: color 0.15s, border-color 0.15s; }
+.dashboard-tab:hover { color: #cbd5e1; }
+.dashboard-tab.active { color: #f8fafc; border-bottom-color: #5865f2; }
+
+.tab-panel { display: none; }
+.tab-panel.active { display: block; }
+
+.section { margin-bottom: 1.5rem; }
+.section h3 { color: #e2e8f0; font-size: 0.95rem; margin-bottom: 0.75rem; padding-bottom: 0.35rem; border-bottom: 1px solid #4a4b56; }
+
+.card { background: #1a1d20; border-radius: 0.35rem; padding: 0.75rem 1rem; margin-bottom: 0.5rem; overflow: hidden; }
+.card .value { font-size: 0.85rem; color: #cbd5e1; }
+.card .row { display: flex; justify-content: space-between; align-items: center; padding: 0.3rem 0; }
+.card .row + .row { border-top: 1px solid #2a2c2f; }
+.server-select select:focus { outline: none; border-color: #5865f2; }
+
+.back-btn { background: transparent; border: 1px solid #333; color: #94a3b8; padding: 0.3rem 0.7rem; border-radius: 0.25rem; cursor: pointer; font-size: 0.8rem; font-family: inherit; margin-bottom: 0.75rem; transition: background 0.15s; }
+.back-btn:hover { background: #2a2c2f; color: #cbd5e1; }
+
+.btn-primary { padding: 0.35rem 0.75rem; background: #4752c4; color: #fff; border: none; border-radius: 0.25rem; cursor: pointer; font-size: 0.8rem; font-family: inherit; transition: background 0.15s; }
+.btn-primary:hover { background: #5865f2; }
+
+.guild-dropdown { position: relative; width: 100%; max-width: 400px; margin: 0 auto 1rem; text-align: left; font-family: inherit; }
+.guild-dropdown-header { display: flex; justify-content: space-between; align-items: center; padding: 0.5rem 0.75rem; background: #1a1d20; border: 1px solid #333; border-radius: 0.3rem; color: #e2e8f0; font-size: 0.9rem; cursor: pointer; }
+.guild-dropdown-header:hover { border-color: #5865f2; }
+.guild-dropdown-arrow { transition: transform 0.15s; color: #64748b; }
+.guild-dropdown-list { display: none; position: absolute; top: 100%; left: 0; right: 0; background: #1a1d20; border: 1px solid #333; border-top: none; border-radius: 0 0 0.3rem 0.3rem; max-height: 400px; overflow-y: auto; z-index: 500; }
+.guild-dropdown.open .guild-dropdown-list { display: block; }
+.guild-dropdown-item { display: flex; align-items: center; gap: 0.6rem; padding: 0.5rem 0.75rem; cursor: pointer; transition: background 0.15s; }
+.guild-dropdown-item:hover { background: #2a2c2f; }
+.guild-dropdown-item img { width: 30px; height: 30px; border-radius: 50%; flex-shrink: 0; }
+.guild-dropdown-item .item-info { display: flex; flex-direction: column; }
+.guild-dropdown-item .item-name { font-size: 0.85rem; color: #cbd5e1; }
+.guild-dropdown-item .item-sub { font-size: 0.72rem; color: #64748b; }
+.server-select { display: none; }
+.settings-group { margin-bottom: 1rem; }
+.settings-group h4 { color: #e2e8f0; font-size: 0.85rem; font-weight: 600; margin-bottom: 0.5rem; }
+.settings-group .hint { font-size: 0.75rem; color: #64748b; margin-bottom: 0.5rem; }
+
+.setting-toggle { display: flex; justify-content: space-between; align-items: center; padding: 0.5rem 0; }
+.setting-toggle + .setting-toggle { border-top: 1px solid #2a2c2f; }
+.setting-toggle .label { font-size: 0.82rem; color: #cbd5e1; }
+.setting-toggle .desc { font-size: 0.72rem; color: #64748b; }
+
+.toggle { width: 36px; height: 20px; background: #2a2c2f; border-radius: 10px; cursor: pointer; position: relative; transition: background 0.15s; flex-shrink: 0; }
+.toggle.on { background: #5865f2; }
+.toggle::after { content: ""; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; background: #94a3b8; border-radius: 50%; transition: left 0.15s; }
+.toggle.on::after { left: 18px; background: #e2e8f0; }
+
+.text-input { width: 100%; padding: 0.4rem 0.6rem; background: #111; border: 1px solid #333; border-radius: 0.25rem; color: #e2e8f0; font-size: 0.8rem; font-family: inherit; }
+.text-input:focus { outline: none; border-color: #5865f2; }
+
+.prefix-list { display: flex; flex-wrap: wrap; gap: 0.3rem; margin-bottom: 0.4rem; }
+.prefix-tag { display: inline-flex; align-items: center; gap: 0.3rem; background: #2a2c2f; padding: 0.15rem 0.5rem; border-radius: 0.2rem; font-size: 0.8rem; color: #cbd5e1; }
+.prefix-tag .remove { cursor: pointer; color: #ef4444; font-size: 0.75rem; font-weight: bold; }
+
+.channel-input-group { display: flex; gap: 0.5rem; align-items: center; }
+.channel-input-group .text-input { flex: 1; min-width: 100px; }
+  </style>
+</head>
+<body>
+  <h1>Fishie Dashboard</h1>
+
+  <div class="login-card" id="loginView">
+    <h2>Welcome</h2>
+    <p>Log in with Discord to manage your settings, view reminders, and configure guild options.</p>
+    <div class="login-btn" id="loginBtn">Login with Discord</div>
+  </div>
+
+  <div class="dashboard" id="dashboardView">
+    <div class="user-header" id="userHeader">
+      <img id="userAvatar" src="" alt="" style="display:none;width:48px;height:48px;border-radius:50%">
+      <div class="user-info">
+        <h2 id="userName"></h2>
+        <div class="sub" id="userSub"></div>
+      </div>
+      <button class="logout-btn" id="logoutBtn">Logout</button>
+    </div>
+
+    <nav class="dashboard-tabs" id="dashboardTabs">
+      <button class="dashboard-tab active" data-tab="user">User Settings</button>
+      <button class="dashboard-tab" data-tab="guild">Guild Settings</button>
+      <button class="dashboard-tab" data-tab="data">Data Deletion</button>
+    </nav>
+
+        
+
+
+    <div class="tab-panel active" id="tabUser">
+      <div id="userSettingsContent"></div>
+    </div>
+
+    <div class="tab-panel" id="tabGuild">
+      <div class="guild-dropdown" id="guildDropdown">
+        <div class="guild-dropdown-header" id="guildDropdownHeader">
+          <span id="guildDropdownText">Select a server...</span>
+          <span class="guild-dropdown-arrow">▾</span>
+        </div>
+        <div class="guild-dropdown-list" id="guildDropdownList"></div>
+      </div>
+      <div id="guildSettingsContent"></div>
+    </div>
+
+    <div class="tab-panel" id="tabData">
+      <div class="card">
+        <div class="settings-group">
+          <h4>Data Deletion</h4>
+          <p style="color:#94a3b8;font-size:0.85rem;line-height:1.5;margin:0">If you would like to delete your user data or a server's data, go to the <a href="/discord" target="_blank" style="color:#5865f2;text-decoration:none">Discord Tools page</a> where you can choose exactly what data to delete.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="dashboard.js?s=9"></script>
+</body>
+</html>
