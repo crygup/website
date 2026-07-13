@@ -59,29 +59,178 @@ async function renderStats() {
   } catch { content.innerHTML = '<p class="fishie-loading">Failed to load stats.</p>'; }
 }
 
+
 async function renderCommands() {
   content.innerHTML = '<p class="fishie-loading">Loading…</p>';
   try {
     const res = await fetch(`${FISHIE_API}/commands`);
     const data = await res.json();
+    const allCmds = data.commands;
     const cats = {};
-    for (const cmd of data.commands) {
+    for (const cmd of allCmds) {
       const cat = cmd.category || "Other";
       if (!cats[cat]) cats[cat] = [];
       cats[cat].push(cmd);
     }
+    const catNames = Object.keys(cats).sort((a, b) => cats[b].length - cats[a].length);
+    
     let html = '<div class="fishie-commands">';
-    for (const [cat, cmds] of Object.entries(cats)) {
-      for (const c of cmds) {
-        const hasParams = c.params && c.params.length;
-        const paramText = hasParams ? `<span class="cmd-params">${c.params.map(p => `${escapeHtml(p.name)} (${p.required})`).join(", ")}</span>` : "";
-        html += `<div class="cmd-item"><span class="cmd-name cmd-hover" data-tip="${c.aliases ? 'Aliases: ' + escapeHtml(c.aliases) : ''}">${escapeHtml(c.name)}</span><span class="cmd-desc cmd-hover" data-tip="${escapeHtml(c.description)}">${escapeHtml(c.description)}</span></div>`;
+    html += `<div style="display:flex;gap:0.4rem;align-items:center;justify-content:center;margin:0 auto 1rem;max-width:400px;width:100%">
+      <input type="search" id="cmd-search" placeholder="Search commands..." autocomplete="off" style="flex:1;padding:0.45rem 0.7rem;background:#1a1c1f;border:none;border-radius:0.3rem;color:#ddd;font-size:0.85rem;outline:none">
+      <div style="position:relative">
+        <img src="images/filter.svg" alt="Filter" id="cmd-filter-btn" style="width:30px;height:30px;cursor:pointer;opacity:0.6;filter:brightness(0) invert(1);transition:opacity 0.15s;padding:0.4rem" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=0.6">
+        <div id="cmd-filter-dropdown" style="display:none;position:absolute;top:100%;right:0;background:#1a1c1f;padding:0.4rem;z-index:100;min-width:140px">
+          <label style="display:flex;align-items:center;gap:0.3rem;padding:0.25rem 0;cursor:pointer;font-size:0.78rem;color:#94a3b8"><input type="checkbox" value="slash" class="cmd-check"> Slash only</label>
+          <label style="display:flex;align-items:center;gap:0.3rem;padding:0.25rem 0;cursor:pointer;font-size:0.78rem;color:#94a3b8"><input type="checkbox" value="text" class="cmd-check"> Text only</label>
+        </div>
+      </div>
+    </div>`;
+    html += `<div class="cmd-tabs">`;
+    for (const cat of catNames) {
+      html += `<button class="cmd-tab${cat === catNames[0] ? ' active' : ''}" data-cat="${escapeHtml(cat)}">${escapeHtml(cat)} (${cats[cat].length})</button>`;
+    }
+    html += '</div>';
+    for (const cat of catNames) {
+      cats[cat].sort((a, b) => a.name.localeCompare(b.name));
+      html += `<div class="cmd-panel${cat === catNames[0] ? ' active' : ''}" data-cat="${escapeHtml(cat)}"><div class="cmd-grid">`;
+      for (const c of cats[cat]) {
+        html += renderCmdCard(c);
       }
-      html += '</div>';
+      html += '</div></div>';
     }
     html += '</div>';
     content.innerHTML = html;
+    
+    content.querySelectorAll(".cmd-tab").forEach(btn => {
+      btn.addEventListener("click", () => {
+        content.querySelectorAll(".cmd-tab").forEach(b => b.classList.remove("active"));
+        btn.classList.add("active");
+        content.querySelectorAll(".cmd-panel").forEach(p => p.classList.remove("active"));
+        const panel = content.querySelector(`.cmd-panel[data-cat="${btn.dataset.cat}"]`);
+        if (panel) panel.classList.add("active");
+      });
+    });
+    
+    // Filter dropdown
+    const filterBtn = document.getElementById("cmd-filter-btn");
+    const filterDropdown = document.getElementById("cmd-filter-dropdown");
+    filterBtn.onclick = (e) => {
+      e.preventDefault();
+      filterDropdown.style.display = filterDropdown.style.display === "none" ? "block" : "none";
+    };
+    document.addEventListener("click", (e) => {
+      if (!filterBtn.contains(e.target) && !filterDropdown.contains(e.target)) {
+        filterDropdown.style.display = "none";
+      }
+      const copyBtn = e.target.closest(".cmd-copy");
+      if (copyBtn) {
+        const text = copyBtn.dataset.copy;
+        if (text) {
+          navigator.clipboard.writeText(text).then(() => {
+            copyBtn.classList.add("copied");
+            setTimeout(() => copyBtn.classList.remove("copied"), 1200);
+          }).catch(() => {});
+        }
+      }
+    });
+    
+    const searchInput = document.getElementById("cmd-search");
+    filterDropdown.addEventListener("change", () => filterCmds());
+    searchInput.addEventListener("input", () => filterCmds());
+    
+    function getActiveFilters() {
+      const active = new Set();
+      filterDropdown.querySelectorAll(".cmd-check:checked").forEach(cb => active.add(cb.value));
+      return active;
+    }
+    
+    function filterCmds() {
+      const q = searchInput.value.toLowerCase().trim();
+      const activeFilters = getActiveFilters();
+      const hasType = activeFilters.has("slash") || activeFilters.has("text");      const container = content.querySelector(".cmd-tabs").parentNode;
+      const oldResults = container.querySelector(".cmd-search-results");
+      const panels = content.querySelectorAll(".cmd-panel");
+      const tabs = content.querySelectorAll(".cmd-tab");
+      if (!q) {
+        panels.forEach(p => { p.style.display = ""; });
+        tabs.forEach(t => { t.style.display = ""; });
+        panels.forEach(p => p.classList.remove("active"));
+        tabs.forEach(t => t.classList.remove("active"));
+        tabs[0].classList.add("active");
+        panels[0].classList.add("active");
+        if (oldResults) oldResults.remove();
+        content.querySelectorAll(".cmd-card").forEach(c => {
+          const isHybrid = c.dataset.aliases && c.dataset.aliases.trim().length > 0;
+          if (activeFilters.size === 0) { c.style.display = ""; return; }
+          if (hasType) {
+            const tMatch = (activeFilters.has("slash") && !isHybrid) || (activeFilters.has("text") && isHybrid);
+            if (!tMatch) { c.style.display = "none"; return; }
+          }
+          c.style.display = "";
+        });
+        content.querySelectorAll(".cmd-tab").forEach(tab => {
+          const cat = tab.dataset.cat;
+          const cmds = cats[cat] || [];
+          const count = cmds.filter(c => {
+            if (hasType) {
+              const h = c.aliases && c.aliases.trim().length > 0;
+
+              if (activeFilters.has("slash") && h) return false;
+              if (activeFilters.has("text") && !h) return false;
+            }
+
+            return true;
+          }).length;
+          tab.textContent = `${cat} (${count})`;
+        });
+      } else {
+        tabs.forEach(t => t.style.display = "none");
+        panels.forEach(p => { p.style.display = "none"; p.classList.remove("active"); });
+        if (oldResults) oldResults.remove();
+        let matchHtml = '<div class="cmd-search-results"><div class="cmd-grid">';
+        for (const cmd of allCmds) {
+          const name = cmd.name.toLowerCase();
+          const aliases = (cmd.aliases || "").toLowerCase();
+          const isHybrid = cmd.aliases && cmd.aliases.trim().length > 0;
+          let tMatch2 = !hasType;
+          if (hasType) tMatch2 = (activeFilters.has("slash") && !isHybrid) || (activeFilters.has("text") && isHybrid);
+          if ((name.includes(q) || aliases.includes(q)) && tMatch2) {
+            matchHtml += renderCmdCard(cmd);
+          }
+        }
+        matchHtml += '</div></div>';
+        container.insertAdjacentHTML("beforeend", matchHtml);
+      }
+    }
   } catch { content.innerHTML = '<p class="fishie-loading">Failed to load commands.</p>'; }
+}
+
+function renderCmdCard(c) {
+  const isHybrid = c.aliases && c.aliases.trim().length > 0;
+  const copyText = isHybrid ? "fish " + escapeHtml(c.name) : "/" + escapeHtml(c.name);
+  const hasParams = c.params && c.params.length;
+  let paramText = "";
+  if (hasParams) {
+    paramText = '<span class="cmd-arg-title">Arguments</span>';
+    paramText += c.params.filter(p => p.name).map(p => {
+      const bracket = p.required === "required" ? "&lt;" : "[";
+      const close = p.required === "required" ? "&gt;" : "]";
+      let text = bracket + escapeHtml(p.name) + close;
+      if (p.default || p.default_value) text += " (default: " + escapeHtml(String(p.default || p.default_value)) + ")";
+      return '<span class="cmd-arg">' + text + '</span>';
+    }).join(" ");
+  }
+  const esc = escapeHtml;
+  return '<div class="cmd-card" data-cmd="' + esc(c.name) + '" data-aliases="' + esc(c.aliases || "") + '">'
+    + '<div class="cmd-head">'
+    + '<span class="cmd-name" title="' + esc(c.name) + '">' + esc(c.name) + '</span>'
+    + '<button class="cmd-copy" data-copy="' + copyText + '" title="Copy"><img src="images/copy-icon.svg" alt="" class="cmd-copy-icon"></button>'
+    + '</div>'
+    + '<div class="cmd-body">'
+    + '<div class="cmd-desc">' + (esc(c.description) || "No description yet...") + '</div>'
+    + (hasParams ? '<div class="cmd-params">' + paramText + '</div>' : "")
+    + '</div>'
+    + '</div>';
 }
 
 function fmt(n) { return n ? n.toLocaleString() : "0"; }

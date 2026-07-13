@@ -47,7 +47,7 @@ select optgroup option { color: #ddd; padding-left: 0.5rem; }
   <div style="background:#1a1c1f;border-radius:0.5rem;padding:2rem;max-width:500px;text-align:center">
     <h2 style="color:#f8fafc;margin-bottom:0.75rem">Note</h2>
     <p style="color:#94a3b8;line-height:1.6;margin-bottom:1rem">This page works but is no longer maintained. Please use <a href="https://riskofrain2.wiki.gg/" style="color:#95cde5" target="_blank">riskofrain2.wiki.gg</a> instead.</p>
-    <button onclick="this.parentElement.parentElement.remove()" style="background:#2a2c2f;border:1px solid #475569;color:#ddd;padding:0.5rem 1.5rem;border-radius:0.3rem;cursor:pointer;font-size:0.9rem;outline:none" onmouseover="this.style.background='#333'" onmouseout="this.style.background='#2a2c2f'">I understand</button>
+    <button onclick="this.parentElement.parentElement.remove()" style="background:#2a2c2f;border:none;color:#ddd;padding:0.5rem 1.5rem;border-radius:0.3rem;cursor:pointer;font-size:0.9rem;outline:none" onmouseover="this.style.background='#333'" onmouseout="this.style.background='#2a2c2f'">I understand</button>
   </div>
 </div>
 <h1>Risk of Rain 2 Items</h1>
@@ -137,7 +137,6 @@ select optgroup option { color: #ddd; padding-left: 0.5rem; }
     content.innerHTML += html;
   }
 
-  // modal open
   content.addEventListener("click", e => {
     const card = e.target.closest(".card");
     if (!card) return;
@@ -147,12 +146,10 @@ select optgroup option { color: #ddd; padding-left: 0.5rem; }
     showModal(item);
   });
 
-  // modal close
   document.getElementById("modalClose").onclick = () => document.getElementById("modal").classList.remove("open");
   document.getElementById("modal").onclick = e => { if (e.target === e.currentTarget) e.currentTarget.classList.remove("open"); };
   document.addEventListener("keydown", e => { if (e.key === "Escape") document.getElementById("modal").classList.remove("open"); });
 
-  // live search filter
   document.getElementById("search").addEventListener("input", applyFilters);
   document.getElementById("filterRarity").addEventListener("change", applyFilters);
   document.getElementById("filterCategory").addEventListener("change", applyFilters);
@@ -197,7 +194,6 @@ select optgroup option { color: #ddd; padding-left: 0.5rem; }
       h += `</div>`;
     }
 
-    // corruption links
     function corruptLink(iname) {
       const t = data.items.find(i => i.internal_name === iname);
       if (!t) return esc(iname);
@@ -234,7 +230,6 @@ select optgroup option { color: #ddd; padding-left: 0.5rem; }
 
     b.innerHTML = h;
 
-    // click corruption links to navigate
     b.querySelectorAll(".corrupt-link").forEach(el => {
       el.onclick = e => {
         e.stopPropagation();
@@ -244,7 +239,6 @@ select optgroup option { color: #ddd; padding-left: 0.5rem; }
       };
     });
 
-    // click boss drop links to open enemies page
     b.querySelectorAll(".boss-link").forEach(el => {
       el.onclick = e => {
         e.stopPropagation();

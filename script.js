@@ -437,8 +437,8 @@ function renderNowPlaying(track, trackInfo, totalScrobbles) {
     : `Last Played &middot; ${timeAgo(track.playedAt)}`;
 
   const playsLine = [
-    trackPlays ? `${formatCount(trackPlays)} plays` : "",
-    totalScrobbles ? `${formatCount(totalScrobbles)} total` : "",
+    trackPlays ? `${formatCount(trackPlays)} track plays` : "",
+    totalScrobbles ? `${formatCount(totalScrobbles)} total plays` : "",
   ].filter(Boolean).join(" · ");
 
   const cover = track.cover

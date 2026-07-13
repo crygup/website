@@ -44,7 +44,7 @@ h1 { color: #f8fafc; margin-bottom: 0.5rem; }
   <div style="background:#1a1c1f;border-radius:0.5rem;padding:2rem;max-width:500px;text-align:center">
     <h2 style="color:#f8fafc;margin-bottom:0.75rem">Note</h2>
     <p style="color:#94a3b8;line-height:1.6;margin-bottom:1rem">This page works but is no longer maintained. Please use <a href="https://riskofrain2.wiki.gg/" style="color:#95cde5" target="_blank">riskofrain2.wiki.gg</a> instead.</p>
-    <button onclick="this.parentElement.parentElement.remove()" style="background:#2a2c2f;border:1px solid #475569;color:#ddd;padding:0.5rem 1.5rem;border-radius:0.3rem;cursor:pointer;font-size:0.9rem;outline:none" onmouseover="this.style.background='#333'" onmouseout="this.style.background='#2a2c2f'">I understand</button>
+    <button onclick="this.parentElement.parentElement.remove()" style="background:#2a2c2f;border:none;color:#ddd;padding:0.5rem 1.5rem;border-radius:0.3rem;cursor:pointer;font-size:0.9rem;outline:none" onmouseover="this.style.background='#333'" onmouseout="this.style.background='#2a2c2f'">I understand</button>
   </div>
 </div>
 <h1 style="margin-bottom:0.5rem">Risk of Rain 2 Enemies</h1>
@@ -97,7 +97,6 @@ h1 { color: #f8fafc; margin-bottom: 0.5rem; }
 
   function esc(s) { return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
 
-  // group by type
   const groups = {};
   for (const e of data.enemies) {
     const t = e.type || "Other";
@@ -122,7 +121,6 @@ h1 { color: #f8fafc; margin-bottom: 0.5rem; }
     content.innerHTML += html;
   }
 
-  // modal
   const modal = document.getElementById("modal");
   const modalBody = document.getElementById("modalBody");
   const modalClose = document.getElementById("modalClose");
@@ -172,7 +170,6 @@ h1 { color: #f8fafc; margin-bottom: 0.5rem; }
     else h += `<div class="sub">Monster</div>`;
 
     h += `<div class="row" style="margin-bottom:0.5rem"><b>ID:</b> ${esc(e.internal_name)}</div>`;
-    // combine stats + extra into one Details section
     const detailItems = [];
     for (const [k, v] of Object.entries(e.stats || {})) {
       detailItems.push([k.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase()), v]);
@@ -183,7 +180,6 @@ h1 { color: #f8fafc; margin-bottom: 0.5rem; }
       const val = Array.isArray(v) ? v.join(", ") : String(v);
       detailItems.push([k, val]);
     }
-    // drops link (uses items data)
     const dropIname = e.extra?.drops;
     const dropItem = dropIname ? itemMap[dropIname] : null;
     if (dropItem) {
@@ -205,7 +201,6 @@ h1 { color: #f8fafc; margin-bottom: 0.5rem; }
     if (e.lore) h += `<div class="section"><h3>Lore</h3><pre class="content" style="background:#40515d;border:1px solid #4e6273;border-radius:0.3rem;font-family:inherit;white-space:pre-wrap;overflow-x:auto;margin:0;padding:0.6rem">${esc(e.lore)}</pre></div>`;
     modalBody.innerHTML = h;
 
-    // click drops links to open item page
     modalBody.querySelectorAll(".drops-link").forEach(el => {
       el.onclick = e => {
         e.stopPropagation();

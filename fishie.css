@@ -13,11 +13,6 @@
 .stat-value { font-size: 1.5rem; font-weight: 700; color: #f8fafc; }
 .stat-label { font-size: 0.8rem; color: #64748b; margin-top: 0.25rem; }
 .fishie-commands { max-width: 640px; margin: 0 auto; }
-.cmd-category { margin-bottom: 1.25rem; }
-.cmd-category h3 { color: #336058; font-size: 0.95rem; margin-bottom: 0.4rem; padding-bottom: 0.3rem; border-bottom: 1px solid #4a4b56; }
-.cmd-item { display: flex; justify-content: space-between; align-items: baseline; padding: 0.3rem 0; font-size: 0.85rem; }
-.cmd-name { color: #e2e8f0; font-weight: 600; white-space: nowrap; margin-right: 1rem; max-width: 160px; overflow: hidden; text-overflow: ellipsis; }
-.cmd-desc { color: #94a3b8; text-align: right; max-width: 320px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .fishie-logs { display: flex; gap: 0.5rem; justify-content: center; flex-wrap: wrap; }
 .stat-compact { display: flex; flex-direction: column; align-items: center; padding: 0.5rem 0.75rem; background: #243133; border-radius: 0.25rem; font-size: 0.82rem; color: #e2e8f0; min-width: 90px; }
 .stat-compact strong { font-size: 0.75rem; color: #94a3b8; font-weight: 600; margin-bottom: 0.15rem; }
@@ -66,3 +61,43 @@
 .policy-content li {
   margin: 0.2rem 0;
 }
+
+.cmd-category { margin-bottom: 1.5rem; }
+.cmd-category h3 { color: #e2e8f0; font-size: 1rem; margin-bottom: 0.6rem; padding-bottom: 0.35rem; border-bottom: 1px solid #4a4b56; display: flex; align-items: center; gap: 0.5rem; }
+.cmd-category h3 span { font-size: 0.75rem; color: #64748b; font-weight: 400; }
+.cmd-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 0.5rem; }
+.cmd-card { background: #1a1c1f; border-radius: 0.35rem; padding: 0.8rem 1rem; display: flex; flex-direction: column; height: 160px; overflow: hidden; }
+.cmd-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.35rem; gap: 0.4rem; }
+.cmd-name { font-size: 0.85rem; color: #e2e8f0; background: #2a2c2f; padding: 0.2rem 0.5rem; border-radius: 0.2rem; font-family: "Fira Code", "Cascadia Code", monospace; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 180px; }
+.cmd-desc { font-size: 0.8rem; color: #94a3b8; line-height: 1.4; }
+.cmd-params { margin-top: 0.4rem; font-size: 0.78rem; color: #64748b; display: flex; gap: 0.3rem; flex-wrap: wrap; }
+.cmd-arg { background: #2a2c2f; padding: 0.15rem 0.4rem; border-radius: 0.2rem; }
+.cmd-copy { font-size: 0; padding: 0.25rem; background: transparent; border: none; cursor: pointer; border-radius: 0.2rem; transition: background 0.15s; flex-shrink: 0; }
+.cmd-copy:hover { background: #2a2c2f; }
+.cmd-copy-icon { width: 14px; height: 14px; opacity: 0.7; display: block; filter: brightness(0) invert(1); }
+.cmd-copy:hover .cmd-copy-icon, .cmd-copy.copied .cmd-copy-icon { opacity: 1; }
+
+.cmd-type { font-size: 0.65rem; padding: 0.1rem 0.35rem; border-radius: 0.15rem; background: #2a2c2f; color: #94a3b8; font-weight: 600;  white-space: nowrap; flex-shrink: 0; }
+
+.cmd-tabs { display: flex; gap: 0.4rem; flex-wrap: wrap; margin-bottom: 1rem; justify-content: center; }
+.cmd-tab { padding: 0.35rem 0.75rem; background: #1a1c1f; border: 1px solid #2a2c2f; border-radius: 0.25rem; color: #94a3b8; cursor: pointer; font-size: 0.8rem; font-family: inherit; transition: background 0.15s; }
+.cmd-tab.active { background: #2a2c2f; color: #e2e8f0; border-color: #475569; }
+.cmd-tab:hover { background: #2a2c2f; }
+.cmd-panel.hidden { display: none; }
+.cmd-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 0.5rem; }
+
+.cmd-tabs { display: flex; gap: 0.3rem; flex-wrap: wrap; margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 1px solid #4a4b56; justify-content: center; }
+.cmd-tab { padding: 0.3rem 0.7rem; background: transparent; border: none; color: #94a3b8; font-size: 0.82rem; cursor: pointer; border-radius: 0.2rem; font-family: inherit; transition: all 0.15s; }
+.cmd-tab.active { background: #5865f2; color: #fff; }
+.cmd-tab:hover:not(.active) { background: #2a2c2f; color: #e2e8f0; }
+.cmd-tab span { font-size: 0.7rem; opacity: 0.7; }
+.cmd-panel { display: none; }
+.cmd-panel.active { display: block; }
+.cmd-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.75rem; }
+.cmd-arg-title { font-size: 0.72rem; color: #64748b; font-weight: 600; flex: 0 0 100%; margin-bottom: 0.15rem; }
+.cmd-body { flex: 1; overflow: hidden; min-height: 0; }
+.cmd-desc { font-size: 0.8rem; color: #94a3b8; line-height: 1.4; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 3; line-clamp: 3; -webkit-box-orient: vertical; }
+.cmd-copy { position: relative; }
+.cmd-copy.copied::after { content: "Copied!"; position: absolute; bottom: calc(100% + 4px); left: 50%; transform: translateX(-50%); font-size: 0.65rem; color: #94a3b8; white-space: nowrap; background: #1a1c1f; padding: 0.1rem 0.3rem; border-radius: 0.15rem; animation: fadeOut 1.2s forwards; }
+@keyframes fadeOut { 0% { opacity: 1; } 70% { opacity: 1; } 100% { opacity: 0; } }
+select#cmd-type-filter:hover { border-color: #475569; filter: brightness(1.15); }
