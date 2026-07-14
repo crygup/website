@@ -1,9 +1,13 @@
 import http.server
 import os
 import sys
+from urllib.parse import unquote
+
+from server.logging_utils import get_logger
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
 PORT = int(sys.argv[1]) if len(sys.argv) > 1 else 8080
+logger = get_logger("static")
 
 
 BLOCKED = {
@@ -13,6 +17,9 @@ BLOCKED = {
     "/config",
     "/serve.py",
     "/backup",
+    "/logs",
+    "/api.py",
+    "/logging_utils.py",
     "/test.html",
     "/test",
 }
@@ -23,6 +30,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         super().__init__(*args, directory=ROOT, **kwargs)
 
     def _blocked(self, path: str) -> bool:
+        path = unquote(path)
         for prefix in BLOCKED:
             if path == prefix or path.startswith(prefix + "/"):
                 return True
@@ -61,6 +69,23 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             return
         return super().do_HEAD()
 
+    def log_request(self, code, size="-"):
+        # Never write query strings: OAuth codes, state, and tokens may be in them.
+        path = self.path.split("?", 1)[0]
+        logger.info(
+            "request method=%s path=%s status=%s bytes=%s client=%s",
+            self.command,
+            path,
+            code,
+            size,
+            self.client_address[0],
+        )
+
+    def log_message(self, format, *args):
+        # Keep the default server diagnostics out of stdout while avoiding raw
+        # request lines (which can contain credentials in a query string).
+        logger.warning("server_message=%s", format % args)
+
     def end_headers(self):
         self.send_header("X-Content-Type-Options", "nosniff")
         self.send_header("X-Frame-Options", "DENY")
@@ -80,5 +105,6 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         super().end_headers()
 
 
-print(f"Serving {ROOT} on http://0.0.0.0:{PORT}")
-http.server.HTTPServer(("0.0.0.0", PORT), Handler).serve_forever()
+if __name__ == "__main__":
+    logger.info("server_started root=%s host=0.0.0.0 port=%s", ROOT, PORT)
+    http.server.HTTPServer(("0.0.0.0", PORT), Handler).serve_forever()

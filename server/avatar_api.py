@@ -21,12 +21,14 @@ from discord.ext import commands
 from discord.http import Route
 from discord import gateway, CustomActivity, Intents
 import dotenv
+from logging_utils import get_logger
 
 dotenv.load_dotenv(os.path.join(os.path.dirname(__file__), "config", ".env"))
 
 TOKEN = os.getenv("DISCORD_BOT_TOKEN")
 GUILD_ID = int(os.getenv("DISCORD_GUILD_ID", "0") or "0")
 DB_URL = os.getenv("DATABASE_URL")
+logger = get_logger("avatar")
 
 
 async def identify_mobile(self) -> None:
@@ -107,6 +109,32 @@ app.add_middleware(
 )
 
 
+@app.middleware("http")
+async def log_requests(request, call_next):
+    started = asyncio.get_running_loop().time()
+    client = request.client.host if request.client else "-"
+    try:
+        response = await call_next(request)
+    except Exception:
+        logger.exception(
+            "request method=%s path=%s status=500 duration_ms=%.1f client=%s",
+            request.method,
+            request.url.path,
+            (asyncio.get_running_loop().time() - started) * 1000,
+            client,
+        )
+        raise
+    logger.info(
+        "request method=%s path=%s status=%s duration_ms=%.1f client=%s",
+        request.method,
+        request.url.path,
+        response.status_code,
+        (asyncio.get_running_loop().time() - started) * 1000,
+        client,
+    )
+    return response
+
+
 async def resolve_user_id(query: str) -> int:
     """Accept a raw Discord ID or a username (requires guild)."""
     q = query.strip()
@@ -161,6 +189,11 @@ async def refresh_urls(urls: list[str]) -> list[str]:
                 refreshed_url = item.get("refreshed", "")
                 mapping[orig] = refreshed_url or orig
         except Exception:
+            logger.warning(
+                "Discord attachment URL refresh failed for batch_size=%s",
+                len(batch),
+                exc_info=True,
+            )
             continue
 
     return [mapping.get(u.split("?")[0], u) for u in urls]
@@ -195,6 +228,10 @@ async def get_avatars(
     try:
         fresh_urls = await refresh_urls(urls)
     except Exception:
+        logger.warning(
+            "Discord attachment URL refresh failed; returning cached URLs",
+            exc_info=True,
+        )
         fresh_urls = urls
 
     avatars = [

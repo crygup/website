@@ -4,6 +4,8 @@ set -euo pipefail
 SRC="$(dirname "$(realpath "$0")")"
 WWW="/var/www/crygup"
 API="/opt/avatar-lookup/avatar_api.py"
+LOGGER="/opt/avatar-lookup/logging_utils.py"
+SYSTEMD_DROPIN="/etc/systemd/system/avatar-lookup.service.d/website-logging.conf"
 
 echo "=== Deploying static files -> $WWW"
 sudo cp "$SRC"/*.html "$WWW"/
@@ -16,5 +18,7 @@ sudo nginx -t && sudo systemctl reload nginx
 
 echo "=== Deploying avatar API -> $API"
 sudo cp "$SRC"/server/avatar_api.py "$API"
+sudo install -m 644 "$SRC"/server/logging_utils.py "$LOGGER"
+sudo install -D -m 644 "$SRC"/systemd/avatar-lookup-logging.conf "$SYSTEMD_DROPIN"
+sudo systemctl daemon-reload
 sudo systemctl restart avatar-lookup.service
-

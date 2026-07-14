@@ -18,17 +18,46 @@ import aiohttp
 from fastapi import Body, FastAPI, Header, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
+from server.logging_utils import get_logger
 
 if TYPE_CHECKING:
     from core import Fishie
 
 app = FastAPI(title="Fishie API")
+logger = get_logger("api")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
     allow_methods=["GET", "POST", "DELETE", "OPTIONS"],
     allow_headers=["*"],
 )
+
+
+@app.middleware("http")
+async def log_requests(request: Request, call_next):
+    started = time.perf_counter()
+    client = request.client.host if request.client else "-"
+    try:
+        response = await call_next(request)
+    except Exception:
+        logger.exception(
+            "request method=%s path=%s status=500 duration_ms=%.1f client=%s",
+            request.method,
+            request.url.path,
+            (time.perf_counter() - started) * 1000,
+            client,
+        )
+        raise
+    logger.info(
+        "request method=%s path=%s status=%s duration_ms=%.1f client=%s",
+        request.method,
+        request.url.path,
+        response.status_code,
+        (time.perf_counter() - started) * 1000,
+        client,
+    )
+    return response
+
 
 bot_ref: "Fishie | None" = None
 TABLE_MAP = {
@@ -1283,11 +1312,8 @@ async def add_guild_prefix(
     except HTTPException:
         raise
     except Exception as e:
-        import traceback
-
-        print(f"[API ERROR] add_guild_prefix: {e}", flush=True)
-        traceback.print_exc()
-        raise HTTPException(500, str(e))
+        logger.exception("add_guild_prefix failed")
+        raise HTTPException(500, "Internal server error") from e
 
 
 @app.delete("/guild/{guild_id}/prefixes")
