@@ -1,70 +1,92 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>crygup · discord</title>
-  <link rel="stylesheet" href="style.css?s=13">
-  <link rel="stylesheet" href="discord.css?s=24">
-  <link rel="icon" type="image/x-icon" href="images/pfp.ico">
-</head>
-<body data-page="discord">
-  <header>
-    <h1>Discord Tools</h1>
-  </header>
-  <main>
-    <nav class="tab-bar" id="discord-tabs">
-      <button class="tab-btn active" data-tab="user">User Lookup</button>
-      <button class="tab-btn" data-tab="guild">Server Lookup</button>
-      <button class="tab-btn" data-tab="settings">Settings</button>
-    </nav>
-
-    <section class="tab-panel" id="discord-panel">
-      <form id="search-form">
-        <input type="text" id="search-input" placeholder="Discord ID or username…" autofocus>
-        <button type="submit">Search</button>
-      </form>
-      <div id="login-section"></div>
-
-      <nav class="lookup-subtabs hidden" id="user-subtabs">
-        <button class="subtab-btn active" data-subtab="avatars">Avatars</button>
-        <button class="subtab-btn" data-subtab="usernames">Usernames</button>
-        <button class="subtab-btn" data-subtab="display-names">Display Names</button>
-        <button class="subtab-btn" data-subtab="discrims">Discrims</button>
-      </nav>
-      <nav class="lookup-subtabs hidden" id="guild-subtabs">
-        <button class="subtab-btn active" data-subtab="icons">Icons</button>
-        <button class="subtab-btn" data-subtab="names">Names</button>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>crygup · discord</title>
+    <link rel="stylesheet" href="style.css?s=13" />
+    <link rel="stylesheet" href="discord.css?s=24" />
+    <link rel="icon" type="image/x-icon" href="images/pfp.ico" />
+  </head>
+  <body data-page="discord">
+    <header>
+      <h1>Discord Tools</h1>
+    </header>
+    <main>
+      <nav class="tab-bar" id="discord-tabs">
+        <button class="tab-btn active" data-tab="user">User Lookup</button>
+        <button class="tab-btn" data-tab="guild">Server Lookup</button>
+        <button class="tab-btn" data-tab="settings">Settings</button>
       </nav>
 
-      <div id="delete-all-container"></div>
-      <div id="results-grid"></div>
-      <p id="status"></p>
-      <div id="pagination" class="hidden"></div>
-      <div id="settings-panel" class="hidden"></div>
+      <section class="tab-panel" id="discord-panel">
+        <form id="search-form">
+          <input
+            type="text"
+            id="search-input"
+            placeholder="Discord ID or username…"
+            autofocus
+          />
+          <button type="submit">Search</button>
+        </form>
+        <div id="login-section"></div>
 
-      <p class="invite-banner">Want to track your avatars (and more)? Join the
-        <a href="https://discord.gg/rM9u4MRFBE" target="_blank" rel="noopener"> Discord server</a>
-        or invite the
-        <a href="https://discord.com/oauth2/authorize?client_id=876391494485950504&scope=bot+applications.commands&permissions=138513074240" target="_blank" rel="noopener"> Discord bot</a>
-      </p>
-    </section>
-  </main>
+        <nav class="lookup-subtabs hidden" id="user-subtabs">
+          <button class="subtab-btn active" data-subtab="avatars">
+            Avatars
+          </button>
+          <button class="subtab-btn" data-subtab="usernames">Usernames</button>
+          <button class="subtab-btn" data-subtab="display-names">
+            Display Names
+          </button>
+          <button class="subtab-btn" data-subtab="discrims">Discrims</button>
+        </nav>
+        <nav class="lookup-subtabs hidden" id="guild-subtabs">
+          <button class="subtab-btn active" data-subtab="icons">Icons</button>
+          <button class="subtab-btn" data-subtab="names">Names</button>
+        </nav>
 
-  <div id="modal" class="hidden">
-    <div class="modal-backdrop"></div>
-    <div class="modal-content">
-      <button class="modal-close">&times;</button>
-      <img id="modal-img" src="" alt="">
-      <p id="modal-key"></p>
-      <p id="modal-date"></p>
+        <div id="delete-all-container"></div>
+        <div id="results-grid"></div>
+        <p id="status"></p>
+        <div id="pagination" class="hidden"></div>
+        <div id="settings-panel" class="hidden"></div>
+
+        <p class="invite-banner">
+          Want to track your avatars (and more)? Join the
+          <a
+            href="https://discord.gg/rM9u4MRFBE"
+            target="_blank"
+            rel="noopener"
+          >
+            Discord server</a
+          >
+          or invite the
+          <a
+            href="https://discord.com/oauth2/authorize?client_id=876391494485950504&scope=bot+applications.commands&permissions=138513074240"
+            target="_blank"
+            rel="noopener"
+          >
+            Discord bot</a
+          >
+        </p>
+      </section>
+    </main>
+
+    <div id="modal" class="hidden">
+      <div class="modal-backdrop"></div>
+      <div class="modal-content">
+        <button class="modal-close">&times;</button>
+        <img id="modal-img" src="" alt="" />
+        <p id="modal-key"></p>
+        <p id="modal-date"></p>
+      </div>
     </div>
-  </div>
 
-  <footer>
-    <p>&copy; <span id="year"></span></p>
-  </footer>
-  <script src="script.js?s=3"></script>
-  <script src="discord.js?s=36"></script>
-</body>
+    <footer>
+      <p>&copy; <span id="year"></span></p>
+    </footer>
+    <script src="script.js?s=3"></script>
+    <script src="discord.js?s=36"></script>
+  </body>
 </html>

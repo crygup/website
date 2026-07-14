@@ -7,7 +7,9 @@
   border: none;
   border-radius: 0.2rem;
   cursor: pointer;
-  transition: background 0.15s, color 0.15s;
+  transition:
+    background 0.15s,
+    color 0.15s;
 }
 .small-btn:hover {
   background: #232b2e;
@@ -143,7 +145,7 @@
 .msg-modal-backdrop {
   position: absolute;
   inset: 0;
-  background: rgba(0,0,0,0.5);
+  background: rgba(0, 0, 0, 0.5);
 }
 
 .msg-modal-box {

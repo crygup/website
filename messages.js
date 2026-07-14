@@ -67,7 +67,8 @@ form.addEventListener("submit", async (e) => {
 
     if (!res.ok) {
       const err = await res.json().catch(() => ({}));
-      if (res.status === 429) throw new Error("Please wait a minute before sending another message.");
+      if (res.status === 429)
+        throw new Error("Please wait a minute before sending another message.");
       throw new Error(err.detail || "Failed to send message");
     }
 
@@ -88,7 +89,9 @@ function showModal() {
 function closeModal() {
   modal.classList.add("hidden");
 }
-modal.querySelector(".msg-modal-backdrop").addEventListener("click", closeModal);
+modal
+  .querySelector(".msg-modal-backdrop")
+  .addEventListener("click", closeModal);
 modal.querySelector(".msg-modal-close").addEventListener("click", closeModal);
 document.addEventListener("keydown", (e) => {
   if (e.key === "Escape" && !modal.classList.contains("hidden")) closeModal();

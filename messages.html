@@ -1,55 +1,75 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>crygup · messages</title>
-  <link rel="stylesheet" href="style.css?s=13">
-  <link rel="stylesheet" href="messages.css?s=1">
-  <link rel="icon" type="image/x-icon" href="images/pfp.ico">
-</head>
-<body data-page="messages">
-  <header>
-    <h1>Messages</h1>
-  </header>
-  <main>
-    <section class="tab-panel" id="messages-panel">
-      <p class="messages-hint">Send me a message... :D</p>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>crygup · messages</title>
+    <link rel="stylesheet" href="style.css?s=13" />
+    <link rel="stylesheet" href="messages.css?s=1" />
+    <link rel="icon" type="image/x-icon" href="images/pfp.ico" />
+  </head>
+  <body data-page="messages">
+    <header>
+      <h1>Messages</h1>
+    </header>
+    <main>
+      <section class="tab-panel" id="messages-panel">
+        <p class="messages-hint">Send me a message... :D</p>
 
-      <form id="message-form">
-        <div class="field">
-          <label for="msg-name">Name</label>
-          <div class="name-row">
-            <img id="msg-avatar" class="msg-avatar hidden" src="" alt="">
-            <input type="text" id="msg-name" maxlength="50" placeholder="Your name" required>
-            <button type="button" id="msg-clear" class="small-btn hidden" title="Clear and go anonymous">Clear</button>
+        <form id="message-form">
+          <div class="field">
+            <label for="msg-name">Name</label>
+            <div class="name-row">
+              <img id="msg-avatar" class="msg-avatar hidden" src="" alt="" />
+              <input
+                type="text"
+                id="msg-name"
+                maxlength="50"
+                placeholder="Your name"
+                required
+              />
+              <button
+                type="button"
+                id="msg-clear"
+                class="small-btn hidden"
+                title="Clear and go anonymous"
+              >
+                Clear
+              </button>
+            </div>
+            <span class="char-count" id="name-count">0/50</span>
           </div>
-          <span class="char-count" id="name-count">0/50</span>
-        </div>
 
-        <div class="field">
-          <label for="msg-content">Message</label>
-          <textarea id="msg-content" maxlength="2000" placeholder="Your message…" required></textarea>
-          <span class="char-count" id="content-count">0/2000</span>
-        </div>
+          <div class="field">
+            <label for="msg-content">Message</label>
+            <textarea
+              id="msg-content"
+              maxlength="2000"
+              placeholder="Your message…"
+              required
+            ></textarea>
+            <span class="char-count" id="content-count">0/2000</span>
+          </div>
 
-        <button type="submit" id="msg-submit" class="msg-submit-btn">Send Message</button>
-      </form>
-    </section>
-  </main>
+          <button type="submit" id="msg-submit" class="msg-submit-btn">
+            Send Message
+          </button>
+        </form>
+      </section>
+    </main>
 
-  <div id="msg-modal" class="msg-modal hidden">
-    <div class="msg-modal-backdrop"></div>
-    <div class="msg-modal-box">
-      <p>message sent, thank you</p>
-      <button class="msg-modal-close small-btn">Close</button>
+    <div id="msg-modal" class="msg-modal hidden">
+      <div class="msg-modal-backdrop"></div>
+      <div class="msg-modal-box">
+        <p>message sent, thank you</p>
+        <button class="msg-modal-close small-btn">Close</button>
+      </div>
     </div>
-  </div>
 
-  <footer>
-    <p>&copy; <span id="year"></span></p>
-  </footer>
-  <script src="script.js?s=3"></script>
-  <script src="messages.js?s=1"></script>
-</body>
+    <footer>
+      <p>&copy; <span id="year"></span></p>
+    </footer>
+    <script src="script.js?s=3"></script>
+    <script src="messages.js?s=1"></script>
+  </body>
 </html>
