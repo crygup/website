@@ -1,16 +1,19 @@
-(function(){
+(function () {
   const page = document.body.dataset.page || "";
 
   const links = [
-    { label: "Home",     href: "/",            match: "" },
-    { label: "Discord",  href: "/discord",     match: "discord" },
-    { label: "Fishie",   href: "/fishie",      match: "fishie" },
-    { label: "Messages", href: "/messages",    match: "messages" },
-    { label: "Mudae",    match: "mudae",
+    { label: "Home", href: "/", match: "" },
+    { label: "Discord", href: "/discord", match: "discord" },
+    { label: "Fishie", href: "/fishie", match: "fishie" },
+    { label: "Messages", href: "/messages", match: "messages" },
+    {
+      label: "Mudae",
+      match: "mudae",
       subs: [
         { label: "OC Solver", href: "/oc" },
         { label: "OQ Solver", href: "/oq" },
-      ]},
+      ],
+    },
   ];
 
   const btn = document.createElement("button");
@@ -54,7 +57,7 @@
 
   for (const item of links) {
     if (item.subs) {
-      const expanded = page === item.match ? ' expanded' : '';
+      const expanded = page === item.match ? " expanded" : "";
       html += `<button class="sidebar-expand${expanded}">${item.label}<span class="sidebar-arrow"></span></button>`;
       html += `<div class="sidebar-subs${expanded}">`;
       for (const sub of item.subs) {
@@ -62,7 +65,7 @@
       }
       html += `</div>`;
     } else {
-      const active = page === item.match ? ' active' : '';
+      const active = page === item.match ? " active" : "";
       html += `<a href="${item.href}" class="${active}">${item.label}</a>`;
     }
   }
@@ -80,7 +83,6 @@
     }
   }
   bindLogout();
-
 
   function rebuildLogin() {
     const userEl = sidebar.querySelector(".sidebar-user, .sidebar-login");
@@ -102,9 +104,13 @@
     overlay.classList.remove("open");
   }
 
-  btn.addEventListener("click", () => sidebar.classList.contains("open") ? close() : open());
+  btn.addEventListener("click", () =>
+    sidebar.classList.contains("open") ? close() : open(),
+  );
   overlay.addEventListener("click", close);
-  sidebar.addEventListener("click", (e) => { if (e.target.tagName === "A") close(); });
+  sidebar.addEventListener("click", (e) => {
+    if (e.target.tagName === "A") close();
+  });
 
   const expandBtn = sidebar.querySelector(".sidebar-expand");
   const subsDiv = sidebar.querySelector(".sidebar-subs");
@@ -114,7 +120,9 @@
       subsDiv.classList.toggle("expanded");
     });
   }
-  document.addEventListener("keydown", (e) => { if (e.key === "Escape") close(); });
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") close();
+  });
 })();
 
 const YOUTUBE_PROXY = "https://youtube.crygup.com";
@@ -178,25 +186,35 @@ Check it out <a href="/discord" target="_blank" rel="noopener">here</a>`,
   ],
 
   socials: [
-    { name: "Discord",   url: "https://discord.gg/rM9u4MRFBE" },
-    { name: "Twitter",   url: "https://x.com/crygup" },
+    { name: "Discord", url: "https://discord.gg/rM9u4MRFBE" },
+    { name: "Twitter", url: "https://x.com/crygup" },
     { name: "Instagram", url: "https://instagram.com/crygup" },
-    { name: "YouTube",   url: "https://youtube.com/@crygup" },
-    { name: "Letterboxd",url: "https://letterboxd.com/fluttershy" },
-    { name: "AniList",   url: "https://anilist.co/user/fluttershy" },
-    { name: "Steam",     url: "https://steamcommunity.com/profiles/76561199034626559/" },
-    { name: "Last.fm",   url: "https://www.last.fm/user/crygup" },
-    { name: "Spotify",   url: "https://open.spotify.com/user/ndbz2vxohhd8y09292dtz5lbz" },
+    { name: "YouTube", url: "https://youtube.com/@crygup" },
+    { name: "Letterboxd", url: "https://letterboxd.com/fluttershy" },
+    { name: "AniList", url: "https://anilist.co/user/fluttershy" },
+    {
+      name: "Steam",
+      url: "https://steamcommunity.com/profiles/76561199034626559/",
+    },
+    { name: "Last.fm", url: "https://www.last.fm/user/crygup" },
+    {
+      name: "Spotify",
+      url: "https://open.spotify.com/user/ndbz2vxohhd8y09292dtz5lbz",
+    },
   ],
- };
+};
 
 if (document.getElementById("bio-panel")) {
   document.querySelectorAll(".tab-btn[data-tab]").forEach((btn) => {
     btn.addEventListener("click", () => {
-      document.querySelectorAll(".tab-btn[data-tab]").forEach((b) => b.classList.remove("active"));
+      document
+        .querySelectorAll(".tab-btn[data-tab]")
+        .forEach((b) => b.classList.remove("active"));
       btn.classList.add("active");
 
-      document.querySelectorAll(".tab-panel").forEach((p) => p.classList.add("hidden"));
+      document
+        .querySelectorAll(".tab-panel")
+        .forEach((p) => p.classList.add("hidden"));
       const panel = document.getElementById(`${btn.dataset.tab}-panel`);
       panel.classList.remove("hidden");
     });
@@ -215,16 +233,26 @@ if (mudaeDropdown) {
 }
 
 const nameEl = document.getElementById("name");
-if (nameEl) nameEl.innerHTML = `${profile.name} <img src="images/drpepper-150.gif" alt="" class="drpepper-gif"> `;
+if (nameEl)
+  nameEl.innerHTML = `${profile.name} <img src="images/drpepper-150.gif" alt="" class="drpepper-gif"> `;
 
 const dp = document.querySelector(".drpepper-gif");
 if (dp) {
   const nameRect = nameEl.getBoundingClientRect();
-  dp.style.left = (nameRect.right + 4) + "px";
-  dp.style.top = (nameRect.top + nameRect.height / 2 - dp.offsetHeight / 2) + "px";
+  dp.style.left = nameRect.right + 4 + "px";
+  dp.style.top =
+    nameRect.top + nameRect.height / 2 - dp.offsetHeight / 2 + "px";
 
-  let dragging = false, startX, startY, startLeft, startTop;
-  let lastX, lastY, lastTime, vx = 0, vy = 0;
+  let dragging = false,
+    startX,
+    startY,
+    startLeft,
+    startTop;
+  let lastX,
+    lastY,
+    lastTime,
+    vx = 0,
+    vy = 0;
   let animFrame;
 
   function getPos(e) {
@@ -241,20 +269,29 @@ if (dp) {
     lastX = pos.x;
     lastY = pos.y;
     lastTime = performance.now();
-    vx = 0; vy = 0;
+    vx = 0;
+    vy = 0;
     dp.classList.add("dragging");
   }
 
   function doMove(pos) {
     const moveX = pos.x - startX;
     const moveY = pos.y - startY;
-    dp.style.left = Math.max(0, Math.min(window.innerWidth - dp.offsetWidth, startLeft + moveX)) + "px";
-    dp.style.top = Math.max(0, Math.min(window.innerHeight - dp.offsetHeight, startTop + moveY)) + "px";
+    dp.style.left =
+      Math.max(
+        0,
+        Math.min(window.innerWidth - dp.offsetWidth, startLeft + moveX),
+      ) + "px";
+    dp.style.top =
+      Math.max(
+        0,
+        Math.min(window.innerHeight - dp.offsetHeight, startTop + moveY),
+      ) + "px";
     const now = performance.now();
     const dt = now - lastTime;
     if (dt > 0) {
-      vx = (pos.x - lastX) / dt * 0.5;
-      vy = (pos.y - lastY) / dt * 0.5;
+      vx = ((pos.x - lastX) / dt) * 0.5;
+      vy = ((pos.y - lastY) / dt) * 0.5;
     }
     lastX = pos.x;
     lastY = pos.y;
@@ -265,14 +302,27 @@ if (dp) {
     dp.classList.remove("dragging");
     if (Math.abs(vx) > 0.01 || Math.abs(vy) > 0.01) {
       (function animate() {
-        vx *= 0.94; vy *= 0.94;
+        vx *= 0.94;
+        vy *= 0.94;
         if (Math.abs(vx) < 0.01 && Math.abs(vy) < 0.01) return;
         let left = dp.offsetLeft + vx * 16;
         let top = dp.offsetTop + vy * 16;
-        if (left <= 0) { left = 0; vx = -vx * 0.5; }
-        if (left >= window.innerWidth - dp.offsetWidth) { left = window.innerWidth - dp.offsetWidth; vx = -vx * 0.5; }
-        if (top <= 0) { top = 0; vy = -vy * 0.5; }
-        if (top >= window.innerHeight - dp.offsetHeight) { top = window.innerHeight - dp.offsetHeight; vy = -vy * 0.5; }
+        if (left <= 0) {
+          left = 0;
+          vx = -vx * 0.5;
+        }
+        if (left >= window.innerWidth - dp.offsetWidth) {
+          left = window.innerWidth - dp.offsetWidth;
+          vx = -vx * 0.5;
+        }
+        if (top <= 0) {
+          top = 0;
+          vy = -vy * 0.5;
+        }
+        if (top >= window.innerHeight - dp.offsetHeight) {
+          top = window.innerHeight - dp.offsetHeight;
+          vy = -vy * 0.5;
+        }
         dp.style.left = left + "px";
         dp.style.top = top + "px";
         animFrame = requestAnimationFrame(animate);
@@ -280,12 +330,12 @@ if (dp) {
     }
   }
 
-  dp.addEventListener("mousedown", e => {
+  dp.addEventListener("mousedown", (e) => {
     e.preventDefault();
     dragging = true;
     beginDrag({ x: e.clientX, y: e.clientY });
   });
-  document.addEventListener("mousemove", e => {
+  document.addEventListener("mousemove", (e) => {
     if (!dragging) return;
     doMove({ x: e.clientX, y: e.clientY });
   });
@@ -295,37 +345,45 @@ if (dp) {
     endDrag();
   });
   let touchScrolling = false;
-  dp.addEventListener("touchstart", e => {
-    const pos = getPos(e);
-    dragging = false;
-    touchScrolling = false;
-    beginDrag(pos);
-  }, { passive: false });
+  dp.addEventListener(
+    "touchstart",
+    (e) => {
+      const pos = getPos(e);
+      dragging = false;
+      touchScrolling = false;
+      beginDrag(pos);
+    },
+    { passive: false },
+  );
 
-  dp.addEventListener("touchmove", e => {
-    const pos = getPos(e);
-    const dx = pos.x - startX;
-    const dy = pos.y - startY;
-    const dist = Math.sqrt(dx * dx + dy * dy);
+  dp.addEventListener(
+    "touchmove",
+    (e) => {
+      const pos = getPos(e);
+      const dx = pos.x - startX;
+      const dy = pos.y - startY;
+      const dist = Math.sqrt(dx * dx + dy * dy);
 
-    if (!dragging) {
-      if (dist < 8) return;
-      if (Math.abs(dy) > Math.abs(dx) * 1.5) {
-        touchScrolling = true;
-        dp.classList.remove("dragging");
-        return;
+      if (!dragging) {
+        if (dist < 8) return;
+        if (Math.abs(dy) > Math.abs(dx) * 1.5) {
+          touchScrolling = true;
+          dp.classList.remove("dragging");
+          return;
+        }
+        dragging = true;
+        startX = pos.x - dx;
+        startY = pos.y - dy;
+        startLeft = dp.offsetLeft;
+        startTop = dp.offsetTop;
       }
-      dragging = true;
-      startX = pos.x - dx;
-      startY = pos.y - dy;
-      startLeft = dp.offsetLeft;
-      startTop = dp.offsetTop;
-    }
 
-    if (touchScrolling) return;
-    e.preventDefault();
-    doMove(pos);
-  }, { passive: false });
+      if (touchScrolling) return;
+      e.preventDefault();
+      doMove(pos);
+    },
+    { passive: false },
+  );
 
   function touchEnd() {
     dp.classList.remove("dragging");
@@ -359,7 +417,10 @@ if (bio) {
 const socialsEl = document.getElementById("socials");
 if (socialsEl) {
   socialsEl.innerHTML = profile.socials
-    .map(s => `<a href="${s.url}" target="_blank" rel="noopener" class="social-link">${s.name}</a>`)
+    .map(
+      (s) =>
+        `<a href="${s.url}" target="_blank" rel="noopener" class="social-link">${s.name}</a>`,
+    )
     .join(" · ");
 }
 const list = document.getElementById("project-list");
@@ -378,7 +439,7 @@ const npSection = document.getElementById("now-playing");
 
 async function fetchNowPlaying() {
   const res = await fetch(
-    `${LASTFM_PROXY}/?method=user.getrecenttracks&user=${LASTFM_USER}&limit=1&format=json`
+    `${LASTFM_PROXY}/?method=user.getrecenttracks&user=${LASTFM_USER}&limit=1&format=json`,
   );
   if (!res.ok) throw new Error("Last.fm fetch failed");
   const data = await res.json();
@@ -397,7 +458,7 @@ async function fetchNowPlaying() {
 
 async function fetchTrackPlays(artist, track) {
   const res = await fetch(
-    `${LASTFM_PROXY}/?method=track.getinfo&user=${LASTFM_USER}&artist=${encodeURIComponent(artist)}&track=${encodeURIComponent(track)}&format=json`
+    `${LASTFM_PROXY}/?method=track.getinfo&user=${LASTFM_USER}&artist=${encodeURIComponent(artist)}&track=${encodeURIComponent(track)}&format=json`,
   );
   if (!res.ok) return null;
   const data = await res.json();
@@ -409,7 +470,7 @@ async function fetchTrackPlays(artist, track) {
 
 async function fetchTotalScrobbles() {
   const res = await fetch(
-    `${LASTFM_PROXY}/?method=user.getinfo&user=${LASTFM_USER}&format=json`
+    `${LASTFM_PROXY}/?method=user.getinfo&user=${LASTFM_USER}&format=json`,
   );
   if (!res.ok) return null;
   const data = await res.json();
@@ -425,7 +486,10 @@ function timeAgo(ts) {
   if (hours < 24) return `${hours}h ago`;
   const days = Math.floor(hours / 24);
   if (days < 7) return `${days}d ago`;
-  return new Date(ts).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  return new Date(ts).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+  });
 }
 
 function renderNowPlaying(track, trackInfo, totalScrobbles) {
@@ -439,12 +503,14 @@ function renderNowPlaying(track, trackInfo, totalScrobbles) {
   const playsLine = [
     trackPlays ? `${formatCount(trackPlays)} track plays` : "",
     totalScrobbles ? `${formatCount(totalScrobbles)} total plays` : "",
-  ].filter(Boolean).join(" · ");
+  ]
+    .filter(Boolean)
+    .join(" · ");
 
   const cover = track.cover
     ? `<img class="np-cover" src="${track.cover}" alt="${escapeHtml(track.name)}" onerror="this.style.display='none';this.nextElementSibling.style.display='';fetchSpotifyCover(${JSON.stringify(track.artist)},${JSON.stringify(track.name)})">`
     : "";
-  const placeholder = `<div class="np-cover placeholder np-cover-placeholder" style="${track.cover ? 'display:none' : ''}"></div>`;
+  const placeholder = `<div class="np-cover placeholder np-cover-placeholder" style="${track.cover ? "display:none" : ""}"></div>`;
 
   const heart = loved ? ' <span class="np-loved">\u2665</span>' : "";
 
@@ -463,12 +529,18 @@ function renderNowPlaying(track, trackInfo, totalScrobbles) {
 
 async function fetchSpotifyCover(artist, name) {
   try {
-    const res = await fetch(`https://api.crygup.com/fishie/spotify-cover?artist=${encodeURIComponent(artist)}&track=${encodeURIComponent(name)}`);
+    const res = await fetch(
+      `https://api.crygup.com/fishie/spotify-cover?artist=${encodeURIComponent(artist)}&track=${encodeURIComponent(name)}`,
+    );
     if (!res.ok) return;
     const data = await res.json();
     if (data.url) {
       const ph = npSection.querySelector(".np-cover-placeholder");
-      if (ph) { ph.style.backgroundImage = `url(${data.url})`; ph.style.backgroundSize = "cover"; ph.style.backgroundPosition = "center"; }
+      if (ph) {
+        ph.style.backgroundImage = `url(${data.url})`;
+        ph.style.backgroundSize = "cover";
+        ph.style.backgroundPosition = "center";
+      }
     }
   } catch {}
 }
@@ -488,23 +560,24 @@ if (npSection) {
 const videoContainer = document.getElementById("video-list");
 
 function formatCount(n) {
-  if (n >= 1_000_000) return (n / 1_000_000).toFixed(1).replace(/\.0$/, "") + "M";
+  if (n >= 1_000_000)
+    return (n / 1_000_000).toFixed(1).replace(/\.0$/, "") + "M";
   if (n >= 1_000) return (n / 1_000).toFixed(1).replace(/\.0$/, "") + "K";
   return String(n);
 }
 
 async function fetchLatestVideos() {
   const chRes = await fetch(
-    `${YOUTUBE_PROXY}/channels?part=contentDetails&forHandle=${YOUTUBE_CHANNEL}`
+    `${YOUTUBE_PROXY}/channels?part=contentDetails&forHandle=${YOUTUBE_CHANNEL}`,
   );
   if (!chRes.ok) throw new Error(`channel: ${chRes.status}`);
   const chData = await chRes.json();
-  const uploadsId = chData.items?.[0]?.contentDetails?.relatedPlaylists?.uploads;
+  const uploadsId =
+    chData.items?.[0]?.contentDetails?.relatedPlaylists?.uploads;
   if (!uploadsId) throw new Error("No uploads playlist found");
 
-
   const plRes = await fetch(
-    `${YOUTUBE_PROXY}/playlistItems?part=snippet&playlistId=${uploadsId}&maxResults=12`
+    `${YOUTUBE_PROXY}/playlistItems?part=snippet&playlistId=${uploadsId}&maxResults=12`,
   );
   if (!plRes.ok) throw new Error(`playlist: ${plRes.status}`);
   const plData = await plRes.json();
@@ -512,9 +585,8 @@ async function fetchLatestVideos() {
   if (items.length === 0) return [];
   const ids = items.map((i) => i.snippet.resourceId.videoId).join(",");
 
-
   const vRes = await fetch(
-    `${YOUTUBE_PROXY}/videos?part=statistics,snippet,contentDetails&id=${ids}`
+    `${YOUTUBE_PROXY}/videos?part=statistics,snippet,contentDetails&id=${ids}`,
   );
   if (!vRes.ok) throw new Error(`videos: ${vRes.status}`);
   const vData = await vRes.json();
@@ -531,7 +603,7 @@ async function fetchLatestVideos() {
     videos.map(async (v) => {
       try {
         const oeRes = await fetch(
-          `https://www.youtube.com/oembed?url=https://www.youtube.com/shorts/${v.id}&format=json`
+          `https://www.youtube.com/oembed?url=https://www.youtube.com/shorts/${v.id}&format=json`,
         );
         if (!oeRes.ok) return v;
         const oeData = await oeRes.json();
@@ -541,7 +613,7 @@ async function fetchLatestVideos() {
       } catch {
         return v;
       }
-    })
+    }),
   );
 
   return checks.filter(Boolean).slice(0, 6);
@@ -571,7 +643,8 @@ function renderVideoCard(v) {
     const iframe = document.createElement("iframe");
     iframe.src = `https://www.youtube-nocookie.com/embed/${v.id}?autoplay=1&origin=${window.location.origin}`;
     iframe.title = v.title;
-    iframe.allow = "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture";
+    iframe.allow =
+      "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture";
     iframe.allowFullscreen = true;
     iframe.referrerPolicy = "strict-origin-when-cross-origin";
     thumb.innerHTML = "";
@@ -606,19 +679,54 @@ if (videoContainer) {
     .catch(() => renderError());
 }
 
-function escapeHtml(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;'); }
+function escapeHtml(s) {
+  return String(s)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
 
-
-(function(){
+(function () {
   const qp = new URLSearchParams(window.location.search);
+  const lastfmToken = qp.get("token");
+  const lastfmState = qp.get("lastfm_state");
+  const FISHIE_API = "https://api.crygup.com/fishie";
+
+  if (lastfmToken && lastfmState) {
+    window.history.replaceState({}, "", window.location.pathname);
+    fetch(
+      `${FISHIE_API}/lastfm/callback?token=${encodeURIComponent(lastfmToken)}&state=${encodeURIComponent(lastfmState)}`,
+    )
+      .then(async (r) => {
+        const data = await r.json();
+        if (!r.ok) throw new Error(data.detail || "Last.fm connection failed");
+        return data;
+      })
+      .then((data) => {
+        if (data.source === "website") {
+          sessionStorage.setItem("lastfm_linked_username", data.username);
+        }
+        alert(`Connected Last.fm account ${data.username} to Fishie.`);
+      })
+      .catch((error) => alert(error.message || "Last.fm connection failed."));
+    return;
+  }
+
   const code = qp.get("code");
   if (!code) return;
   window.history.replaceState({}, "", window.location.pathname);
 
-  const FISHIE_API = "https://api.crygup.com/fishie";
-  fetch(`${FISHIE_API}/oauth/exchange?code=${encodeURIComponent(code)}`, { method: "POST" })
-    .then(r => { if (!r.ok) throw new Error("Login failed"); return r.json(); })
-    .then(data => {
+  fetch(
+    `${FISHIE_API}/oauth/exchange?code=${encodeURIComponent(code)}&redirect_uri=${encodeURIComponent("https://crygup.com")}`,
+    { method: "POST" },
+  )
+    .then((r) => {
+      if (!r.ok) throw new Error("Login failed");
+      return r.json();
+    })
+    .then((data) => {
       localStorage.setItem("discord_user", JSON.stringify(data.user));
       localStorage.setItem("discord_token", data.access_token);
       window.dispatchEvent(new CustomEvent("discord-login"));
