@@ -11,6 +11,7 @@ The Discord bot is used to:
 
 import asyncio
 import os
+import sys
 import asyncpg
 import uvicorn
 from contextlib import asynccontextmanager
@@ -18,6 +19,7 @@ from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from discord.ext import commands
 from discord.http import Route
+from discord import gateway, CustomActivity, Intents
 import dotenv
 
 dotenv.load_dotenv(os.path.join(os.path.dirname(__file__), "config", ".env"))
@@ -26,9 +28,62 @@ TOKEN = os.getenv("DISCORD_BOT_TOKEN")
 GUILD_ID = int(os.getenv("DISCORD_GUILD_ID", "0") or "0")
 DB_URL = os.getenv("DATABASE_URL")
 
-bot = commands.Bot(command_prefix=commands.when_mentioned, intents=None)
+
+async def identify_mobile(self) -> None:
+    """Sends the IDENTIFY packet."""
+    payload = {
+        "op": self.IDENTIFY,
+        "d": {
+            "token": self.token,
+            "properties": {
+                "os": sys.platform,
+                "browser": "Discord iOS",
+                "device": "Discord iOS",
+            },
+            "compress": True,
+            "large_threshold": 250,
+        },
+    }
+
+    if self.shard_id is not None and self.shard_count is not None:
+        payload["d"]["shard"] = [self.shard_id, self.shard_count]
+
+    state = self._connection
+    if state._activity is not None or state._status is not None:
+        payload["d"]["presence"] = {
+            "status": state._status,
+            "game": state._activity,
+            "since": 0,
+            "afk": False,
+        }
+
+    if state._intents is not None:
+        payload["d"]["intents"] = state._intents.value
+
+    await self.call_hooks(
+        "before_identify", self.shard_id, initial=self._initial_identify
+    )
+    await self.send_as_json(payload)
+
+
+gateway.DiscordWebSocket.identify = identify_mobile
+jsk_envs = [
+    "JISHAKU_RETAIN",
+    "JISHAKU_HIDE",
+    "JISHAKU_NO_DM_TRACEBACK",
+    "JISHAKU_NO_UNDERSCORE",
+    "JISHAKU_FORCE_PAGINATOR",
+]
+
+for env in jsk_envs:
+    os.environ[env] = "True"
+
+bot = commands.Bot(
+    command_prefix=commands.when_mentioned_or("evi "), intents=Intents.all()
+)
 db_pool: asyncpg.Pool | None = None
 bot.help_command = None
+bot.activity = CustomActivity(name="dr pepper is so good")
 
 
 @asynccontextmanager
