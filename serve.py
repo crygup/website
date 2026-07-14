@@ -13,8 +13,8 @@ BLOCKED = {
     "/config",
     "/serve.py",
     "/backup",
-    "test.html",
-    "test",
+    "/test.html",
+    "/test",
 }
 
 
@@ -53,6 +53,13 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                 return super().do_GET()
 
         return super().do_GET()
+
+    def do_HEAD(self):
+        path = self.path.split("?")[0].rstrip("/") or "/index"
+        if self._blocked(path):
+            self.send_error(404)
+            return
+        return super().do_HEAD()
 
     def end_headers(self):
         self.send_header("X-Content-Type-Options", "nosniff")
