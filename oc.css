@@ -106,7 +106,6 @@
   content: "R";
 }
 
-/* Emoji mode — hide labels, show image */
 .oc-grid-emoji .oc-cell::after {
   content: none !important;
 }

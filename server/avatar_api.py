@@ -1,5 +1,5 @@
 """
-Avatar lookup API — FastAPI + discord.py in one process.
+Avatar lookup API FastAPI + discord.py in one process.
 
 GET  /avatars?q=<discord_id>&page=1&per_page=100
      → { avatars: [{ url, avatar_key, created_at }], total, page, pages }
