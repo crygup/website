@@ -228,6 +228,9 @@ async function loadUserSettings(userId, token) {
       '<div class="card"><div class="settings-group"><h4>Connected Accounts</h4>';
     var accts = accData.accounts || {};
     var lastfm = accts.lastfm || "";
+    var steam = accts.steam || "";
+    var steamDisplayName = accts.steam_display_name || steam;
+    var spotify = accts.spotify || "";
     html +=
       '<div class="row" style="display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap">' +
       '<span style="color:#94a3b8;font-size:0.78rem;min-width:60px">Last.fm</span>' +
@@ -244,7 +247,37 @@ async function loadUserSettings(userId, token) {
       (lastfm ? "Disconnect Last.fm" : "Connect Last.fm") +
       "</button>" +
       "</div>";
-    var svcs = ["steam", "roblox", "genshin", "letterboxd"];
+    html +=
+      '<div class="row" style="display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap">' +
+      '<span style="color:#94a3b8;font-size:0.78rem;min-width:60px">Steam</span>' +
+      '<span style="color:' +
+      (steam ? "#cbd5e1" : "#64748b") +
+      ';font-size:0.8rem;flex:1">' +
+      (steam ? esc(steamDisplayName) : "Not connected") +
+      "</span>" +
+      '<button class="' +
+      (steam ? "logout-btn" : "btn-primary") +
+      '" onclick="' +
+      (steam ? "disconnectSteam('" + userId + "')" : "connectSteam()") +
+      '">' +
+      (steam ? "Disconnect Steam" : "Connect Steam") +
+      "</button></div>";
+    html +=
+      '<div class="row" style="display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap">' +
+      '<span style="color:#94a3b8;font-size:0.78rem;min-width:60px">Spotify</span>' +
+      '<span style="color:' +
+      (spotify ? "#cbd5e1" : "#64748b") +
+      ';font-size:0.8rem;flex:1">' +
+      (spotify ? esc(spotify) : "Not connected") +
+      "</span>" +
+      '<button class="' +
+      (spotify ? "logout-btn" : "btn-primary") +
+      '" onclick="' +
+      (spotify ? "disconnectSpotify('" + userId + "')" : "connectSpotify()") +
+      '">' +
+      (spotify ? "Disconnect Spotify" : "Connect Spotify") +
+      "</button></div>";
+    var svcs = ["roblox", "letterboxd"];
     for (var si = 0; si < svcs.length; si++) {
       var svc = svcs[si];
       var val = accts[svc] || "";
@@ -304,7 +337,7 @@ async function togUserOpt(userId, item, enable) {
 
 async function saveAllAccounts(userId) {
   var token = localStorage.getItem("fishie_token");
-  var svcs = ["steam", "roblox", "genshin", "letterboxd"];
+  var svcs = ["roblox", "letterboxd"];
   var payload = {};
   for (var si = 0; si < svcs.length; si++) {
     var el = document.getElementById("acct-" + svcs[si]);
@@ -335,6 +368,36 @@ async function connectLastfm() {
   }
 }
 
+async function connectSteam() {
+  var token = localStorage.getItem("fishie_token");
+  try {
+    var res = await fetch(API + "/steam/connect", {
+      headers: { Authorization: "Bearer " + token },
+    });
+    var data = await res.json();
+    if (!res.ok || !data.url)
+      throw new Error(data.detail || "Could not start Steam connection");
+    window.location.href = data.url;
+  } catch (e) {
+    alert(e.message || "Could not start Steam connection.");
+  }
+}
+
+async function connectSpotify() {
+  var token = localStorage.getItem("fishie_token");
+  try {
+    var res = await fetch(API + "/spotify/connect", {
+      headers: { Authorization: "Bearer " + token },
+    });
+    var data = await res.json();
+    if (!res.ok || !data.url)
+      throw new Error(data.detail || "Could not start Spotify connection");
+    window.location.href = data.url;
+  } catch (e) {
+    alert(e.message || "Could not start Spotify connection.");
+  }
+}
+
 async function disconnectLastfm(userId) {
   if (!confirm("Disconnect your Last.fm account from Fishie?")) return;
   var token = localStorage.getItem("fishie_token");
@@ -348,6 +411,38 @@ async function disconnectLastfm(userId) {
     await loadUserSettings(userId, token);
   } catch (e) {
     alert(e.message || "Could not disconnect Last.fm.");
+  }
+}
+
+async function disconnectSteam(userId) {
+  if (!confirm("Disconnect your Steam account from Fishie?")) return;
+  var token = localStorage.getItem("fishie_token");
+  try {
+    var res = await fetch(API + "/user/" + userId + "/steam", {
+      method: "DELETE",
+      headers: { Authorization: "Bearer " + token },
+    });
+    var data = await res.json();
+    if (!res.ok) throw new Error(data.detail || "Could not disconnect Steam");
+    await loadUserSettings(userId, token);
+  } catch (e) {
+    alert(e.message || "Could not disconnect Steam.");
+  }
+}
+
+async function disconnectSpotify(userId) {
+  if (!confirm("Disconnect your Spotify account from Fishie?")) return;
+  var token = localStorage.getItem("fishie_token");
+  try {
+    var res = await fetch(API + "/user/" + userId + "/spotify", {
+      method: "DELETE",
+      headers: { Authorization: "Bearer " + token },
+    });
+    var data = await res.json();
+    if (!res.ok) throw new Error(data.detail || "Could not disconnect Spotify");
+    await loadUserSettings(userId, token);
+  } catch (e) {
+    alert(e.message || "Could not disconnect Spotify.");
   }
 }
 

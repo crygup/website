@@ -692,7 +692,58 @@ function escapeHtml(s) {
   const qp = new URLSearchParams(window.location.search);
   const lastfmToken = qp.get("token");
   const lastfmState = qp.get("lastfm_state");
+  const steamState = qp.get("steam_state");
+  const spotifyCode = qp.get("code");
+  const spotifyState = qp.get("state");
   const FISHIE_API = "https://api.crygup.com/fishie";
+
+  if (steamState && qp.get("openid.mode")) {
+    const callbackParams = new URLSearchParams();
+    callbackParams.set("steam_state", steamState);
+    qp.forEach((value, key) => {
+      if (key.startsWith("openid.")) callbackParams.set(key, value);
+    });
+    window.history.replaceState({}, "", window.location.pathname);
+    fetch(`${FISHIE_API}/steam/callback?${callbackParams.toString()}`)
+      .then(async (r) => {
+        const data = await r.json();
+        if (!r.ok) throw new Error(data.detail || "Steam connection failed");
+        return data;
+      })
+      .then((data) => {
+        if (data.source === "website") {
+          sessionStorage.setItem(
+            "steam_linked_name",
+            data.personaname || data.steamid,
+          );
+        }
+        alert(
+          `Connected Steam account ${data.personaname || data.steamid} to Fishie.`,
+        );
+      })
+      .catch((error) => alert(error.message || "Steam connection failed."));
+    return;
+  }
+
+  if (spotifyCode && spotifyState && spotifyState.startsWith("spotify_")) {
+    window.history.replaceState({}, "", window.location.pathname);
+    fetch(
+      `${FISHIE_API}/spotify/callback?code=${encodeURIComponent(spotifyCode)}&state=${encodeURIComponent(spotifyState)}`,
+    )
+      .then(async (r) => {
+        const data = await r.json();
+        if (!r.ok) throw new Error(data.detail || "Spotify connection failed");
+        return data;
+      })
+      .then((data) => {
+        if (data.source === "website") {
+          sessionStorage.setItem("spotify_linked_name", data.display_name);
+        }
+        alert(`Connected Spotify account ${data.display_name} to Fishie.`);
+      })
+      .catch((error) => alert(error.message || "Spotify connection failed."));
+    return;
+  }
 
   if (lastfmToken && lastfmState) {
     window.history.replaceState({}, "", window.location.pathname);
