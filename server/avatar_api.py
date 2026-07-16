@@ -103,7 +103,7 @@ app = FastAPI(lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["https://crygup.com", "https://www.crygup.com"],
     allow_methods=["GET", "POST", "OPTIONS"],
     allow_headers=["*"],
 )
