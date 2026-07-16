@@ -230,7 +230,7 @@ async function loadUserSettings(userId, token) {
     var lastfm = accts.lastfm || "";
     var steam = accts.steam || "";
     var steamDisplayName = accts.steam_display_name || steam;
-    var spotify = accts.spotify || "";
+    var anilist = accts.anilist || "";
     html +=
       '<div class="row" style="display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap">' +
       '<span style="color:#94a3b8;font-size:0.78rem;min-width:60px">Last.fm</span>' +
@@ -264,18 +264,18 @@ async function loadUserSettings(userId, token) {
       "</button></div>";
     html +=
       '<div class="row" style="display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap">' +
-      '<span style="color:#94a3b8;font-size:0.78rem;min-width:60px">Spotify</span>' +
+      '<span style="color:#94a3b8;font-size:0.78rem;min-width:60px">AniList</span>' +
       '<span style="color:' +
-      (spotify ? "#cbd5e1" : "#64748b") +
+      (anilist ? "#cbd5e1" : "#64748b") +
       ';font-size:0.8rem;flex:1">' +
-      (spotify ? esc(spotify) : "Not connected") +
+      (anilist ? esc(anilist) : "Not connected") +
       "</span>" +
       '<button class="' +
-      (spotify ? "logout-btn" : "btn-primary") +
+      (anilist ? "logout-btn" : "btn-primary") +
       '" onclick="' +
-      (spotify ? "disconnectSpotify('" + userId + "')" : "connectSpotify()") +
+      (anilist ? "disconnectAnilist('" + userId + "')" : "connectAnilist()") +
       '">' +
-      (spotify ? "Disconnect Spotify" : "Connect Spotify") +
+      (anilist ? "Disconnect AniList" : "Connect AniList") +
       "</button></div>";
     var svcs = ["roblox", "letterboxd"];
     for (var si = 0; si < svcs.length; si++) {
@@ -383,18 +383,18 @@ async function connectSteam() {
   }
 }
 
-async function connectSpotify() {
+async function connectAnilist() {
   var token = localStorage.getItem("fishie_token");
   try {
-    var res = await fetch(API + "/spotify/connect", {
+    var res = await fetch(API + "/anilist/connect", {
       headers: { Authorization: "Bearer " + token },
     });
     var data = await res.json();
     if (!res.ok || !data.url)
-      throw new Error(data.detail || "Could not start Spotify connection");
+      throw new Error(data.detail || "Could not start AniList connection");
     window.location.href = data.url;
   } catch (e) {
-    alert(e.message || "Could not start Spotify connection.");
+    alert(e.message || "Could not start AniList connection.");
   }
 }
 
@@ -430,19 +430,19 @@ async function disconnectSteam(userId) {
   }
 }
 
-async function disconnectSpotify(userId) {
-  if (!confirm("Disconnect your Spotify account from Fishie?")) return;
+async function disconnectAnilist(userId) {
+  if (!confirm("Disconnect your AniList account from Fishie?")) return;
   var token = localStorage.getItem("fishie_token");
   try {
-    var res = await fetch(API + "/user/" + userId + "/spotify", {
+    var res = await fetch(API + "/user/" + userId + "/anilist", {
       method: "DELETE",
       headers: { Authorization: "Bearer " + token },
     });
     var data = await res.json();
-    if (!res.ok) throw new Error(data.detail || "Could not disconnect Spotify");
+    if (!res.ok) throw new Error(data.detail || "Could not disconnect AniList");
     await loadUserSettings(userId, token);
   } catch (e) {
-    alert(e.message || "Could not disconnect Spotify.");
+    alert(e.message || "Could not disconnect AniList.");
   }
 }
 

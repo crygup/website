@@ -695,6 +695,8 @@ function escapeHtml(s) {
   const steamState = qp.get("steam_state");
   const spotifyCode = qp.get("code");
   const spotifyState = qp.get("state");
+  const anilistCode = qp.get("code");
+  const anilistState = qp.get("state");
   const FISHIE_API = "https://api.crygup.com/fishie";
 
   if (steamState && qp.get("openid.mode")) {
@@ -742,6 +744,26 @@ function escapeHtml(s) {
         alert(`Connected Spotify account ${data.display_name} to Fishie.`);
       })
       .catch((error) => alert(error.message || "Spotify connection failed."));
+    return;
+  }
+
+  if (anilistCode && anilistState && anilistState.startsWith("anilist_")) {
+    window.history.replaceState({}, "", window.location.pathname);
+    fetch(
+      `${FISHIE_API}/anilist/callback?code=${encodeURIComponent(anilistCode)}&state=${encodeURIComponent(anilistState)}`,
+    )
+      .then(async (r) => {
+        const data = await r.json();
+        if (!r.ok) throw new Error(data.detail || "AniList connection failed");
+        return data;
+      })
+      .then((data) => {
+        if (data.source === "website") {
+          sessionStorage.setItem("anilist_linked_username", data.username);
+        }
+        alert(`Connected AniList account ${data.username} to Fishie.`);
+      })
+      .catch((error) => alert(error.message || "AniList connection failed."));
     return;
   }
 
