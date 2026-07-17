@@ -25,9 +25,17 @@ from logging_utils import get_logger
 
 dotenv.load_dotenv(os.path.join(os.path.dirname(__file__), "config", ".env"))
 
-TOKEN = os.getenv("DISCORD_BOT_TOKEN")
+
+def required_env(name: str) -> str:
+    value = os.getenv(name)
+    if not value:
+        raise RuntimeError(f"Missing required environment variable: {name}")
+    return value
+
+
+TOKEN = required_env("DISCORD_BOT_TOKEN")
 GUILD_ID = int(os.getenv("DISCORD_GUILD_ID", "0") or "0")
-DB_URL = os.getenv("DATABASE_URL")
+DB_URL = required_env("DATABASE_URL")
 logger = get_logger("avatar")
 
 
@@ -88,6 +96,12 @@ bot.help_command = None
 bot.activity = CustomActivity(name="dr pepper is so good")
 
 
+def get_db_pool() -> asyncpg.Pool:
+    if db_pool is None:
+        raise RuntimeError("Database pool is not initialized")
+    return db_pool
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     global db_pool
@@ -95,7 +109,8 @@ async def lifespan(app: FastAPI):
     await bot.load_extension("jishaku")
     asyncio.create_task(bot.start(TOKEN))
     yield
-    await db_pool.close()
+    pool = get_db_pool()
+    await pool.close()
     await bot.close()
 
 
@@ -207,11 +222,14 @@ async def get_avatars(
 ):
     user_id = await resolve_user_id(q)
 
-    async with db_pool.acquire() as conn:
+    pool = get_db_pool()
+    async with pool.acquire() as conn:
         count_row = await conn.fetchrow(
             "SELECT COUNT(*) FROM avatars WHERE user_id = $1", user_id
         )
-        total = count_row[0]
+        if count_row is None:
+            raise HTTPException(503, "Could not count stored avatars")
+        total = int(count_row[0])
         pages = max(1, (total + per_page - 1) // per_page)
 
         if page > pages:
