@@ -223,3 +223,6 @@ __marimo__/
 /backup
 /logs/
 /config/
+/src/logs/
+/src/server/config/
+/src/server/venv/
