@@ -1,6 +1,25 @@
 const API = "https://api.crygup.com/fishie";
 const CLIENT_ID = "876391494485950504";
 const REDIRECT = "https://crygup.com/dashboard";
+
+// Authentication is provided by the API's HttpOnly session cookie. Strip any
+// legacy bearer header and include the cookie on cross-origin API requests.
+(() => {
+  const nativeFetch = window.fetch.bind(window);
+  window.fetch = (input, init = {}) => {
+    const options = init || {};
+    const headers = new Headers(options.headers || {});
+    headers.delete("Authorization");
+    const requestUrl =
+      typeof input === "string" ? input : input?.url || String(input);
+    const credentials = requestUrl.startsWith("https://api.crygup.com/fishie")
+      ? "include"
+      : options.credentials || "same-origin";
+    return nativeFetch(input, { ...options, credentials, headers });
+  };
+})();
+
+localStorage.removeItem("fishie_token");
 function esc(s) {
   return String(s)
     .replace(/&/g, "&amp;")
@@ -20,8 +39,7 @@ if (code) {
         API + "/oauth/exchange?code=" + encodeURIComponent(code),
       );
       const data = await res.json();
-      if (data.access_token) {
-        localStorage.setItem("fishie_token", data.access_token);
+      if (data.user) {
         localStorage.setItem("fishie_user", JSON.stringify(data.user));
         window.history.replaceState({}, document.title, "/dashboard");
         initDashboard();
@@ -31,17 +49,41 @@ if (code) {
     }
   })();
 } else {
-  var token = localStorage.getItem("fishie_token");
-  if (token) initDashboard();
-  else showLogin();
+  fetch(API + "/oauth/me")
+    .then((res) => {
+      if (res.status === 401) {
+        console.info("Fishie session not found; user is not logged in.");
+        showLogin();
+        return null;
+      }
+      if (!res.ok) throw new Error(`Session check failed (${res.status})`);
+      return res.json();
+    })
+    .then((data) => {
+      if (!data || !data.authenticated) {
+        console.info("Fishie session not found; user is not logged in.");
+        showLogin();
+        return;
+      }
+      localStorage.setItem("fishie_user", JSON.stringify(data.user));
+      initDashboard();
+    })
+    .catch((error) => {
+      console.error("Could not restore Fishie session:", error);
+      showLogin();
+    });
+}
+
+async function logout() {
+  await fetch(API + "/oauth/logout", { method: "POST" });
+  localStorage.removeItem("fishie_user");
+  location.reload();
 }
 
 var _logout = document.getElementById("logoutBtn");
 if (_logout)
   _logout.onclick = function () {
-    localStorage.removeItem("fishie_token");
-    localStorage.removeItem("fishie_user");
-    location.reload();
+    logout();
   };
 var _login = document.getElementById("loginBtn");
 if (_login)
@@ -85,7 +127,6 @@ async function initDashboard() {
   document.getElementById("dashboardView").classList.add("active");
 
   var user = JSON.parse(localStorage.getItem("fishie_user") || "{}");
-  var token = localStorage.getItem("fishie_token");
 
   var avatar = user.id
     ? "https://cdn.discordapp.com/avatars/" +
@@ -109,9 +150,7 @@ async function initDashboard() {
   document.getElementById("userHeader").innerHTML =
     headerHtml + '<button class="logout-btn" id="logoutBtn">Logout</button>';
   document.getElementById("logoutBtn").onclick = function () {
-    localStorage.removeItem("fishie_token");
-    localStorage.removeItem("fishie_user");
-    location.reload();
+    logout();
   };
 
   try {
@@ -124,8 +163,8 @@ async function initDashboard() {
     }
   } catch (_) {}
 
-  await loadUserSettings(user.id, token);
-  await loadGuilds(user.id, token);
+  await loadUserSettings(user.id);
+  await loadGuilds(user.id);
 
   if (params.get("lastfm") === "connected") {
     var linkedUsername =
@@ -136,21 +175,17 @@ async function initDashboard() {
   }
 }
 
-async function loadUserSettings(userId, token) {
+async function loadUserSettings(userId) {
   var div = document.getElementById("userSettingsContent");
   try {
     var [optRes, remRes, accRes, xpRes] = await Promise.all([
       fetch(API + "/user/" + userId + "/opted-out", {
-        headers: { Authorization: "Bearer " + token },
       }),
       fetch(API + "/user/" + userId + "/reminders", {
-        headers: { Authorization: "Bearer " + token },
       }),
       fetch(API + "/user/" + userId + "/accounts", {
-        headers: { Authorization: "Bearer " + token },
       }),
       fetch(API + "/user/" + userId + "/xp", {
-        headers: { Authorization: "Bearer " + token },
       }),
     ]);
     var optData = await optRes.json();
@@ -310,10 +345,8 @@ async function loadUserSettings(userId, token) {
 }
 
 async function togUserOpt(userId, item, enable) {
-  var token = localStorage.getItem("fishie_token");
   try {
     var res = await fetch(API + "/user/" + userId + "/opted-out", {
-      headers: { Authorization: "Bearer " + token },
     });
     var data = await res.json();
     var items = data.items || [];
@@ -327,7 +360,6 @@ async function togUserOpt(userId, item, enable) {
     await fetch(API + "/user/" + userId + "/opted-out", {
       method: "POST",
       headers: {
-        Authorization: "Bearer " + token,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({ items: items }),
@@ -336,7 +368,6 @@ async function togUserOpt(userId, item, enable) {
 }
 
 async function saveAllAccounts(userId) {
-  var token = localStorage.getItem("fishie_token");
   var svcs = ["roblox", "letterboxd"];
   var payload = {};
   for (var si = 0; si < svcs.length; si++) {
@@ -346,7 +377,6 @@ async function saveAllAccounts(userId) {
   await fetch(API + "/user/" + userId + "/accounts", {
     method: "POST",
     headers: {
-      Authorization: "Bearer " + token,
       "Content-Type": "application/json",
     },
     body: JSON.stringify({ accounts: payload }),
@@ -354,10 +384,8 @@ async function saveAllAccounts(userId) {
 }
 
 async function connectLastfm() {
-  var token = localStorage.getItem("fishie_token");
   try {
     var res = await fetch(API + "/lastfm/connect", {
-      headers: { Authorization: "Bearer " + token },
     });
     var data = await res.json();
     if (!res.ok || !data.url)
@@ -369,10 +397,8 @@ async function connectLastfm() {
 }
 
 async function connectSteam() {
-  var token = localStorage.getItem("fishie_token");
   try {
     var res = await fetch(API + "/steam/connect", {
-      headers: { Authorization: "Bearer " + token },
     });
     var data = await res.json();
     if (!res.ok || !data.url)
@@ -384,10 +410,8 @@ async function connectSteam() {
 }
 
 async function connectAnilist() {
-  var token = localStorage.getItem("fishie_token");
   try {
     var res = await fetch(API + "/anilist/connect", {
-      headers: { Authorization: "Bearer " + token },
     });
     var data = await res.json();
     if (!res.ok || !data.url)
@@ -400,15 +424,13 @@ async function connectAnilist() {
 
 async function disconnectLastfm(userId) {
   if (!confirm("Disconnect your Last.fm account from Fishie?")) return;
-  var token = localStorage.getItem("fishie_token");
   try {
     var res = await fetch(API + "/user/" + userId + "/lastfm", {
       method: "DELETE",
-      headers: { Authorization: "Bearer " + token },
     });
     var data = await res.json();
     if (!res.ok) throw new Error(data.detail || "Could not disconnect Last.fm");
-    await loadUserSettings(userId, token);
+    await loadUserSettings(userId);
   } catch (e) {
     alert(e.message || "Could not disconnect Last.fm.");
   }
@@ -416,15 +438,13 @@ async function disconnectLastfm(userId) {
 
 async function disconnectSteam(userId) {
   if (!confirm("Disconnect your Steam account from Fishie?")) return;
-  var token = localStorage.getItem("fishie_token");
   try {
     var res = await fetch(API + "/user/" + userId + "/steam", {
       method: "DELETE",
-      headers: { Authorization: "Bearer " + token },
     });
     var data = await res.json();
     if (!res.ok) throw new Error(data.detail || "Could not disconnect Steam");
-    await loadUserSettings(userId, token);
+    await loadUserSettings(userId);
   } catch (e) {
     alert(e.message || "Could not disconnect Steam.");
   }
@@ -432,24 +452,21 @@ async function disconnectSteam(userId) {
 
 async function disconnectAnilist(userId) {
   if (!confirm("Disconnect your AniList account from Fishie?")) return;
-  var token = localStorage.getItem("fishie_token");
   try {
     var res = await fetch(API + "/user/" + userId + "/anilist", {
       method: "DELETE",
-      headers: { Authorization: "Bearer " + token },
     });
     var data = await res.json();
     if (!res.ok) throw new Error(data.detail || "Could not disconnect AniList");
-    await loadUserSettings(userId, token);
+    await loadUserSettings(userId);
   } catch (e) {
     alert(e.message || "Could not disconnect AniList.");
   }
 }
 
-async function loadGuilds(userId, token) {
+async function loadGuilds(userId) {
   try {
     var res = await fetch(API + "/user/" + userId + "/guilds", {
-      headers: { Authorization: "Bearer " + token },
     });
     var data = await res.json();
     var list = document.getElementById("guildDropdownList");
@@ -495,7 +512,7 @@ function selectGuild(guildId) {
     document.getElementById("guildSettingsContent").innerHTML = "";
     return;
   }
-  loadGuildSettings(guildId, localStorage.getItem("fishie_token"));
+  loadGuildSettings(guildId);
 }
 
 document.addEventListener("click", function (e) {
@@ -522,17 +539,15 @@ document.addEventListener("click", function (e) {
 
 var _guildChannels = {};
 
-async function loadGuildSettings(guildId, token) {
+async function loadGuildSettings(guildId) {
   var div = document.getElementById("guildSettingsContent");
   div.innerHTML = '<p style="color:#64748b">Loading...</p>';
   try {
     var user = JSON.parse(localStorage.getItem("fishie_user") || "{}");
     var [gRes, setRes, optRes, preRes] = await Promise.all([
       fetch(API + "/user/" + user.id + "/guilds", {
-        headers: { Authorization: "Bearer " + token },
       }),
       fetch(API + "/guild/" + guildId + "/settings", {
-        headers: { Authorization: "Bearer " + token },
       }),
       fetch(API + "/guild/" + guildId + "/opted-out"),
       fetch(API + "/guild/" + guildId + "/prefixes"),
@@ -679,7 +694,6 @@ async function loadGuildSettings(guildId, token) {
 }
 
 async function saveGChan(guildId, key) {
-  var token = localStorage.getItem("fishie_token");
   var el = document.getElementById(
     { auto_download: "gAutoDl", honeypot: "gHoneypot", pinboard: "gPinboard" }[
       key
@@ -691,7 +705,6 @@ async function saveGChan(guildId, key) {
   await fetch(API + "/guild/" + guildId + "/settings", {
     method: "POST",
     headers: {
-      Authorization: "Bearer " + token,
       "Content-Type": "application/json",
     },
     body: JSON.stringify(payload),
@@ -699,13 +712,11 @@ async function saveGChan(guildId, key) {
 }
 
 async function togGSet(guildId, key, enable) {
-  var token = localStorage.getItem("fishie_token");
   var payload = {};
   payload[key] = enable;
   await fetch(API + "/guild/" + guildId + "/settings", {
     method: "POST",
     headers: {
-      Authorization: "Bearer " + token,
       "Content-Type": "application/json",
     },
     body: JSON.stringify(payload),
@@ -716,13 +727,11 @@ async function addPrefix(guildId) {
   var inp = document.getElementById("newPrefix");
   var prefix = inp.value.trim();
   if (!prefix || prefix.length > 10) return;
-  var token = localStorage.getItem("fishie_token");
   var user = JSON.parse(localStorage.getItem("fishie_user") || "{}");
   try {
     var res = await fetch(API + "/guild/" + guildId + "/prefixes", {
       method: "POST",
       headers: {
-        Authorization: "Bearer " + token,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({ prefix: prefix, author_id: user.id }),
@@ -734,7 +743,7 @@ async function addPrefix(guildId) {
       return;
     }
     inp.value = "";
-    loadGuildSettings(guildId, token);
+    loadGuildSettings(guildId);
   } catch (e) {
     console.error("Prefix add error:", e);
     alert("Network error adding prefix.");
@@ -742,20 +751,17 @@ async function addPrefix(guildId) {
 }
 
 async function remPrefix(guildId, prefix) {
-  var token = localStorage.getItem("fishie_token");
   await fetch(API + "/guild/" + guildId + "/prefixes", {
     method: "DELETE",
     headers: {
-      Authorization: "Bearer " + token,
       "Content-Type": "application/json",
     },
     body: JSON.stringify({ prefix: prefix }),
   });
-  loadGuildSettings(guildId, token);
+  loadGuildSettings(guildId);
 }
 
 async function togGOpt(guildId, item, enable) {
-  var token = localStorage.getItem("fishie_token");
   try {
     var res = await fetch(API + "/guild/" + guildId + "/opted-out");
     var data = await res.json();
@@ -770,7 +776,6 @@ async function togGOpt(guildId, item, enable) {
     await fetch(API + "/guild/" + guildId + "/opted-out", {
       method: "POST",
       headers: {
-        Authorization: "Bearer " + token,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({ items: items }),

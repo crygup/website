@@ -3,15 +3,60 @@ console.log("discord.js v3 loaded");
 const FISHIE_API = "https://api.crygup.com/fishie";
 const CLIENT_ID = "876391494485950504";
 
+(() => {
+  const nativeFetch = window.fetch.bind(window);
+  window.fetch = (input, init = {}) => {
+    const options = init || {};
+    const headers = new Headers(options.headers || {});
+    headers.delete("Authorization");
+    const requestUrl =
+      typeof input === "string" ? input : input?.url || String(input);
+    const credentials = requestUrl.startsWith("https://api.crygup.com/fishie")
+      ? "include"
+      : options.credentials || "same-origin";
+    return nativeFetch(input, { ...options, credentials, headers });
+  };
+})();
+
 let currentTab = "user";
 let currentSubtab = "avatars";
 let currentPage = 1;
 let userQuery = "";
 let guildQuery = "";
 let loggedInUser = JSON.parse(localStorage.getItem("discord_user") || "null");
-let accessToken = localStorage.getItem("discord_token") || null;
+localStorage.removeItem("discord_token");
 let currentUserId = null;
 let currentGuildId = null;
+
+if (!loggedInUser && !window.__fishieOAuthPending) {
+  fetch(`${FISHIE_API}/oauth/me`)
+    .then((res) => {
+      if (res.status === 401) {
+        console.info("Fishie session not found; user is not logged in.");
+        return null;
+      }
+      if (!res.ok) throw new Error(`Session check failed (${res.status})`);
+      return res.json();
+    })
+    .then((data) => {
+      if (!data || !data.authenticated) {
+        console.info("Fishie session not found; user is not logged in.");
+        return;
+      }
+      localStorage.setItem("discord_user", JSON.stringify(data.user));
+      window.location.reload();
+    })
+    .catch((error) => {
+      console.error("Could not restore Fishie session:", error);
+    });
+}
+
+window.addEventListener("discord-login", () => {
+  loggedInUser = JSON.parse(localStorage.getItem("discord_user") || "null");
+  if (loggedInUser && !localStorage.getItem("settings_pending")) {
+    window.location.reload();
+  }
+});
 
 const grid = document.getElementById("results-grid");
 const pagination = document.getElementById("pagination");
@@ -198,20 +243,20 @@ function renderSettings() {
     document
       .getElementById("settings-logout-btn")
       .addEventListener("click", () => {
-        localStorage.removeItem("discord_user");
-        localStorage.removeItem("discord_token");
-        loggedInUser = null;
-        accessToken = null;
-        hideSettingsPanel();
-        tabs.forEach((b) => b.classList.remove("active"));
-        const userBtn = document.querySelector(
-          '#discord-tabs [data-tab="user"]',
-        );
-        if (userBtn) userBtn.classList.add("active");
-        currentTab = "user";
-        currentSubtab = "avatars";
-        userSubtabs.classList.remove("hidden");
-        renderLogin();
+        fetch(`${FISHIE_API}/oauth/logout`, { method: "POST" }).finally(() => {
+          localStorage.removeItem("discord_user");
+          loggedInUser = null;
+          hideSettingsPanel();
+          tabs.forEach((b) => b.classList.remove("active"));
+          const userBtn = document.querySelector(
+            '#discord-tabs [data-tab="user"]',
+          );
+          if (userBtn) userBtn.classList.add("active");
+          currentTab = "user";
+          currentSubtab = "avatars";
+          userSubtabs.classList.remove("hidden");
+          renderLogin();
+        });
       });
 
     document
@@ -293,12 +338,11 @@ const GUILD_TRACKING_ITEMS = [
 
 async function fetchGuilds() {
   const select = document.getElementById("guild-select");
-  if (!select || !loggedInUser || !accessToken) return;
+  if (!select || !loggedInUser) return;
   select.disabled = true;
   select.innerHTML = '<option value="">Loading…</option>';
   try {
     const res = await fetch(`${FISHIE_API}/user/${loggedInUser.id}/guilds`, {
-      headers: { Authorization: `Bearer ${accessToken}` },
     });
     if (!res.ok) throw new Error("Failed to fetch guilds");
     const data = await res.json();
@@ -324,13 +368,12 @@ async function fetchGuilds() {
 }
 
 async function loadManagedGuilds() {
-  if (!loggedInUser || !accessToken) {
+  if (!loggedInUser) {
     managedGuildIds = [];
     return;
   }
   try {
     const res = await fetch(`${FISHIE_API}/user/${loggedInUser.id}/guilds`, {
-      headers: { Authorization: `Bearer ${accessToken}` },
     });
     if (res.ok) {
       const data = await res.json();
@@ -344,7 +387,7 @@ async function loadManagedGuilds() {
 
 function fetchGuildOptOuts(guildId) {
   const container = document.getElementById("guild-toggles");
-  if (!container || !accessToken) return;
+  if (!container) return;
   const guilds = document.getElementById("guild-select")._guildData || [];
   const guild = guilds.find((g) => g.id === guildId);
   if (!guild) return;
@@ -370,7 +413,7 @@ function renderGuildToggles(optedOut, guildId) {
 }
 
 async function saveGuildOptOuts(guildId) {
-  if (!loggedInUser || !accessToken) return;
+  if (!loggedInUser) return;
   const optedOut = GUILD_TRACKING_ITEMS.filter((item) => {
     const input = document.querySelector(
       `#guild-toggles .guild-toggle[data-key="${item.key}"]`,
@@ -382,7 +425,6 @@ async function saveGuildOptOuts(guildId) {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${accessToken}`,
       },
       body: JSON.stringify({ items: optedOut }),
     });
@@ -426,7 +468,7 @@ function renderToggles(optedOut) {
 }
 
 async function saveOptOuts() {
-  if (!loggedInUser || !accessToken) return;
+  if (!loggedInUser) return;
   const optedOut = TRACKING_ITEMS.filter((item) => !item.disabled)
     .filter((item) => {
       const input = document.querySelector(
@@ -440,7 +482,6 @@ async function saveOptOuts() {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${accessToken}`,
       },
       body: JSON.stringify({ items: optedOut }),
     });
@@ -484,7 +525,6 @@ const TABLE_MAP = {
 let managedGuildIds = [];
 
 const canDelete = () =>
-  accessToken &&
   loggedInUser &&
   ((currentTab === "user" && currentUserId === String(loggedInUser.id)) ||
     (currentTab === "guild" &&
@@ -587,7 +627,7 @@ async function deleteItem(table, key) {
   try {
     const res = await fetch(
       `${FISHIE_API}/item/${table}/${targetId}?key=${encodeURIComponent(key)}`,
-      { method: "DELETE", headers: { Authorization: `Bearer ${accessToken}` } },
+      { method: "DELETE" },
     );
     if (!res.ok) throw new Error("Delete failed");
     closeModal();
@@ -610,7 +650,7 @@ async function deleteAll() {
   try {
     const res = await fetch(
       `${FISHIE_API}/user/${targetId}?table=${TABLE_MAP[currentSubtab]}`,
-      { method: "DELETE", headers: { Authorization: `Bearer ${accessToken}` } },
+      { method: "DELETE" },
     );
     if (!res.ok) throw new Error("Delete all failed");
     alert(`${tabLabel()} deleted.`);
@@ -741,7 +781,7 @@ if (wantsSettings) {
 } else if (q) {
   setActiveQuery(q);
   input.value = q;
-  if (loggedInUser && accessToken) {
+  if (loggedInUser) {
     loadManagedGuilds().then(() => fetchData());
   } else {
     fetchData();
@@ -749,4 +789,4 @@ if (wantsSettings) {
 } else if (loggedInUser && currentTab === "user") {
   input.value = String(loggedInUser.id);
 }
-if (loggedInUser && accessToken && !q) loadManagedGuilds();
+if (loggedInUser && !q) loadManagedGuilds();

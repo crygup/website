@@ -1,3 +1,19 @@
+(() => {
+  const nativeFetch = window.fetch.bind(window);
+  window.fetch = (input, init = {}) => {
+    const options = init || {};
+    const headers = new Headers(options.headers || {});
+    headers.delete("Authorization");
+    const requestUrl =
+      typeof input === "string" ? input : input?.url || String(input);
+    const credentials = requestUrl.startsWith("https://api.crygup.com/fishie")
+      ? "include"
+      : options.credentials || "same-origin";
+    return nativeFetch(input, { ...options, credentials, headers });
+  };
+})();
+localStorage.removeItem("discord_token");
+
 (function () {
   const page = document.body.dataset.page || "";
 
@@ -76,9 +92,12 @@
     const btn = sidebar.querySelector(".sidebar-logout");
     if (btn) {
       btn.addEventListener("click", () => {
-        localStorage.removeItem("discord_user");
-        localStorage.removeItem("discord_token");
-        window.location.reload();
+        fetch("https://api.crygup.com/fishie/oauth/logout", {
+          method: "POST",
+        }).finally(() => {
+          localStorage.removeItem("discord_user");
+          window.location.reload();
+        });
       });
     }
   }
@@ -789,6 +808,7 @@ function escapeHtml(s) {
 
   const code = qp.get("code");
   if (!code) return;
+  window.__fishieOAuthPending = true;
   window.history.replaceState({}, "", window.location.pathname);
 
   fetch(
@@ -801,11 +821,13 @@ function escapeHtml(s) {
     })
     .then((data) => {
       localStorage.setItem("discord_user", JSON.stringify(data.user));
-      localStorage.setItem("discord_token", data.access_token);
+      window.__fishieOAuthPending = false;
       window.dispatchEvent(new CustomEvent("discord-login"));
       if (localStorage.getItem("settings_pending")) {
         window.location.href = "/discord";
       }
     })
-    .catch(() => {});
+    .catch(() => {
+      window.__fishieOAuthPending = false;
+    });
 })();
