@@ -69,7 +69,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             return
         return super().do_HEAD()
 
-    def log_request(self, code, size="-"):
+    def log_request(self, code="-", size="-"):
         # Never write query strings: OAuth codes, state, and tokens may be in them.
         path = self.path.split("?", 1)[0]
         logger.info(
