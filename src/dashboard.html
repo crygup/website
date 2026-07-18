@@ -216,6 +216,25 @@
       .btn-primary:hover {
         background: #5865f2;
       }
+      .guild-tab {
+        padding: 0.35rem 0.75rem;
+        background: #332b37;
+        color: #94a3b8;
+        border: none;
+        border-radius: 0.25rem;
+        cursor: pointer;
+        font-size: 0.8rem;
+        font-family: inherit;
+        transition: background 0.15s, color 0.15s;
+      }
+      .guild-tab:hover,
+      .guild-tab.active {
+        background: #4752c4;
+        color: #fff;
+      }
+      .settings-subtabs {
+        justify-content: center;
+      }
 
       .guild-dropdown {
         position: relative;
@@ -441,6 +460,7 @@
 
       <div class="tab-panel active" id="tabUser">
         <div id="userSettingsContent"></div>
+        <div id="userHighlightsSettings" style="display:none"><div class="card"><span style="color:#64748b">Loading highlights...</span></div></div>
       </div>
 
       <div class="tab-panel" id="tabGuild">
@@ -481,6 +501,6 @@
       </div>
     </div>
 
-    <script src="dashboard.js?s=17"></script>
+    <script src="dashboard.js?s=30"></script>
   </body>
 </html>

@@ -13,7 +13,7 @@ import re
 import secrets
 import time
 from types import SimpleNamespace
-from typing import TYPE_CHECKING
+from typing import Any, TYPE_CHECKING, cast
 from urllib.parse import parse_qs, urlencode, urlsplit
 
 import aiohttp
@@ -332,7 +332,7 @@ async def _refresh_discord_accounts_message(
     try:
         from extensions.settings import ManageAccountsView
 
-        channel = bot_ref.get_channel(channel_id)
+        channel: Any = bot_ref.get_channel(channel_id)
         if channel is None:
             channel = await bot_ref.fetch_channel(channel_id)
         message = await channel.fetch_message(message_id)
@@ -345,7 +345,7 @@ async def _refresh_discord_accounts_message(
         ctx = SimpleNamespace(bot=bot_ref, author=author)
         await message.edit(
             view=ManageAccountsView(
-                ctx,
+                cast(Any, ctx),
                 row=row,
                 lastfm_connected=bool(row and row["lastfm"]),
                 steam_connected=bool(row and row["steam"]),
@@ -366,7 +366,8 @@ def _schedule_discord_accounts_refresh(
         return
     tasks = getattr(bot_ref, "_oauth_refresh_tasks", None)
     if tasks is None:
-        tasks = bot_ref._oauth_refresh_tasks = set()
+        tasks = set()
+        setattr(bot_ref, "_oauth_refresh_tasks", tasks)
     task = asyncio.create_task(
         _refresh_discord_accounts_message(user_id, channel_id, message_id)
     )
@@ -647,7 +648,7 @@ async def list_commands():
     for cmd in bot_ref.commands:
         add_cmd(cmd)
         if hasattr(cmd, "walk_commands"):
-            for sub in cmd.walk_commands():
+            for sub in cast(Any, cmd).walk_commands():
                 add_cmd(sub)
     return {"commands": sorted(cmds, key=lambda c: (c["category"], c["name"]))}
 
@@ -1801,6 +1802,120 @@ async def set_guild_settings(
             bot_ref.cached_honeypots.add(updates["honeypot"])
 
     return {"settings": updates}
+
+
+def _dashboard_command_list():
+    if not bot_ref:
+        return []
+    bot = bot_ref
+    commands_by_name = {}
+
+    def add_command(command):
+        if (
+            command.hidden
+            or command.cog_name in ("Owner", "Jishaku")
+            or bot._command_disable_excluded(command)
+        ):
+            return
+        name = command.qualified_name.casefold()
+        commands_by_name[name] = {
+            "name": command.qualified_name,
+            "description": command.description or command.short_doc or "",
+        }
+
+    for command in bot_ref.commands:
+        add_command(command)
+    return sorted(commands_by_name.values(), key=lambda item: item["name"].casefold())
+
+
+async def _managed_guild(guild_id: int, authorization: str):
+    me = await _verify_token(authorization)
+    if not bot_ref:
+        raise HTTPException(503, "Bot not ready")
+    guild = bot_ref.get_guild(guild_id)
+    if not guild:
+        raise HTTPException(404, "Guild not found")
+    member = guild.get_member(int(me["id"]))
+    if not member or not member.guild_permissions.manage_guild:
+        raise HTTPException(403, "Need Manage Server permission")
+    return guild
+
+
+@app.get("/guild/{guild_id}/command-disables")
+async def get_command_disables(guild_id: int, authorization: str = Header(None)):
+    """Return command controls for a server managed by the authenticated user."""
+    guild = await _managed_guild(guild_id, authorization)
+    pool = _check_pool()
+    rows = await pool.fetch(
+        "SELECT command, channel_id FROM command_disables WHERE guild_id = $1",
+        guild_id,
+    )
+    return {
+        "commands": _dashboard_command_list(),
+        "channels": [
+            {"id": str(channel.id), "name": channel.name}
+            for channel in guild.text_channels
+        ],
+        "disabled": [
+            {"command": row["command"], "channel_id": int(row["channel_id"])}
+            for row in rows
+        ],
+    }
+
+
+@app.post("/guild/{guild_id}/command-disables")
+async def set_command_disable(
+    guild_id: int, payload: dict = Body(...), authorization: str = Header(None)
+):
+    """Enable or disable one command server-wide or in a text channel."""
+    guild = await _managed_guild(guild_id, authorization)
+    if not bot_ref:
+        raise HTTPException(503, "Bot not ready")
+
+    requested = str(payload.get("command", "")).strip()
+    command = bot_ref.get_command(requested.casefold())
+    if command is None or command.qualified_name.casefold() != requested.casefold():
+        raise HTTPException(400, "Unknown command")
+    if bot_ref._command_disable_excluded(command):
+        raise HTTPException(400, "This command cannot be disabled")
+
+    raw_channel_id = payload.get("channel_id", 0)
+    try:
+        channel_id = int(raw_channel_id or 0)
+    except (TypeError, ValueError):
+        raise HTTPException(400, "channel_id must be a text channel ID or 0")
+    if channel_id:
+        channel = guild.get_channel(channel_id)
+        if channel is None or channel not in guild.text_channels:
+            raise HTTPException(
+                400, "channel_id must belong to a text channel in this server"
+            )
+
+    pool = _check_pool()
+    command_name = command.qualified_name.casefold()
+    if bool(payload.get("disabled")):
+        await pool.execute(
+            """
+            INSERT INTO command_disables (guild_id, command, channel_id)
+            VALUES ($1, $2, $3)
+            ON CONFLICT (guild_id, command, channel_id) DO NOTHING
+            """,
+            guild_id,
+            command_name,
+            channel_id,
+        )
+        bot_ref.db_cache.add_disabled_command(guild_id, command_name, channel_id)
+        disabled = True
+    else:
+        await pool.execute(
+            "DELETE FROM command_disables WHERE guild_id = $1 AND command = $2 AND channel_id = $3",
+            guild_id,
+            command_name,
+            channel_id,
+        )
+        bot_ref.db_cache.remove_disabled_command(guild_id, command_name, channel_id)
+        disabled = False
+    return {"command": command_name, "channel_id": channel_id, "disabled": disabled}
 
 
 @app.get("/guild/{guild_id}/prefixes")

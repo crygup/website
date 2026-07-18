@@ -198,27 +198,41 @@ async function loadUserSettings(userId) {
       { k: "username", l: "Username" },
       { k: "display", l: "Display name" },
       { k: "nickname", l: "Nickname" },
-      { k: "discrim", l: "Discriminator" },
+      { k: "discrim", l: "Discriminator", disabled: true },
       { k: "joins", l: "Server joins" },
     ];
 
     var html =
-      '<div class="card"><div class="settings-group"><h4>Tracking</h4>';
+      '<div class="settings-subtabs" style="display:flex;gap:0.4rem;margin-bottom:0.75rem;flex-wrap:wrap">' +
+      '<button id="userTabGeneral" class="guild-tab active" onclick="showUserSettingsTab(\'' + userId + '\',\'general\')">General</button>' +
+      '<button id="userTabHighlights" class="guild-tab" onclick="openUserHighlights(\'' + userId + '\')">Highlights</button>' +
+      '</div><div id="userGeneralSettings"><div class="card"><div class="settings-group"><h4>Tracking</h4>';
     for (var i = 0; i < items.length; i++) {
-      var on = !optedOut.has(items[i].k);
+      var disabled = Boolean(items[i].disabled);
+      var on = !disabled && !optedOut.has(items[i].k);
       html +=
-        '<div class="setting-toggle"><div class="label">' +
+        '<div class="setting-toggle" style="' +
+        (disabled ? "opacity:0.45;cursor:not-allowed" : "") +
+        '"><div class="label">' +
         items[i].l +
+        (disabled
+          ? ' <span style="font-size:0.72rem;color:#64748b">(unavailable)</span>'
+          : "") +
         "</div>" +
         '<div class="toggle ' +
         (on ? "on" : "") +
         '" data-optout="' +
         items[i].k +
-        "\" onclick=\"var t=this;t.classList.toggle('on');togUserOpt('" +
-        userId +
-        "','" +
-        items[i].k +
-        "',t.classList.contains('on'))\"></div></div>";
+        '"' +
+        (disabled
+          ? ' aria-disabled="true" title="Discriminator logging is unavailable"'
+          : " onclick=\"var t=this;t.classList.toggle('on');togUserOpt('") +
+        (disabled
+          ? "></div></div>"
+          : userId +
+            "','" +
+            items[i].k +
+            "',t.classList.contains('on'))\"></div></div>");
     }
     html += "</div></div>";
 
@@ -336,12 +350,117 @@ async function loadUserSettings(userId) {
       "'" +
       ')">Save Accounts</button>';
     html += "</div></div>";
+    html += "</div>";
 
     div.innerHTML = html;
+    loadUserHighlights(userId);
   } catch (e) {
     console.error("User settings error:", e);
     div.innerHTML = '<p style="color:#64748b">Failed to load settings.</p>';
   }
+}
+
+var _userHighlightGuilds = [];
+var _userHighlightWords = {};
+
+function showUserSettingsTab(userId, tab) {
+  var general = document.getElementById("userGeneralSettings");
+  var highlights = document.getElementById("userHighlightsSettings");
+  if (general) general.style.display = tab === "general" ? "block" : "none";
+  if (highlights) highlights.style.display = tab === "highlights" ? "block" : "none";
+  var generalButton = document.getElementById("userTabGeneral");
+  var highlightsButton = document.getElementById("userTabHighlights");
+  if (generalButton) generalButton.classList.toggle("active", tab === "general");
+  if (highlightsButton) highlightsButton.classList.toggle("active", tab === "highlights");
+}
+
+async function openUserHighlights(userId) {
+  showUserSettingsTab(userId, "highlights");
+  await loadUserHighlights(userId);
+}
+
+async function loadUserHighlights(userId) {
+  var panel = document.getElementById("userHighlightsSettings");
+  if (!panel) return;
+  panel.innerHTML = '<div class="card"><span style="color:#64748b">Loading highlights...</span></div>';
+  try {
+    var res = await fetch(API + "/user/" + userId + "/highlights", { credentials: "include" });
+    var data = await res.json();
+    if (!res.ok) throw new Error(data.detail || "Could not load highlights");
+    _userHighlightGuilds = data.guilds || [];
+    _userHighlightWords = {};
+    _userHighlightGuilds.forEach(function (guild) {
+      _userHighlightWords[String(guild.id)] = (guild.highlights || []).slice();
+    });
+    renderUserHighlights();
+  } catch (error) {
+    console.error("User highlights error:", error);
+    panel.innerHTML = '<div class="card"><span style="color:#f87171">Failed to load highlights.</span></div>';
+  }
+}
+
+function renderUserHighlights() {
+  var panel = document.getElementById("userHighlightsSettings");
+  if (!panel) return;
+  if (!_userHighlightGuilds.length) {
+    panel.innerHTML = '<div class="card"><div class="settings-group"><h4>Highlights</h4><div class="desc">You do not currently share a server with Fishie.</div></div></div>';
+    return;
+  }
+  var selected = document.getElementById("userHighlightGuildSelect");
+  var selectedId = selected ? selected.value : String(_userHighlightGuilds[0].id);
+  if (!_userHighlightGuilds.some(function (guild) { return String(guild.id) === selectedId; })) {
+    selectedId = String(_userHighlightGuilds[0].id);
+  }
+  var guild = _userHighlightGuilds.find(function (item) { return String(item.id) === selectedId; });
+  var words = _userHighlightWords[selectedId] || [];
+  var html = '<div class="card"><div class="settings-group"><h4>Highlights</h4><div class="desc">Choose a shared server to manage the words that send you a highlight notification.</div><select class="text-input" id="userHighlightGuildSelect" onchange="renderUserHighlights()">';
+  html += _userHighlightGuilds.map(function (item) {
+    return '<option value="' + esc(item.id) + '"' + (String(item.id) === selectedId ? ' selected' : '') + '>' + esc(item.name) + '</option>';
+  }).join("");
+  html += '</select></div></div><div class="card"><div class="settings-group"><h4>' + esc(guild.name) + '</h4><div class="prefix-list">';
+  if (!words.length) html += '<span style="color:#64748b;font-size:0.8rem">No highlights configured.</span>';
+  words.forEach(function (word, index) {
+    html += '<span class="prefix-tag">' + esc(word) + ' <span class="remove" onclick="removeUserHighlight(' + index + ')">×</span></span>';
+  });
+  html += '</div><div style="display:flex;gap:0.3rem;flex-wrap:wrap"><input type="text" class="text-input" id="newUserHighlight" maxlength="100" placeholder="Word or phrase" style="flex:1;min-width:12rem"><button class="btn-primary" onclick="addUserHighlight()">Add</button><button class="btn-primary" onclick="saveUserHighlights(\'' + selectedId + '\')">Save</button></div></div></div>';
+  panel.innerHTML = html;
+}
+
+function addUserHighlight() {
+  var select = document.getElementById("userHighlightGuildSelect");
+  var input = document.getElementById("newUserHighlight");
+  if (!select || !input) return;
+  var word = input.value.trim().replace(/\s+/g, " ");
+  if (!word) return;
+  var words = _userHighlightWords[select.value] || [];
+  if (word.length > 100 || words.some(function (item) { return item.toLowerCase() === word.toLowerCase(); })) return;
+  words.push(word);
+  _userHighlightWords[select.value] = words;
+  renderUserHighlights();
+}
+
+function removeUserHighlight(index) {
+  var select = document.getElementById("userHighlightGuildSelect");
+  if (!select) return;
+  var words = _userHighlightWords[select.value] || [];
+  words.splice(index, 1);
+  _userHighlightWords[select.value] = words;
+  renderUserHighlights();
+}
+
+async function saveUserHighlights(guildId) {
+  var res = await fetch(API + "/user/" + (JSON.parse(localStorage.getItem("fishie_user") || "{}").id || "") + "/highlights", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ guild_id: guildId, words: _userHighlightWords[guildId] || [] }),
+  });
+  if (!res.ok) {
+    var detail = await res.text();
+    console.error("Highlight save failed", res.status, detail);
+    alert("Could not save highlights: " + detail);
+    return;
+  }
+  alert("Highlights saved.");
 }
 
 async function togUserOpt(userId, item, enable) {
@@ -544,13 +663,14 @@ async function loadGuildSettings(guildId) {
   div.innerHTML = '<p style="color:#64748b">Loading...</p>';
   try {
     var user = JSON.parse(localStorage.getItem("fishie_user") || "{}");
-    var [gRes, setRes, optRes, preRes] = await Promise.all([
+    var [gRes, setRes, optRes, preRes, cmdRes] = await Promise.all([
       fetch(API + "/user/" + user.id + "/guilds", {
       }),
       fetch(API + "/guild/" + guildId + "/settings", {
       }),
       fetch(API + "/guild/" + guildId + "/opted-out"),
       fetch(API + "/guild/" + guildId + "/prefixes"),
+      fetch(API + "/guild/" + guildId + "/command-disables"),
     ]);
     var gData = await gRes.json();
     var guild = null;
@@ -566,13 +686,27 @@ async function loadGuildSettings(guildId) {
     var preData = await preRes.json();
     var optedOut = new Set(optData.items || []);
     var prefixes = preData.prefixes || [];
+    var commandData = cmdRes.ok
+      ? await cmdRes.json()
+      : { commands: [], channels: [], disabled: [], error: true };
     var autoDownload = setData.auto_download || "";
     var honeypot = setData.honeypot || "";
     var poketwo = setData.poketwo || false;
     var autoReactions = setData.auto_reactions || false;
     var pinboard = setData.pinboard || "";
 
-    var html = '<div class="card">';
+    var html =
+      '<div class="settings-subtabs guild-settings-tabs" style="display:flex;gap:0.4rem;margin-bottom:0.75rem;flex-wrap:wrap">' +
+      '<button id="guildTabGeneral" class="guild-tab active" onclick="showGuildSettingsTab(\'' +
+      guildId +
+      '\',\'general\')">General</button>' +
+      '<button id="guildTabTwitch" class="guild-tab" onclick="showGuildSettingsTab(\'' +
+      guildId +
+      '\',\'twitch\')">Twitch follows</button>' +
+      '<button id="guildTabLogger" class="guild-tab" onclick="showGuildSettingsTab(\'' +
+      guildId +
+      '\',\'logger\')">Logger channels</button></div>' +
+      '<div id="guildGeneralTab"><div class="card">';
     var guildIcon = guild && guild.icon ? guild.icon : null;
     var iconUrl = guildIcon || null;
     html +=
@@ -660,6 +794,73 @@ async function loadGuildSettings(guildId) {
       ')">Add</button></div>';
     html += "</div>";
 
+    html += '<div class="settings-group"><h4>Command Controls</h4>';
+    html +=
+      '<div class="desc" style="margin-bottom:0.6rem">Disable commands server-wide or only in a specific text channel.</div>';
+    var commandOptions = commandData.commands || [];
+    if (commandData.error || !commandOptions.length) {
+      html +=
+        '<div style="color:#f59e0b;font-size:0.8rem">Command controls are unavailable right now. Please refresh and try again.</div></div>';
+    } else {
+      html +=
+        '<div style="display:flex;gap:0.4rem;flex-wrap:wrap">' +
+        '<input class="text-input" id="gCommand" list="gCommandOptions" autocomplete="off" placeholder="Type to filter commands" style="flex:1;min-width:12rem">' +
+        '<datalist id="gCommandOptions">';
+      for (var ci = 0; ci < commandOptions.length; ci++) {
+        html +=
+          '<option value="' +
+          esc(commandOptions[ci].name) +
+          '"></option>';
+      }
+      html +=
+        '</datalist><select class="text-input" id="gCommandChannel" style="flex:1;min-width:12rem"><option value="0">Entire server</option>';
+    var commandChannels = commandData.channels || [];
+    for (var cci = 0; cci < commandChannels.length; cci++) {
+      html +=
+        '<option value="' +
+        esc(commandChannels[cci].id) +
+        '">#' +
+        esc(commandChannels[cci].name) +
+        "</option>";
+    }
+    html +=
+      '</select><button class="btn-primary" onclick="setGuildCommand(\'' +
+      guildId +
+      '\',true)">Disable</button></div>';
+    html += '<div style="margin-top:0.75rem">';
+    var disabledCommands = commandData.disabled || [];
+    if (!disabledCommands.length) {
+      html +=
+        '<span style="color:#64748b;font-size:0.8rem">No commands are disabled.</span>';
+    } else {
+      var channelNames = {};
+      for (var cni = 0; cni < commandChannels.length; cni++) {
+        channelNames[String(commandChannels[cni].id)] =
+          "#" + commandChannels[cni].name;
+      }
+      for (var dci = 0; dci < disabledCommands.length; dci++) {
+        var disabledItem = disabledCommands[dci];
+        var scope = disabledItem.channel_id
+          ? channelNames[String(disabledItem.channel_id)] ||
+            "channel " + disabledItem.channel_id
+          : "entire server";
+        html +=
+          '<div class="row" style="display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap"><span style="color:#cbd5e1;flex:1"><code>' +
+          esc(disabledItem.command) +
+          "</code> · " +
+          esc(scope) +
+          '</span><button class="logout-btn" onclick="enableGuildCommand(\'' +
+          guildId +
+          '\',\'' +
+          esc(disabledItem.command) +
+          '\',' +
+          JSON.stringify(String(disabledItem.channel_id || "0")) +
+          ')">Enable</button></div>';
+      }
+    }
+    html += "</div></div>";
+    }
+
     html += '<div class="settings-group"><h4>Tracking Opt-Out</h4>';
     var tItems = [
       { k: "name", l: "Server name logging" },
@@ -683,14 +884,143 @@ async function loadGuildSettings(guildId) {
     }
     html += "</div>";
 
-    html += "</div>";
+    html +=
+      '</div><div id="guildTwitchTab" style="display:none"></div><div id="guildLoggerTab" style="display:none"></div>';
 
     div.innerHTML = html;
+    loadGuildTwitchTab(guildId);
+    loadGuildLoggerTab(guildId);
   } catch (e) {
     console.error("Guild settings error:", e);
     div.innerHTML =
       '<p style="color:#64748b">Failed to load guild settings.</p>';
   }
+}
+
+function showGuildSettingsTab(guildId, tab) {
+  ["general", "twitch", "logger"].forEach(function (name) {
+    var panel = document.getElementById("guild" + name[0].toUpperCase() + name.slice(1) + "Tab");
+    if (panel) panel.style.display = name === tab ? "block" : "none";
+    var button = document.getElementById("guildTab" + name[0].toUpperCase() + name.slice(1));
+    if (button) button.classList.toggle("active", name === tab);
+  });
+}
+
+async function loadGuildTwitchTab(guildId) {
+  var panel = document.getElementById("guildTwitchTab");
+  if (!panel) return;
+  try {
+    var res = await fetch(API + "/guild/" + guildId + "/twitch-follows");
+    var data = await res.json();
+    if (!res.ok) throw new Error(data.detail || "Could not load Twitch follows");
+    var channels = data.channels || [];
+    var html = '<div class="card"><div class="settings-group"><h4>Twitch follows</h4>';
+    html += '<div class="desc">Follow up to three channels and customize where and what announcements post.</div>';
+    html += '<div style="display:flex;gap:0.4rem;flex-wrap:wrap;margin-top:0.6rem"><input id="twNewName" class="text-input" placeholder="Twitch channel name" style="flex:1;min-width:10rem"><select id="twNewChannel" class="text-input" style="flex:1;min-width:10rem">';
+    html += channels.map(function (channel) { return '<option value="' + esc(channel.id) + '">#' + esc(channel.name) + '</option>'; }).join("");
+    html += '</select><button class="btn-primary" onclick="saveTwitchFollow(\'' + guildId + '\',null)">Follow</button></div>';
+    html += '<textarea id="twNewMessage" class="text-input" maxlength="2000" placeholder="Optional announcement text" style="width:100%;margin-top:0.4rem;min-height:4rem"></textarea></div></div>';
+    var follows = data.follows || [];
+    if (!follows.length) html += '<div class="card"><span style="color:#64748b;font-size:0.8rem">No Twitch channels are followed.</span></div>';
+    follows.forEach(function (follow, index) {
+      var base = "twFollow" + index;
+      var followChannels = channels.slice();
+      if (follow.announce_channel_id != null && !followChannels.some(function (channel) {
+        return String(channel.id) === String(follow.announce_channel_id);
+      })) {
+        followChannels.push({
+          id: String(follow.announce_channel_id),
+          name: follow.announce_channel_name || "Configured channel",
+        });
+      }
+      html += '<div class="card"><div class="settings-group"><h4>' + esc(follow.channel_name) + '</h4>';
+      html += '<label class="label">Announcement channel</label><select class="text-input" id="' + base + 'Channel">' + followChannels.map(function (channel) { return '<option value="' + esc(channel.id) + '"' + (String(channel.id) === String(follow.announce_channel_id) ? ' selected' : '') + '>#' + esc(channel.name) + '</option>'; }).join("") + '</select>';
+      html += '<textarea class="text-input" id="' + base + 'Message" maxlength="2000" placeholder="Optional announcement text" style="width:100%;margin-top:0.4rem;min-height:4rem">' + esc(follow.message_template || "") + '</textarea>';
+      html += '<div style="display:flex;gap:0.4rem;margin-top:0.4rem"><button class="btn-primary" onclick="saveTwitchFollow(\'' + guildId + '\',\'' + esc(follow.channel_name) + '\',\'' + base + '\')">Save</button><button class="logout-btn" onclick="removeTwitchFollow(\'' + guildId + '\',\'' + esc(follow.channel_name) + '\')">Unfollow</button></div></div></div>';
+    });
+    panel.innerHTML = html;
+    // Set the existing destination explicitly after rendering.  This keeps the
+    // saved channel selected even when the browser does not honor a generated
+    // `selected` attribute while replacing the panel HTML.
+    follows.forEach(function (follow, index) {
+      var select = document.getElementById("twFollow" + index + "Channel");
+      if (select && follow.announce_channel_id != null) {
+        select.value = String(follow.announce_channel_id);
+      }
+    });
+  } catch (error) {
+    console.error("Twitch settings error:", error);
+    panel.innerHTML = '<div class="card"><span style="color:#f87171">Failed to load Twitch follows.</span></div>';
+  }
+}
+
+async function saveTwitchFollow(guildId, channelName, base) {
+  var name = channelName || (document.getElementById("twNewName") || {}).value;
+  var channel = document.getElementById(base ? base + "Channel" : "twNewChannel");
+  var message = document.getElementById(base ? base + "Message" : "twNewMessage");
+  if (!name || !channel) return;
+  // Discord snowflake IDs exceed JavaScript's safe integer range. Keep the
+  // selected value as a string so it reaches the API without rounding.
+  var res = await fetch(API + "/guild/" + guildId + "/twitch-follows", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ channel_name: name, announce_channel_id: channel.value, message_template: message ? message.value : null }) });
+  if (!res.ok) {
+    var detail = await res.text();
+    console.error("Twitch follow save failed", res.status, detail);
+    alert("Could not save the Twitch follow: " + detail);
+    return;
+  }
+  loadGuildTwitchTab(guildId);
+}
+
+async function removeTwitchFollow(guildId, channelName) {
+  if (!confirm("Unfollow " + channelName + "?")) return;
+  var res = await fetch(API + "/guild/" + guildId + "/twitch-follows/" + encodeURIComponent(channelName), { method: "DELETE" });
+  if (!res.ok) { alert("Could not unfollow that Twitch channel."); return; }
+  loadGuildTwitchTab(guildId);
+}
+
+async function loadGuildLoggerTab(guildId) {
+  var panel = document.getElementById("guildLoggerTab");
+  if (!panel) return;
+  try {
+    var res = await fetch(API + "/guild/" + guildId + "/logger");
+    var data = await res.json();
+    if (!res.ok) throw new Error(data.detail || "Could not load logger settings");
+    var channels = data.channels || [];
+    var configured = {};
+    (data.configured || []).forEach(function (item) { configured[String(item.event).toLowerCase()] = item; });
+    var loggerChannels = channels.slice();
+    (data.configured || []).forEach(function (item) {
+      if (item.channel_id != null && !loggerChannels.some(function (channel) {
+        return String(channel.id) === String(item.channel_id);
+      })) {
+        loggerChannels.push({
+          id: String(item.channel_id),
+          name: item.channel_name || "Configured channel",
+        });
+      }
+    });
+    var html = '<div class="card"><div class="settings-group"><h4>Logger channels</h4><div class="desc">Each event uses its own Fishie webhook. Select a channel or clear an event.</div>';
+    Object.keys(data.events || {}).forEach(function (event) {
+      var item = configured[event];
+      html += '<div style="display:flex;align-items:flex-end;gap:0.6rem;flex-wrap:wrap;padding:0.65rem 0;border-top:1px solid #2a2c2f"><div style="flex:1;min-width:14rem"><div class="label">' + esc(data.events[event]) + '</div><select class="text-input" id="logger-' + esc(event) + '"><option value="">Disabled</option>' + loggerChannels.map(function (channel) { return '<option value="' + esc(channel.id) + '"' + (item && String(item.channel_id) === String(channel.id) ? ' selected' : '') + '>#' + esc(channel.name) + '</option>'; }).join("") + '</select></div><button class="btn-primary" style="flex:0 0 auto;white-space:nowrap" onclick="saveLoggerEvent(\'' + guildId + '\',\'' + event + '\')">Save</button></div>';
+    });
+    html += '</div></div>';
+    panel.innerHTML = html;
+  } catch (error) {
+    console.error("Logger settings error:", error);
+    panel.innerHTML = '<div class="card"><span style="color:#f87171">Failed to load logger settings.</span></div>';
+  }
+}
+
+async function saveLoggerEvent(guildId, event) {
+  var input = document.getElementById("logger-" + event);
+  if (!input) return;
+  var url = API + "/guild/" + guildId + "/logger";
+  var options = { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ event: event, channel_id: input.value }) };
+  if (!input.value) { options.method = "DELETE"; url += "/" + encodeURIComponent(event); delete options.body; }
+  var res = await fetch(url, options);
+  if (!res.ok) { alert("Could not update that logger event."); return; }
+  loadGuildLoggerTab(guildId);
 }
 
 async function saveGChan(guildId, key) {
@@ -721,6 +1051,47 @@ async function togGSet(guildId, key, enable) {
     },
     body: JSON.stringify(payload),
   });
+}
+
+async function setGuildCommand(guildId, disabled) {
+  var command = document.getElementById("gCommand");
+  var channel = document.getElementById("gCommandChannel");
+  if (!command || !command.value) return;
+  try {
+    var res = await fetch(API + "/guild/" + guildId + "/command-disables", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        command: command.value,
+        channel_id: channel ? channel.value : "0",
+        disabled: Boolean(disabled),
+      }),
+    });
+    if (!res.ok) throw new Error(await res.text());
+    await loadGuildSettings(guildId);
+  } catch (e) {
+    console.error("Command setting error:", e);
+    alert("Could not update that command setting.");
+  }
+}
+
+async function enableGuildCommand(guildId, command, channelId) {
+  try {
+    var res = await fetch(API + "/guild/" + guildId + "/command-disables", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        command: command,
+        channel_id: String(channelId || "0"),
+        disabled: false,
+      }),
+    });
+    if (!res.ok) throw new Error(await res.text());
+    await loadGuildSettings(guildId);
+  } catch (e) {
+    console.error("Command setting error:", e);
+    alert("Could not enable that command.");
+  }
 }
 
 async function addPrefix(guildId) {
