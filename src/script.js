@@ -14,6 +14,20 @@
 })();
 localStorage.removeItem("discord_token");
 
+const FISHIE_API_BASE = "https://api.crygup.com/fishie";
+const FISHIE_HOME_REDIRECT = "https://crygup.com";
+
+window.startFishieOAuth = async function (redirectUri = FISHIE_HOME_REDIRECT) {
+  const response = await fetch(
+    `${FISHIE_API_BASE}/oauth/start?redirect_uri=${encodeURIComponent(redirectUri)}`,
+  );
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok || !data.url) {
+    throw new Error(data.detail || "Could not start Discord login");
+  }
+  window.location.assign(data.url);
+};
+
 (function () {
   const page = document.body.dataset.page || "";
 
@@ -42,9 +56,6 @@ localStorage.removeItem("discord_token");
   overlay.className = "sidebar-overlay";
   document.body.prepend(overlay);
 
-  const CLIENT_ID = "876391494485950504";
-  const OAUTH_URL = `https://discord.com/oauth2/authorize?client_id=${CLIENT_ID}&redirect_uri=${encodeURIComponent("https://crygup.com")}&response_type=code&scope=identify`;
-
   const sidebar = document.createElement("nav");
   sidebar.className = "sidebar";
 
@@ -63,7 +74,7 @@ localStorage.removeItem("discord_token");
       section += `<button class="sidebar-logout">Logout</button>`;
       section += `</div>`;
     } else {
-      section += `<a href="${OAUTH_URL}" class="sidebar-login">Login with Discord</a>`;
+      section += `<a href="#" class="sidebar-login">Login with Discord</a>`;
     }
     section += `<div class="sidebar-divider"></div>`;
     return section;
@@ -101,7 +112,23 @@ localStorage.removeItem("discord_token");
       });
     }
   }
+
+  function bindLogin() {
+    const link = sidebar.querySelector(".sidebar-login");
+    if (link) {
+      link.addEventListener("click", async (event) => {
+        event.preventDefault();
+        try {
+          await window.startFishieOAuth(FISHIE_HOME_REDIRECT);
+        } catch (error) {
+          console.error("Could not start Discord login:", error);
+        }
+      });
+    }
+  }
+
   bindLogout();
+  bindLogin();
 
   function rebuildLogin() {
     const userEl = sidebar.querySelector(".sidebar-user, .sidebar-login");
@@ -110,6 +137,7 @@ localStorage.removeItem("discord_token");
     if (divider) divider.remove();
     sidebar.insertAdjacentHTML("afterbegin", buildLoginSection());
     bindLogout();
+    bindLogin();
   }
   window.addEventListener("discord-login", rebuildLogin);
 
@@ -807,17 +835,24 @@ function escapeHtml(s) {
   }
 
   const code = qp.get("code");
-  if (!code) return;
+  const oauthState = qp.get("state");
+  if (!code || !oauthState) return;
   window.__fishieOAuthPending = true;
   window.history.replaceState({}, "", window.location.pathname);
 
-  fetch(
-    `${FISHIE_API}/oauth/exchange?code=${encodeURIComponent(code)}&redirect_uri=${encodeURIComponent("https://crygup.com")}`,
-    { method: "POST" },
-  )
-    .then((r) => {
-      if (!r.ok) throw new Error("Login failed");
-      return r.json();
+  fetch(`${FISHIE_API}/oauth/exchange`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      code,
+      state: oauthState,
+      redirect_uri: FISHIE_HOME_REDIRECT,
+    }),
+  })
+    .then(async (response) => {
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.detail || "Login failed");
+      return data;
     })
     .then((data) => {
       localStorage.setItem("discord_user", JSON.stringify(data.user));
@@ -827,7 +862,8 @@ function escapeHtml(s) {
         window.location.href = "/discord";
       }
     })
-    .catch(() => {
+    .catch((error) => {
+      console.error("Discord login failed:", error);
       window.__fishieOAuthPending = false;
     });
 })();

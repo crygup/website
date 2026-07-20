@@ -1,5 +1,4 @@
 const API = "https://api.crygup.com/fishie";
-const CLIENT_ID = "876391494485950504";
 const REDIRECT = "https://crygup.com/dashboard";
 
 // Authentication is provided by the API's HttpOnly session cookie. Strip any
@@ -31,21 +30,26 @@ function esc(s) {
 
 const params = new URLSearchParams(window.location.search);
 const code = params.get("code");
+const state = params.get("state");
 
-if (code) {
+if (code && state) {
   (async () => {
+    window.history.replaceState({}, document.title, "/dashboard");
     try {
-      const res = await fetch(
-        API + "/oauth/exchange?code=" + encodeURIComponent(code),
-      );
+      const res = await fetch(API + "/oauth/exchange", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code, state, redirect_uri: REDIRECT }),
+      });
       const data = await res.json();
+      if (!res.ok) throw new Error(data.detail || "OAuth exchange failed");
       if (data.user) {
         localStorage.setItem("fishie_user", JSON.stringify(data.user));
-        window.history.replaceState({}, document.title, "/dashboard");
         initDashboard();
       }
     } catch (e) {
       console.error("OAuth failed:", e);
+      showLogin();
     }
   })();
 } else {
@@ -87,13 +91,19 @@ if (_logout)
   };
 var _login = document.getElementById("loginBtn");
 if (_login)
-  _login.onclick = function () {
-    window.location.href =
-      "https://discord.com/api/oauth2/authorize?client_id=" +
-      CLIENT_ID +
-      "&redirect_uri=" +
-      encodeURIComponent(REDIRECT) +
-      "&response_type=code&scope=identify%20guilds";
+  _login.onclick = async function () {
+    try {
+      const res = await fetch(
+        API + "/oauth/start?redirect_uri=" + encodeURIComponent(REDIRECT),
+      );
+      const data = await res.json();
+      if (!res.ok || !data.url) {
+        throw new Error(data.detail || "Could not start Discord login");
+      }
+      window.location.assign(data.url);
+    } catch (error) {
+      console.error("Could not start Discord login:", error);
+    }
   };
 
 function showLogin() {

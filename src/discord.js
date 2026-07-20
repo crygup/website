@@ -224,7 +224,7 @@ function renderSettings() {
             <div class="tracking-toggles" id="tracking-toggles">
               <span class="toggle-status">Loading…</span>
             </div>
-            <p class="settings-disclaimer">Opting out stops future tracking but does not remove existing data. Other users can still look up your profile and view past information. To remove existing data, use the delete options on the lookup tabs.</p>
+            <p class="settings-disclaimer">Opting out stops future tracking but does not remove existing data. Your stored account history is only visible to you while logged in. To remove existing data, use the delete options on the lookup tabs.</p>
           </div>
         </div>
         <div class="subtab-panel hidden" id="subtab-guild">
@@ -302,9 +302,14 @@ function renderSettings() {
       </div>`;
     document
       .getElementById("settings-login-yes")
-      .addEventListener("click", () => {
+      .addEventListener("click", async () => {
         localStorage.setItem("settings_pending", "1");
-        window.location.href = `https://discord.com/oauth2/authorize?client_id=${CLIENT_ID}&redirect_uri=${encodeURIComponent("https://crygup.com")}&response_type=code&scope=identify`;
+        try {
+          await window.startFishieOAuth("https://crygup.com");
+        } catch (error) {
+          localStorage.removeItem("settings_pending");
+          console.error("Could not start Discord login:", error);
+        }
       });
     document
       .getElementById("settings-login-no")
@@ -549,6 +554,14 @@ async function fetchData() {
     }
     if (currentTab === "user") {
       currentUserId = id;
+      if (currentSubtab !== "avatars") {
+        if (!loggedInUser) {
+          throw new Error("Log in to view your stored account history.");
+        }
+        if (String(id) !== String(loggedInUser.id)) {
+          throw new Error("You can only view your own stored account history.");
+        }
+      }
       const res = await fetch(USER_ENDPOINTS[currentSubtab](id, currentPage));
       if (!res.ok) {
         const e = await res.json().catch(() => ({}));
