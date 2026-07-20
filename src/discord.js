@@ -302,9 +302,14 @@ function renderSettings() {
       </div>`;
     document
       .getElementById("settings-login-yes")
-      .addEventListener("click", () => {
+      .addEventListener("click", async () => {
         localStorage.setItem("settings_pending", "1");
-        window.location.href = `https://discord.com/oauth2/authorize?client_id=${CLIENT_ID}&redirect_uri=${encodeURIComponent("https://crygup.com")}&response_type=code&scope=identify`;
+        try {
+          await window.startFishieOAuth("https://crygup.com");
+        } catch (error) {
+          localStorage.removeItem("settings_pending");
+          console.error("Could not start Discord login:", error);
+        }
       });
     document
       .getElementById("settings-login-no")
