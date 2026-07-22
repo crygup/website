@@ -28,11 +28,22 @@ header h1 {
 }
 
 .drpepper-gif {
-  position: fixed;
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 2.5rem;
   height: 2.5rem;
+  object-fit: contain;
   cursor: grab;
-  z-index: 999;
+  z-index: 900;
   user-select: none;
+  visibility: hidden;
+  touch-action: none;
+  will-change: transform;
+  -webkit-user-drag: none;
+}
+.drpepper-gif.positioned {
+  visibility: visible;
 }
 .drpepper-gif.dragging {
   cursor: grabbing;

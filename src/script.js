@@ -281,168 +281,208 @@ if (mudaeDropdown) {
 }
 
 const nameEl = document.getElementById("name");
-if (nameEl)
-  nameEl.innerHTML = `${profile.name} <img src="images/drpepper-150.gif" alt="" class="drpepper-gif"> `;
+if (nameEl) {
+  nameEl.textContent = profile.name;
+  document.body.insertAdjacentHTML(
+    "beforeend",
+    '<picture><source media="(prefers-reduced-motion: reduce)" srcset="images/drpepper-80.png" type="image/png"><source srcset="images/drpepper-80.webp" type="image/webp"><img src="images/drpepper-80.gif" width="80" height="80" alt="" draggable="false" class="drpepper-gif"></picture>',
+  );
+}
 
 const dp = document.querySelector(".drpepper-gif");
 if (dp) {
-  const nameRect = nameEl.getBoundingClientRect();
-  dp.style.left = nameRect.right + 4 + "px";
-  dp.style.top =
-    nameRect.top + nameRect.height / 2 - dp.offsetHeight / 2 + "px";
+  const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+  let dragging = false;
+  let activePointerId = null;
+  let pointerStartX = 0;
+  let pointerStartY = 0;
+  let dragStartX = 0;
+  let dragStartY = 0;
+  let lastPointerX = 0;
+  let lastPointerY = 0;
+  let lastPointerTime = 0;
+  let x = 0;
+  let y = 0;
+  let minX = 0;
+  let minY = 0;
+  let maxX = 0;
+  let maxY = 0;
+  let vx = 0;
+  let vy = 0;
+  let animFrame = 0;
+  let resizeFrame = 0;
 
-  let dragging = false,
-    startX,
-    startY,
-    startLeft,
-    startTop;
-  let lastX,
-    lastY,
-    lastTime,
-    vx = 0,
-    vy = 0;
-  let animFrame;
-
-  function getPos(e) {
-    if (e.touches) return { x: e.touches[0].clientX, y: e.touches[0].clientY };
-    return { x: e.clientX, y: e.clientY };
+  function updateBounds() {
+    minX = window.scrollX;
+    minY = window.scrollY;
+    maxX = Math.max(minX, minX + window.innerWidth - dp.offsetWidth);
+    maxY = Math.max(minY, minY + window.innerHeight - dp.offsetHeight);
   }
 
-  function beginDrag(pos) {
-    cancelAnimationFrame(animFrame);
-    startX = pos.x;
-    startY = pos.y;
-    startLeft = dp.offsetLeft;
-    startTop = dp.offsetTop;
-    lastX = pos.x;
-    lastY = pos.y;
-    lastTime = performance.now();
+  function setPosition(nextX, nextY) {
+    x = Math.max(minX, Math.min(maxX, nextX));
+    y = Math.max(minY, Math.min(maxY, nextY));
+    dp.style.transform = `translate3d(${x}px, ${y}px, 0)`;
+  }
+
+  function cancelInertia() {
+    if (animFrame) {
+      cancelAnimationFrame(animFrame);
+      animFrame = 0;
+    }
+  }
+
+  function beginDrag(event) {
+    cancelInertia();
+    updateBounds();
+    activePointerId = event.pointerId;
+    pointerStartX = event.clientX;
+    pointerStartY = event.clientY;
+    dragStartX = x;
+    dragStartY = y;
+    lastPointerX = event.clientX;
+    lastPointerY = event.clientY;
+    lastPointerTime = performance.now();
     vx = 0;
     vy = 0;
-    dp.classList.add("dragging");
-  }
-
-  function doMove(pos) {
-    const moveX = pos.x - startX;
-    const moveY = pos.y - startY;
-    dp.style.left =
-      Math.max(
-        0,
-        Math.min(window.innerWidth - dp.offsetWidth, startLeft + moveX),
-      ) + "px";
-    dp.style.top =
-      Math.max(
-        0,
-        Math.min(window.innerHeight - dp.offsetHeight, startTop + moveY),
-      ) + "px";
-    const now = performance.now();
-    const dt = now - lastTime;
-    if (dt > 0) {
-      vx = ((pos.x - lastX) / dt) * 0.5;
-      vy = ((pos.y - lastY) / dt) * 0.5;
-    }
-    lastX = pos.x;
-    lastY = pos.y;
-    lastTime = now;
-  }
-
-  function endDrag() {
-    dp.classList.remove("dragging");
-    if (Math.abs(vx) > 0.01 || Math.abs(vy) > 0.01) {
-      (function animate() {
-        vx *= 0.94;
-        vy *= 0.94;
-        if (Math.abs(vx) < 0.01 && Math.abs(vy) < 0.01) return;
-        let left = dp.offsetLeft + vx * 16;
-        let top = dp.offsetTop + vy * 16;
-        if (left <= 0) {
-          left = 0;
-          vx = -vx * 0.5;
-        }
-        if (left >= window.innerWidth - dp.offsetWidth) {
-          left = window.innerWidth - dp.offsetWidth;
-          vx = -vx * 0.5;
-        }
-        if (top <= 0) {
-          top = 0;
-          vy = -vy * 0.5;
-        }
-        if (top >= window.innerHeight - dp.offsetHeight) {
-          top = window.innerHeight - dp.offsetHeight;
-          vy = -vy * 0.5;
-        }
-        dp.style.left = left + "px";
-        dp.style.top = top + "px";
-        animFrame = requestAnimationFrame(animate);
-      })();
-    }
-  }
-
-  dp.addEventListener("mousedown", (e) => {
-    e.preventDefault();
     dragging = true;
-    beginDrag({ x: e.clientX, y: e.clientY });
-  });
-  document.addEventListener("mousemove", (e) => {
-    if (!dragging) return;
-    doMove({ x: e.clientX, y: e.clientY });
-  });
-  document.addEventListener("mouseup", () => {
-    if (!dragging) return;
-    dragging = false;
-    endDrag();
-  });
-  let touchScrolling = false;
-  dp.addEventListener(
-    "touchstart",
-    (e) => {
-      const pos = getPos(e);
-      dragging = false;
-      touchScrolling = false;
-      beginDrag(pos);
-    },
-    { passive: false },
-  );
+    dp.classList.add("dragging");
+    dp.setPointerCapture(event.pointerId);
+  }
 
-  dp.addEventListener(
-    "touchmove",
-    (e) => {
-      const pos = getPos(e);
-      const dx = pos.x - startX;
-      const dy = pos.y - startY;
-      const dist = Math.sqrt(dx * dx + dy * dy);
+  function moveDrag(event) {
+    setPosition(
+      dragStartX + event.clientX - pointerStartX,
+      dragStartY + event.clientY - pointerStartY,
+    );
+    const now = performance.now();
+    const dt = now - lastPointerTime;
+    if (dt > 0) {
+      vx = ((event.clientX - lastPointerX) / dt) * 0.5;
+      vy = ((event.clientY - lastPointerY) / dt) * 0.5;
+    }
+    lastPointerX = event.clientX;
+    lastPointerY = event.clientY;
+    lastPointerTime = now;
+  }
 
-      if (!dragging) {
-        if (dist < 8) return;
-        if (Math.abs(dy) > Math.abs(dx) * 1.5) {
-          touchScrolling = true;
-          dp.classList.remove("dragging");
-          return;
-        }
-        dragging = true;
-        startX = pos.x - dx;
-        startY = pos.y - dy;
-        startLeft = dp.offsetLeft;
-        startTop = dp.offsetTop;
+  function startInertia() {
+    if (
+      reducedMotion.matches ||
+      (Math.abs(vx) <= 0.01 && Math.abs(vy) <= 0.01)
+    ) {
+      return;
+    }
+
+    function animate() {
+      vx *= 0.94;
+      vy *= 0.94;
+      if (Math.abs(vx) < 0.01 && Math.abs(vy) < 0.01) {
+        animFrame = 0;
+        return;
       }
 
-      if (touchScrolling) return;
-      e.preventDefault();
-      doMove(pos);
-    },
-    { passive: false },
-  );
+      let nextX = x + vx * 16;
+      let nextY = y + vy * 16;
+      if (nextX <= minX || nextX >= maxX) {
+        nextX = Math.max(minX, Math.min(maxX, nextX));
+        vx = -vx * 0.5;
+      }
+      if (nextY <= minY || nextY >= maxY) {
+        nextY = Math.max(minY, Math.min(maxY, nextY));
+        vy = -vy * 0.5;
+      }
+      setPosition(nextX, nextY);
+      animFrame = requestAnimationFrame(animate);
+    }
 
-  function touchEnd() {
-    dp.classList.remove("dragging");
-    if (!dragging) return;
-    dragging = false;
-    endDrag();
+    animFrame = requestAnimationFrame(animate);
   }
-  dp.addEventListener("touchend", touchEnd);
-  dp.addEventListener("touchcancel", touchEnd);
-  document.addEventListener("touchend", () => {
-    if (dragging) touchEnd();
+
+  function finishDrag(useInertia) {
+    const pointerId = activePointerId;
+    dragging = false;
+    activePointerId = null;
+    dp.classList.remove("dragging");
+    if (pointerId !== null && dp.hasPointerCapture(pointerId)) {
+      dp.releasePointerCapture(pointerId);
+    }
+    if (useInertia) startInertia();
+  }
+
+  dp.addEventListener("pointerdown", (event) => {
+    if (
+      !event.isPrimary ||
+      (event.pointerType === "mouse" && event.button !== 0)
+    ) {
+      return;
+    }
+    event.preventDefault();
+    beginDrag(event);
+  });
+
+  dp.addEventListener("pointermove", (event) => {
+    if (!dragging || event.pointerId !== activePointerId) return;
+    event.preventDefault();
+    moveDrag(event);
+  });
+
+  dp.addEventListener("pointerup", (event) => {
+    if (!dragging || event.pointerId !== activePointerId) return;
+    finishDrag(true);
+  });
+
+  dp.addEventListener("pointercancel", (event) => {
+    if (!dragging || event.pointerId !== activePointerId) return;
+    finishDrag(false);
+  });
+
+  dp.addEventListener("lostpointercapture", (event) => {
+    if (!dragging || event.pointerId !== activePointerId) return;
+    finishDrag(false);
+  });
+
+  dp.addEventListener("dragstart", (event) => event.preventDefault());
+
+  window.addEventListener("blur", () => {
+    if (dragging) finishDrag(false);
+  });
+
+  window.addEventListener("resize", () => {
+    cancelAnimationFrame(resizeFrame);
+    resizeFrame = requestAnimationFrame(() => {
+      const rect = dp.getBoundingClientRect();
+      const wasVisible =
+        rect.right > 0 &&
+        rect.bottom > 0 &&
+        rect.left < window.innerWidth &&
+        rect.top < window.innerHeight;
+      updateBounds();
+      if (wasVisible) setPosition(x, y);
+    });
+  });
+
+  window.addEventListener("scroll", cancelInertia, { passive: true });
+
+  reducedMotion.addEventListener("change", (event) => {
+    if (event.matches) cancelInertia();
+  });
+
+  document.addEventListener("visibilitychange", () => {
+    if (document.hidden) cancelInertia();
+  });
+
+  Promise.all([
+    document.fonts?.ready || Promise.resolve(),
+    dp.decode().catch(() => undefined),
+  ]).then(() => {
+    updateBounds();
+    const nameRect = nameEl.getBoundingClientRect();
+    setPosition(
+      window.scrollX + nameRect.right + 4,
+      window.scrollY + nameRect.top + nameRect.height / 2 - dp.offsetHeight / 2,
+    );
+    dp.classList.add("positioned");
   });
 }
 const taglineEl = document.getElementById("tagline");
