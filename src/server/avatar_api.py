@@ -12,10 +12,11 @@ The Discord bot is used to:
 import asyncio
 import os
 import sys
+from contextlib import asynccontextmanager, suppress
+
 import asyncpg
 import uvicorn
-from contextlib import asynccontextmanager
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, HTTPException, Query, Response
 from fastapi.middleware.cors import CORSMiddleware
 from discord.ext import commands
 from discord.http import Route
@@ -23,7 +24,11 @@ from discord import gateway, CustomActivity, Intents
 import dotenv
 from logging_utils import get_logger
 
-dotenv.load_dotenv(os.path.join(os.path.dirname(__file__), "config", ".env"))
+CONFIG_FILE = os.environ.get(
+    "WEBSITE_CONFIG_FILE",
+    os.path.join(os.path.dirname(__file__), "config", ".env"),
+)
+dotenv.load_dotenv(CONFIG_FILE)
 
 
 def required_env(name: str) -> str:
@@ -92,6 +97,7 @@ bot = commands.Bot(
     command_prefix=commands.when_mentioned_or("evi "), intents=Intents.all()
 )
 db_pool: asyncpg.Pool | None = None
+bot_task: asyncio.Task[None] | None = None
 bot.help_command = None
 bot.activity = CustomActivity(name="dr pepper is so good")
 
@@ -104,14 +110,21 @@ def get_db_pool() -> asyncpg.Pool:
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    global db_pool
+    global bot_task, db_pool
     db_pool = await asyncpg.create_pool(DB_URL, min_size=1, max_size=4)
     await bot.load_extension("jishaku")
-    asyncio.create_task(bot.start(TOKEN))
-    yield
-    pool = get_db_pool()
-    await pool.close()
-    await bot.close()
+    bot_task = asyncio.create_task(bot.start(TOKEN), name="avatar-discord-bot")
+    try:
+        yield
+    finally:
+        await bot.close()
+        if bot_task is not None:
+            with suppress(asyncio.CancelledError):
+                await bot_task
+        pool = get_db_pool()
+        await pool.close()
+        bot_task = None
+        db_pool = None
 
 
 app = FastAPI(lifespan=lifespan)
@@ -121,6 +134,7 @@ app.add_middleware(
     allow_origins=["https://crygup.com", "https://www.crygup.com"],
     allow_methods=["GET", "POST", "OPTIONS"],
     allow_headers=["*"],
+    allow_credentials=True,
 )
 
 
@@ -148,6 +162,26 @@ async def log_requests(request, call_next):
         client,
     )
     return response
+
+
+@app.get("/health/live", include_in_schema=False)
+async def health_live() -> Response:
+    return Response(status_code=204)
+
+
+@app.get("/health/ready", include_in_schema=False)
+async def health_ready() -> Response:
+    task = bot_task
+    if task is None or task.done() or not bot.is_ready():
+        raise HTTPException(503, "Discord client is not ready")
+
+    try:
+        async with get_db_pool().acquire() as conn:
+            await conn.fetchval("SELECT 1")
+    except Exception as exc:
+        raise HTTPException(503, "Database is not ready") from exc
+
+    return Response(status_code=204)
 
 
 async def resolve_user_id(query: str) -> int:
@@ -265,4 +299,8 @@ async def get_avatars(
 
 
 if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(
+        app,
+        host=os.environ.get("WEBSITE_API_HOST", "127.0.0.1"),
+        port=int(os.environ.get("WEBSITE_API_PORT", "8000")),
+    )

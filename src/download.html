@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>crygup · download</title>
+    <link rel="stylesheet" href="style.css?s=13" />
+    <link rel="stylesheet" href="download.css?s=7" />
+    <link rel="icon" type="image/x-icon" href="images/pfp.ico" />
+  </head>
+  <body data-page="download">
+    <header>
+      <h1>Download</h1>
+      <p id="tagline">save a public video, clip, or audio file</p>
+    </header>
+
+    <main class="download-main">
+      <section class="download-card">
+        <form id="download-form" autocomplete="off">
+          <div class="download-field">
+            <label for="download-url">Media URL</label>
+            <div id="download-url-wrap" class="url-input">
+              <input
+                id="download-url"
+                name="url"
+                type="url"
+                maxlength="2048"
+                inputmode="url"
+                autocomplete="off"
+                autocapitalize="none"
+                autocorrect="off"
+                spellcheck="false"
+                placeholder="https://..."
+                required
+              />
+              <button
+                id="download-submit"
+                class="hidden"
+                type="submit"
+                aria-label="Start download"
+                title="Start download"
+              >
+                <img src="images/arrow-left3svg.svg?s=1" alt="" aria-hidden="true" />
+              </button>
+            </div>
+          </div>
+
+          <select id="download-format" class="format-select" name="format" aria-label="File format">
+            <option value="mp4">mp4</option>
+            <option value="webm">webm</option>
+            <option value="mp3">mp3</option>
+            <option value="gif">gif</option>
+          </select>
+        </form>
+
+        <div id="download-status" class="download-status hidden" aria-live="polite">
+          <div id="download-spinner" class="download-spinner" aria-hidden="true"></div>
+          <div class="download-status-copy">
+            <strong id="download-status-title"></strong>
+            <span id="download-status-detail"></span>
+          </div>
+          <a
+            id="download-ready"
+            class="download-ready hidden"
+            href="#"
+            download
+            aria-label="Download file"
+            title="Download file"
+          >
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M12 3v12m0 0 5-5m-5 5-5-5M5 20h14" />
+            </svg>
+          </a>
+        </div>
+
+        <p class="download-note">
+          Recorded public media only. Downloads stop after three minutes and files
+          are limited to 500 MB. GIFs are limited to 30 seconds. Temporary files are
+          removed automatically.
+        </p>
+      </section>
+    </main>
+
+    <footer>
+      <p>&copy; <span id="year"></span></p>
+    </footer>
+
+    <script src="script.js?s=12"></script>
+    <script src="download.js?s=4"></script>
+  </body>
+</html>

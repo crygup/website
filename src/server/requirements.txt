@@ -1,6 +1,6 @@
-fastapi>=0.110
-uvicorn[standard]>=0.29
-discord.py>=2.3
-asyncpg>=0.29
-python-dotenv>=1.0
-git+https://github.com/scarletcafe/jishaku
+asyncpg==0.31.0
+discord.py==2.7.1
+fastapi==0.139.0
+jishaku @ git+https://github.com/scarletcafe/jishaku@0f8efe325117a8711415a1996612a0329446c631
+python-dotenv==1.2.2
+uvicorn[standard]==0.50.0

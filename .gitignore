@@ -224,5 +224,9 @@ __marimo__/
 /logs/
 /config/
 /src/logs/
+/src/downloads/
 /src/server/config/
+/src/server/cookies/
 /src/server/venv/
+/.env
+useful-commands.md

@@ -35,6 +35,7 @@ window.startFishieOAuth = async function (redirectUri = FISHIE_HOME_REDIRECT) {
     { label: "Home", href: "/", match: "" },
     { label: "Discord", href: "/discord", match: "discord" },
     { label: "Fishie", href: "/fishie", match: "fishie" },
+    { label: "Download", href: "/download", match: "download" },
     { label: "Messages", href: "/messages", match: "messages" },
     {
       label: "Mudae",

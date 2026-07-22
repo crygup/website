@@ -17,6 +17,7 @@ BLOCKED = {
     "/config",
     "/serve.py",
     "/backup",
+    "/downloads",
     "/logs",
     "/api.py",
     "/logging_utils.py",
@@ -38,6 +39,10 @@ class Handler(http.server.SimpleHTTPRequestHandler):
 
     def do_GET(self):
         path = self.path.split("?")[0].rstrip("/") or "/index"
+        if path == "/healthz":
+            self.send_response(204)
+            self.end_headers()
+            return
         if self._blocked(path):
             self.send_error(404)
             return
@@ -64,6 +69,10 @@ class Handler(http.server.SimpleHTTPRequestHandler):
 
     def do_HEAD(self):
         path = self.path.split("?")[0].rstrip("/") or "/index"
+        if path == "/healthz":
+            self.send_response(204)
+            self.end_headers()
+            return
         if self._blocked(path):
             self.send_error(404)
             return
@@ -72,6 +81,8 @@ class Handler(http.server.SimpleHTTPRequestHandler):
     def log_request(self, code="-", size="-"):
         # Never write query strings: OAuth codes, state, and tokens may be in them.
         path = self.path.split("?", 1)[0]
+        if path == "/healthz":
+            return
         logger.info(
             "request method=%s path=%s status=%s bytes=%s client=%s",
             self.command,
@@ -107,4 +118,4 @@ class Handler(http.server.SimpleHTTPRequestHandler):
 
 if __name__ == "__main__":
     logger.info("server_started root=%s host=0.0.0.0 port=%s", ROOT, PORT)
-    http.server.HTTPServer(("0.0.0.0", PORT), Handler).serve_forever()
+    http.server.ThreadingHTTPServer(("0.0.0.0", PORT), Handler).serve_forever()
