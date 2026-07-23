@@ -37,14 +37,7 @@ window.startFishieOAuth = async function (redirectUri = FISHIE_HOME_REDIRECT) {
     { label: "Fishie", href: "/fishie", match: "fishie" },
     { label: "Download", href: "/download", match: "download" },
     { label: "Messages", href: "/messages", match: "messages" },
-    {
-      label: "Mudae",
-      match: "mudae",
-      subs: [
-        { label: "OC Solver", href: "/oc" },
-        { label: "OQ Solver", href: "/oq" },
-      ],
-    },
+    { label: "Mudae", href: "/mudae", match: "mudae" },
   ];
 
   const btn = document.createElement("button");
@@ -209,7 +202,7 @@ You'll also find a download command, which supports a variety of websites, essen
     {
       name: "Mudae Tools",
       desc: `Couple of helpful tools to solve some of the Mudae bot minigames.
-<a href="/oc" target="_blank" rel="noopener">OC Solver</a> & <a href="/oc" target="_blank" rel="noopener">OQ Solver</a>`,
+<a href="/mudae?tab=oc" target="_blank" rel="noopener">OC Solver</a> & <a href="/mudae?tab=oq" target="_blank" rel="noopener">OQ Solver</a>`,
     },
     {
       name: "Discord avatar/username history",
@@ -249,6 +242,7 @@ Check it out <a href="/discord" target="_blank" rel="noopener">here</a>`,
       name: "Spotify",
       url: "https://open.spotify.com/user/ndbz2vxohhd8y09292dtz5lbz",
     },
+    { name: "Email", copy: "contact@crygup.com" },
   ],
 };
 
@@ -504,12 +498,48 @@ if (bio) {
 
 const socialsEl = document.getElementById("socials");
 if (socialsEl) {
+  let copyTooltipTimeout;
   socialsEl.innerHTML = profile.socials
-    .map(
-      (s) =>
-        `<a href="${s.url}" target="_blank" rel="noopener" class="social-link">${s.name}</a>`,
+    .map((social) =>
+      social.copy
+        ? `<a href="#" class="social-link" data-copy="${social.copy}" title="Copy ${social.copy}">${social.name}</a>`
+        : `<a href="${social.url}" target="_blank" rel="noopener" class="social-link">${social.name}</a>`,
     )
     .join(" · ");
+
+  socialsEl.addEventListener("click", async (event) => {
+    const link = event.target.closest(".social-link[data-copy]");
+    if (!link) return;
+    event.preventDefault();
+
+    const text = link.dataset.copy;
+    try {
+      if (navigator.clipboard?.writeText && window.isSecureContext) {
+        await navigator.clipboard.writeText(text);
+      } else {
+        const input = document.createElement("textarea");
+        input.value = text;
+        input.setAttribute("readonly", "");
+        input.style.position = "fixed";
+        input.style.opacity = "0";
+        document.body.appendChild(input);
+        input.select();
+        const copied = document.execCommand("copy");
+        input.remove();
+        if (!copied) throw new Error("Clipboard copy was rejected");
+      }
+      link.title = `${text} copied`;
+      link.classList.remove("copied");
+      void link.offsetWidth;
+      link.classList.add("copied");
+      clearTimeout(copyTooltipTimeout);
+      copyTooltipTimeout = setTimeout(() => {
+        link.classList.remove("copied");
+      }, 1600);
+    } catch (error) {
+      console.error("Could not copy email address:", error);
+    }
+  });
 }
 const list = document.getElementById("project-list");
 if (list) {

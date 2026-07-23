@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>crygup · mudae solvers</title>
+  <link rel="stylesheet" href="style.css?s=13">
+  <link rel="stylesheet" href="oc.css?s=1">
+  <link rel="stylesheet" href="oq.css?s=2">
+  <link rel="icon" type="image/x-icon" href="images/pfp.ico">
+</head>
+<body data-page="mudae">
+  <header>
+    <h1>Mudae Solvers</h1>
+  </header>
+  <main>
+    <nav class="tab-bar" id="mudae-tabs" aria-label="Mudae solvers">
+      <button class="tab-btn active" data-tab="oc" type="button">OC Solver</button>
+      <button class="tab-btn" data-tab="oq" type="button">OQ Solver</button>
+    </nav>
+
+    <section class="tab-panel" id="oc-panel" data-panel="oc">
+      <p class="oc-hint">Click cells to mark revealed colors. The <span class="best-indicator">highlighted</span> cell is the recommended next click.</p>
+
+      <div id="oc-grid"></div>
+      <p id="oc-status"></p>
+
+      <div id="oc-controls">
+        <button id="oc-reset" type="button">Reset Grid</button>
+        <button id="oc-emoji-toggle" type="button">Show Emojis</button>
+      </div>
+    </section>
+
+    <section class="tab-panel hidden" id="oq-panel" data-panel="oq">
+      <p class="oc-hint">Click cells to cycle through colors. White outline = recommended next click. Green outline = known safe. Purple outline = guaranteed purple.</p>
+
+      <div id="oq-grid"></div>
+      <p id="oq-status"></p>
+
+      <div id="oq-controls">
+        <button id="oq-reset" type="button">Reset Grid</button>
+        <button id="oq-emoji-toggle" type="button">Show Emojis</button>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <p>&copy; <span id="year"></span></p>
+  </footer>
+
+  <script src="script.js?s=12"></script>
+  <script src="oc.js?s=1"></script>
+  <script src="oq.js?s=3"></script>
+  <script src="mudae.js?s=1"></script>
+</body>
+</html>

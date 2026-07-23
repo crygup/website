@@ -292,8 +292,10 @@ async def _resolve_klipy(url: str, media_format: str) -> str:
     if (parsed.hostname or "").lower().removeprefix("www.") != "klipy.com":
         return url
     parts = parsed.path.strip("/").split("/")
-    if len(parts) != 2 or parts[0].lower() != "gifs" or not re.fullmatch(
-        r"[A-Za-z0-9_-]+", parts[1]
+    if (
+        len(parts) != 2
+        or parts[0].lower() != "gifs"
+        or not re.fullmatch(r"[A-Za-z0-9_-]+", parts[1])
     ):
         raise DownloadFailure("That Klipy URL is not valid.")
 
@@ -421,7 +423,9 @@ async def _download_media(job: DownloadJob) -> Path:
             "The media could not be downloaded. It may be unavailable or the site may be blocking the request."
         )
 
-    output_lines = [line.strip() for line in stdout.decode().splitlines() if line.strip()]
+    output_lines = [
+        line.strip() for line in stdout.decode().splitlines() if line.strip()
+    ]
     output = Path(output_lines[-1]) if output_lines else None
     if output is None or not output.is_file():
         candidates = [
@@ -697,12 +701,17 @@ async def download_file(job_id: str, request: Request):
     job = await _owned_job(request, job_id)
     if job.status != "ready" or job.file_path is None or not job.file_path.is_file():
         raise HTTPException(409, "The download is not ready")
-    media_type = mimetypes.guess_type(job.filename or "")[0] or "application/octet-stream"
+    media_type = (
+        mimetypes.guess_type(job.filename or "")[0] or "application/octet-stream"
+    )
     return FileResponse(
         job.file_path,
         filename=job.filename,
         media_type=media_type,
-        headers={"Cache-Control": "private, no-store", "X-Content-Type-Options": "nosniff"},
+        headers={
+            "Cache-Control": "private, no-store",
+            "X-Content-Type-Options": "nosniff",
+        },
     )
 
 

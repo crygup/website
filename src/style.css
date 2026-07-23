@@ -442,6 +442,37 @@ main {
   text-decoration: underline;
 }
 
+.social-link[data-copy] {
+  position: relative;
+}
+
+.social-link[data-copy]::after {
+  content: "Copied email";
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 0.5rem);
+  z-index: 5;
+  padding: 0.3rem 0.5rem;
+  border-radius: 0.25rem;
+  color: #f8fafc;
+  background: #232b2e;
+  font-size: 0.75rem;
+  font-style: normal;
+  line-height: 1;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transform: translate(-50%, 0.25rem);
+  transition:
+    opacity 0.15s,
+    transform 0.15s;
+}
+
+.social-link[data-copy].copied::after {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
 #project-list {
   list-style: none;
   display: flex;

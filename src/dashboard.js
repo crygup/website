@@ -209,6 +209,7 @@ async function loadUserSettings(userId) {
       { k: "display", l: "Display name" },
       { k: "nickname", l: "Nickname" },
       { k: "discrim", l: "Discriminator", disabled: true },
+      { k: "stag", l: "Server tags" },
       { k: "joins", l: "Server joins" },
     ];
 
