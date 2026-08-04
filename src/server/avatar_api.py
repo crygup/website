@@ -10,13 +10,14 @@ The Discord bot is used to:
 """
 
 import asyncio
+import hashlib
 import os
 import sys
 from contextlib import asynccontextmanager, suppress
 
 import asyncpg
 import uvicorn
-from fastapi import FastAPI, HTTPException, Query, Response
+from fastapi import Cookie, FastAPI, HTTPException, Query, Response
 from fastapi.middleware.cors import CORSMiddleware
 from discord.ext import commands
 from discord.http import Route
@@ -42,6 +43,7 @@ TOKEN = required_env("DISCORD_BOT_TOKEN")
 GUILD_ID = int(os.getenv("DISCORD_GUILD_ID", "0") or "0")
 DB_URL = required_env("DATABASE_URL")
 logger = get_logger("avatar")
+SESSION_COOKIE = "__Host-fishie_session"
 
 
 async def identify_mobile(self) -> None:
@@ -253,11 +255,33 @@ async def get_avatars(
     q: str = Query(..., description="Discord user ID or username"),
     page: int = Query(1, ge=1),
     per_page: int = Query(100, ge=1, le=100),
+    session_id: str | None = Cookie(None, alias=SESSION_COOKIE),
 ):
     user_id = await resolve_user_id(q)
 
     pool = get_db_pool()
     async with pool.acquire() as conn:
+        history_public = await conn.fetchval(
+            "SELECT history_public FROM user_settings WHERE user_id = $1",
+            user_id,
+        )
+        if history_public is False:
+            viewer_id = None
+            if session_id:
+                viewer_id = await conn.fetchval(
+                    """
+                    SELECT user_id
+                    FROM web_sessions
+                    WHERE session_id_hash = $1 AND expires_at > now()
+                    """,
+                    hashlib.sha256(session_id.encode("utf-8")).hexdigest(),
+                )
+            if viewer_id != user_id:
+                raise HTTPException(
+                    403,
+                    "This user has made their saved history private",
+                )
+
         count_row = await conn.fetchrow(
             "SELECT COUNT(*) FROM avatars WHERE user_id = $1", user_id
         )

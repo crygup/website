@@ -30,7 +30,8 @@ from pydantic import BaseModel, Field
 from logging_utils import get_logger
 
 MAX_FILE_BYTES = 500_000_000
-DOWNLOAD_TIMEOUT = 180.0
+DOWNLOAD_TIMEOUT = 10 * 60.0
+DOWNLOAD_TIMEOUT_MINUTES = int(DOWNLOAD_TIMEOUT // 60)
 GIF_MAX_DURATION = 30.0
 JOB_TTL = 10 * 60.0
 RATE_LIMIT_WINDOW = 10 * 60.0
@@ -231,7 +232,8 @@ def _remaining(deadline: float) -> float:
     remaining = deadline - asyncio.get_running_loop().time()
     if remaining <= 0:
         raise DownloadFailure(
-            "This download took longer than 3 minutes and was stopped. Try a shorter video."
+            f"This download took longer than {DOWNLOAD_TIMEOUT_MINUTES} minutes "
+            "and was stopped. Try a shorter video."
         )
     return remaining
 
@@ -255,7 +257,8 @@ async def _run_process(args: list[str], deadline: float) -> tuple[int, bytes, by
         if isinstance(exc, asyncio.CancelledError):
             raise
         raise DownloadFailure(
-            "This download took longer than 3 minutes and was stopped. Try a shorter video."
+            f"This download took longer than {DOWNLOAD_TIMEOUT_MINUTES} minutes "
+            "and was stopped. Try a shorter video."
         ) from exc
     return proc.returncode or 0, stdout, stderr
 
