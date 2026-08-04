@@ -556,6 +556,7 @@
 
 .lookup-subtabs {
   display: flex;
+  flex-wrap: wrap;
   justify-content: center;
   gap: 0;
   width: 100%;
@@ -568,6 +569,13 @@
 .lookup-subtabs .subtab-btn {
   padding: 0.35rem 0.85rem;
   font-size: 0.82rem;
+}
+.text-badge {
+  width: 1.5rem;
+  height: 1.5rem;
+  flex: 0 0 auto;
+  object-fit: contain;
+  border-radius: 0.25rem;
 }
 .guild-select-wrapper {
   position: relative;

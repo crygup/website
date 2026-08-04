@@ -149,7 +149,6 @@
       }
     }
 
-    const safe = new Set();
     const mustBe = new Set();
     const targetFrequency = new Map();
 
@@ -160,8 +159,7 @@
           if (layout.has(position)) occurrences++;
         }
         targetFrequency.set(position, occurrences);
-        if (occurrences === 0) safe.add(position);
-        else if (occurrences === layouts.length) mustBe.add(position);
+        if (occurrences === layouts.length) mustBe.add(position);
       }
     }
 
@@ -172,7 +170,6 @@
       mustBe,
       purples,
       reds,
-      safe,
       targetFrequency,
       targets,
       unknown,
@@ -181,7 +178,9 @@
   }
 
   function clicksUsed() {
-    return Object.values(revealed).filter((color) => color !== "red").length;
+    return Object.values(revealed).filter((color) =>
+      Object.prototype.hasOwnProperty.call(CLUE_VALUES, color),
+    ).length;
   }
 
   function outcomeFor(layout, position) {
@@ -306,8 +305,6 @@
           "aria-label",
           `Row ${row}, column ${column}: unrevealed`,
         );
-        if (analysis.safe.has(position)) button.classList.add("safe");
-        if (analysis.mustBe.has(position)) button.classList.add("purple-hint");
         if (recommendations.has(position)) button.classList.add("best");
       }
 

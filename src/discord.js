@@ -11,7 +11,7 @@ const CLIENT_ID = "876391494485950504";
     headers.delete("Authorization");
     const requestUrl =
       typeof input === "string" ? input : input?.url || String(input);
-    const credentials = requestUrl.startsWith("https://api.crygup.com/fishie")
+    const credentials = requestUrl.startsWith("https://api.crygup.com/")
       ? "include"
       : options.credentials || "same-origin";
     return nativeFetch(input, { ...options, credentials, headers });
@@ -83,6 +83,8 @@ const SUBTAB_LABELS = {
   usernames: "Usernames",
   "display-names": "Display Names",
   discrims: "Discrims",
+  "server-tags": "Server Tags",
+  statuses: "Statuses",
   icons: "Icons",
   names: "Names",
 };
@@ -219,12 +221,17 @@ function renderSettings() {
         </nav>
         <div class="subtab-panel" id="subtab-user">
           <div class="settings-tracking">
-            <p class="settings-section-title">Tracking settings</p>
-            <p class="settings-hint">Toggle on and off any of the tracking settings.</p>
+            <p class="settings-section-title">Privacy settings</p>
+            <p class="settings-hint">Control new tracking and who can view your saved history.</p>
+            <div class="tracking-toggles" id="privacy-toggles">
+              <span class="toggle-status">Loading…</span>
+            </div>
+            <p class="settings-section-title">Individual tracking settings</p>
+            <p class="settings-hint">Choose which types of new activity Fishie can save.</p>
             <div class="tracking-toggles" id="tracking-toggles">
               <span class="toggle-status">Loading…</span>
             </div>
-            <p class="settings-disclaimer">Opting out stops future tracking but does not remove existing data. Other users can still look up your profile and view past information. To remove existing data, use the delete options on the lookup tabs.</p>
+            <p class="settings-disclaimer">Turning tracking off stops future tracking but does not remove existing data. History visibility controls whether other users can look up saved information. You can change these settings whenever you want.</p>
           </div>
         </div>
         <div class="subtab-panel hidden" id="subtab-guild">
@@ -333,7 +340,15 @@ const TRACKING_ITEMS = [
   { key: "display", label: "Display name tracking" },
   { key: "nickname", label: "Nickname tracking" },
   { key: "discrim", label: "Discriminator tracking", disabled: true },
+  { key: "stag", label: "Server tag tracking" },
+  { key: "status", label: "Status tracking" },
   { key: "joins", label: "Server join tracking" },
+  { key: "xp", label: "XP and message count tracking" },
+  { key: "commands", label: "Command usage tracking" },
+  { key: "activity", label: "Game and activity tracking" },
+  { key: "pokemon", label: "Pokémon solve tracking" },
+  { key: "corn", label: "Corn reaction tracking" },
+  { key: "emoji", label: "Emoji statistics tracking" },
 ];
 
 const GUILD_TRACKING_ITEMS = [
@@ -440,15 +455,69 @@ async function saveGuildOptOuts(guildId) {
 
 async function fetchOptOuts() {
   const container = document.getElementById("tracking-toggles");
-  if (!container || !loggedInUser) return;
+  const privacyContainer = document.getElementById("privacy-toggles");
+  if (!container || !privacyContainer || !loggedInUser) return;
   try {
-    const res = await fetch(`${FISHIE_API}/user/${loggedInUser.id}/opted-out`);
-    if (!res.ok) throw new Error("Failed to fetch");
-    const data = await res.json();
-    renderToggles(data.items || []);
+    const [optRes, privacyRes] = await Promise.all([
+      fetch(`${FISHIE_API}/user/${loggedInUser.id}/opted-out`),
+      fetch(`${FISHIE_API}/user/${loggedInUser.id}/privacy-settings`),
+    ]);
+    if (!optRes.ok || !privacyRes.ok) throw new Error("Failed to fetch");
+    const [optData, privacyData] = await Promise.all([
+      optRes.json(),
+      privacyRes.json(),
+    ]);
+    renderPrivacyToggles(privacyData);
+    renderToggles(optData.items || []);
   } catch {
     container.innerHTML =
       '<span class="toggle-status">Failed to load tracking settings.</span>';
+    privacyContainer.innerHTML =
+      '<span class="toggle-status">Failed to load privacy settings.</span>';
+  }
+}
+
+function renderPrivacyToggles(settings) {
+  const container = document.getElementById("privacy-toggles");
+  if (!container) return;
+  container.innerHTML = `
+    <label class="toggle-row">
+      <span class="toggle-label">Track new activity</span>
+      <input type="checkbox" class="toggle-input privacy-toggle" data-key="tracking_enabled" ${settings.tracking_enabled !== false ? "checked" : ""}>
+      <span class="toggle-switch"></span>
+    </label>
+    <label class="toggle-row">
+      <span class="toggle-label">Public saved history</span>
+      <input type="checkbox" class="toggle-input privacy-toggle" data-key="history_public" ${settings.history_public !== false ? "checked" : ""}>
+      <span class="toggle-switch"></span>
+    </label>`;
+  container.querySelectorAll(".privacy-toggle").forEach((input) => {
+    input.addEventListener("change", savePrivacySettings);
+  });
+}
+
+async function savePrivacySettings() {
+  if (!loggedInUser) return;
+  const tracking = document.querySelector(
+    '#privacy-toggles .privacy-toggle[data-key="tracking_enabled"]',
+  );
+  const history = document.querySelector(
+    '#privacy-toggles .privacy-toggle[data-key="history_public"]',
+  );
+  if (!tracking || !history) return;
+  const res = await fetch(
+    `${FISHIE_API}/user/${loggedInUser.id}/privacy-settings`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        tracking_enabled: tracking.checked,
+        history_public: history.checked,
+      }),
+    },
+  );
+  if (!res.ok) {
+    await fetchOptOuts();
   }
 }
 
@@ -511,6 +580,10 @@ const USER_ENDPOINTS = {
     `${FISHIE_API}/display-names/${id}?page=${page}&per_page=80`,
   discrims: (id, page) =>
     `${FISHIE_API}/discrims/${id}?page=${page}&per_page=80`,
+  "server-tags": (id, page) =>
+    `${FISHIE_API}/server-tags/${id}?page=${page}&per_page=80`,
+  statuses: (id, page) =>
+    `${FISHIE_API}/statuses/${id}?page=${page}&per_page=80`,
 };
 const GUILD_ENDPOINTS = {
   icons: (id, page) =>
@@ -523,6 +596,8 @@ const TABLE_MAP = {
   usernames: "username_logs",
   "display-names": "display_name_logs",
   discrims: "discrim_logs",
+  "server-tags": "stag_logs",
+  statuses: "user_status_history",
   icons: "guild_icons",
   names: "guild_name_logs",
 };
@@ -615,7 +690,10 @@ function renderTextItems(items) {
     const delBtn = canDelete()
       ? `<button class="delete-btn" data-key="${escapeHtml(key)}">×</button>`
       : "";
-    row.innerHTML = `${delBtn}<span class="text-value">${escapeHtml(item.value)}</span><span class="text-date">${new Date(item.created_at).toLocaleDateString()}</span>`;
+    const badge = item.badge_url
+      ? `<img class="text-badge" src="${escapeHtml(item.badge_url)}" alt="" loading="lazy">`
+      : "";
+    row.innerHTML = `${delBtn}${badge}<span class="text-value">${escapeHtml(item.value)}</span><span class="text-date">${new Date(item.created_at).toLocaleDateString()}</span>`;
     if (canDelete())
       row.querySelector(".delete-btn").addEventListener("click", (e) => {
         e.stopPropagation();

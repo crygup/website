@@ -11,7 +11,7 @@ const REDIRECT = "https://crygup.com/dashboard";
     headers.delete("Authorization");
     const requestUrl =
       typeof input === "string" ? input : input?.url || String(input);
-    const credentials = requestUrl.startsWith("https://api.crygup.com/fishie")
+    const credentials = requestUrl.startsWith("https://api.crygup.com/")
       ? "include"
       : options.credentials || "same-origin";
     return nativeFetch(input, { ...options, credentials, headers });
@@ -188,8 +188,10 @@ async function initDashboard() {
 async function loadUserSettings(userId) {
   var div = document.getElementById("userSettingsContent");
   try {
-    var [optRes, remRes, accRes, xpRes] = await Promise.all([
+    var [optRes, privacyRes, remRes, accRes, xpRes] = await Promise.all([
       fetch(API + "/user/" + userId + "/opted-out", {
+      }),
+      fetch(API + "/user/" + userId + "/privacy-settings", {
       }),
       fetch(API + "/user/" + userId + "/reminders", {
       }),
@@ -198,7 +200,13 @@ async function loadUserSettings(userId) {
       fetch(API + "/user/" + userId + "/xp", {
       }),
     ]);
+    if (![optRes, privacyRes, remRes, accRes, xpRes].every(function (res) {
+      return res.ok;
+    })) {
+      throw new Error("Could not load user settings");
+    }
     var optData = await optRes.json();
+    var privacyData = await privacyRes.json();
     var remData = await remRes.json();
     var accData = await accRes.json();
     var xpData = await xpRes.json();
@@ -210,14 +218,32 @@ async function loadUserSettings(userId) {
       { k: "nickname", l: "Nickname" },
       { k: "discrim", l: "Discriminator", disabled: true },
       { k: "stag", l: "Server tags" },
+      { k: "status", l: "Status" },
       { k: "joins", l: "Server joins" },
+      { k: "xp", l: "XP and message count" },
+      { k: "commands", l: "Command usage" },
+      { k: "activity", l: "Game and activity" },
+      { k: "pokemon", l: "Pokémon solves" },
+      { k: "corn", l: "Corn reactions" },
     ];
 
     var html =
       '<div class="settings-subtabs" style="display:flex;gap:0.4rem;margin-bottom:0.75rem;flex-wrap:wrap">' +
       '<button id="userTabGeneral" class="guild-tab active" onclick="showUserSettingsTab(\'' + userId + '\',\'general\')">General</button>' +
       '<button id="userTabHighlights" class="guild-tab" onclick="openUserHighlights(\'' + userId + '\')">Highlights</button>' +
-      '</div><div id="userGeneralSettings"><div class="card"><div class="settings-group"><h4>Tracking</h4>';
+      '</div><div id="userGeneralSettings"><div class="card"><div class="settings-group"><h4>Privacy</h4>' +
+      '<div class="setting-toggle"><div class="label">Track new activity</div><div class="toggle ' +
+      (privacyData.tracking_enabled !== false ? "on" : "") +
+      '" onclick="var t=this;t.classList.toggle(\'on\');togUserPrivacy(\'' +
+      userId +
+      '\',\'tracking_enabled\',t.classList.contains(\'on\'))"></div></div>' +
+      '<div class="setting-toggle"><div class="label">Public saved history</div><div class="toggle ' +
+      (privacyData.history_public !== false ? "on" : "") +
+      '" onclick="var t=this;t.classList.toggle(\'on\');togUserPrivacy(\'' +
+      userId +
+      '\',\'history_public\',t.classList.contains(\'on\'))"></div></div>' +
+      '<div style="color:#64748b;font-size:0.8rem;margin-top:0.6rem">These settings can be changed at any time and do not delete existing data.</div>' +
+      '</div></div><div class="card"><div class="settings-group"><h4>Individual tracking</h4>';
     for (var i = 0; i < items.length; i++) {
       var disabled = Boolean(items[i].disabled);
       var on = !disabled && !optedOut.has(items[i].k);
@@ -236,7 +262,7 @@ async function loadUserSettings(userId) {
         items[i].k +
         '"' +
         (disabled
-          ? ' aria-disabled="true" title="Discriminator logging is unavailable"'
+          ? ' aria-disabled="true" title="Discriminator tracking is unavailable"'
           : " onclick=\"var t=this;t.classList.toggle('on');togUserOpt('") +
         (disabled
           ? "></div></div>"
@@ -497,6 +523,27 @@ async function togUserOpt(userId, item, enable) {
   } catch (_) {}
 }
 
+async function togUserPrivacy(userId, setting, enabled) {
+  try {
+    var res = await fetch(API + "/user/" + userId + "/privacy-settings");
+    if (!res.ok) throw new Error("Could not load privacy settings");
+    var data = await res.json();
+    data[setting] = enabled;
+    var saveRes = await fetch(API + "/user/" + userId + "/privacy-settings", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        tracking_enabled: data.tracking_enabled !== false,
+        history_public: data.history_public !== false,
+      }),
+    });
+    if (!saveRes.ok) throw new Error("Could not save privacy settings");
+  } catch (error) {
+    console.error("Privacy settings update failed:", error);
+    await loadUserSettings(userId);
+  }
+}
+
 async function saveAllAccounts(userId) {
   var svcs = ["roblox", "letterboxd"];
   var payload = {};
@@ -714,6 +761,9 @@ async function loadGuildSettings(guildId) {
       '<button id="guildTabTwitch" class="guild-tab" onclick="showGuildSettingsTab(\'' +
       guildId +
       '\',\'twitch\')">Twitch follows</button>' +
+      '<button id="guildTabYoutube" class="guild-tab" onclick="showGuildSettingsTab(\'' +
+      guildId +
+      '\',\'youtube\')">YouTube follows</button>' +
       '<button id="guildTabLogger" class="guild-tab" onclick="showGuildSettingsTab(\'' +
       guildId +
       '\',\'logger\')">Logger channels</button></div>' +
@@ -896,10 +946,11 @@ async function loadGuildSettings(guildId) {
     html += "</div>";
 
     html +=
-      '</div><div id="guildTwitchTab" style="display:none"></div><div id="guildLoggerTab" style="display:none"></div>';
+      '</div><div id="guildTwitchTab" style="display:none"></div><div id="guildYoutubeTab" style="display:none"></div><div id="guildLoggerTab" style="display:none"></div>';
 
     div.innerHTML = html;
     loadGuildTwitchTab(guildId);
+    loadGuildYoutubeTab(guildId);
     loadGuildLoggerTab(guildId);
   } catch (e) {
     console.error("Guild settings error:", e);
@@ -909,7 +960,7 @@ async function loadGuildSettings(guildId) {
 }
 
 function showGuildSettingsTab(guildId, tab) {
-  ["general", "twitch", "logger"].forEach(function (name) {
+  ["general", "twitch", "youtube", "logger"].forEach(function (name) {
     var panel = document.getElementById("guild" + name[0].toUpperCase() + name.slice(1) + "Tab");
     if (panel) panel.style.display = name === tab ? "block" : "none";
     var button = document.getElementById("guildTab" + name[0].toUpperCase() + name.slice(1));
@@ -987,6 +1038,104 @@ async function removeTwitchFollow(guildId, channelName) {
   var res = await fetch(API + "/guild/" + guildId + "/twitch-follows/" + encodeURIComponent(channelName), { method: "DELETE" });
   if (!res.ok) { alert("Could not unfollow that Twitch channel."); return; }
   loadGuildTwitchTab(guildId);
+}
+
+function youtubeEventCheckboxes(base, selected) {
+  var enabled = new Set(selected || ["video", "live", "short", "community"]);
+  return ["video", "live", "short", "community"].map(function (event) {
+    var label = event === "short" ? "Shorts" : event[0].toUpperCase() + event.slice(1);
+    return '<label style="display:flex;align-items:center;gap:0.3rem;color:#cbd5e1;font-size:0.8rem"><input type="checkbox" id="' + base + "Event" + event + '"' + (enabled.has(event) ? " checked" : "") + ">" + label + "</label>";
+  }).join("");
+}
+
+function selectedYoutubeEvents(base) {
+  return ["video", "live", "short", "community"].filter(function (event) {
+    var input = document.getElementById(base + "Event" + event);
+    return input && input.checked;
+  });
+}
+
+async function loadGuildYoutubeTab(guildId) {
+  var panel = document.getElementById("guildYoutubeTab");
+  if (!panel) return;
+  try {
+    var res = await fetch(API + "/guild/" + guildId + "/youtube-follows");
+    var data = await res.json();
+    if (!res.ok) throw new Error(data.detail || "Could not load YouTube follows");
+    var channels = data.channels || [];
+    var html = '<div class="card"><div class="settings-group"><h4>YouTube follows</h4>';
+    html += '<div class="desc">Follow up to three channels. Uploads use near real-time notifications. Community posts use a lightweight periodic check.</div>';
+    html += '<div style="display:flex;gap:0.4rem;flex-wrap:wrap;margin-top:0.6rem"><input id="ytNewName" class="text-input" placeholder="@handle or YouTube channel URL" style="flex:1;min-width:12rem"><select id="ytNewChannel" class="text-input" style="flex:1;min-width:10rem">';
+    html += channels.map(function (channel) { return '<option value="' + esc(channel.id) + '">#' + esc(channel.name) + '</option>'; }).join("");
+    html += '</select><button class="btn-primary" onclick="saveYoutubeFollow(\'' + guildId + '\',null)">Follow</button></div>';
+    html += '<div style="display:flex;gap:0.8rem;flex-wrap:wrap;margin-top:0.55rem">' + youtubeEventCheckboxes("ytNew", data.event_types) + '</div>';
+    html += '<textarea id="ytNewMessage" class="text-input" maxlength="2000" placeholder="Optional announcement text" style="width:100%;margin-top:0.4rem;min-height:4rem"></textarea></div></div>';
+    var follows = data.follows || [];
+    if (!follows.length) html += '<div class="card"><span style="color:#64748b;font-size:0.8rem">No YouTube channels are followed.</span></div>';
+    follows.forEach(function (follow, index) {
+      var base = "ytFollow" + index;
+      var followChannels = channels.slice();
+      if (follow.announce_channel_id != null && !followChannels.some(function (channel) {
+        return String(channel.id) === String(follow.announce_channel_id);
+      })) {
+        followChannels.push({ id: String(follow.announce_channel_id), name: follow.announce_channel_name || "Configured channel" });
+      }
+      html += '<div class="card"><div class="settings-group"><h4>' + esc(follow.channel_name) + '</h4>';
+      if (follow.channel_handle) html += '<div class="desc">' + esc(follow.channel_handle) + '</div>';
+      html += '<label class="label">Announcement channel</label><select class="text-input" id="' + base + 'Channel">' + followChannels.map(function (channel) { return '<option value="' + esc(channel.id) + '"' + (String(channel.id) === String(follow.announce_channel_id) ? ' selected' : '') + '>#' + esc(channel.name) + '</option>'; }).join("") + '</select>';
+      html += '<div style="display:flex;gap:0.8rem;flex-wrap:wrap;margin-top:0.55rem">' + youtubeEventCheckboxes(base, follow.event_types) + '</div>';
+      html += '<textarea class="text-input" id="' + base + 'Message" maxlength="2000" placeholder="Optional announcement text" style="width:100%;margin-top:0.4rem;min-height:4rem">' + esc(follow.message_template || "") + '</textarea>';
+      html += '<div style="display:flex;gap:0.4rem;margin-top:0.4rem"><button class="btn-primary" onclick="saveYoutubeFollow(\'' + guildId + '\',\'' + esc(follow.youtube_channel_id) + '\',\'' + base + '\')">Save</button><button class="logout-btn" onclick="removeYoutubeFollow(\'' + guildId + '\',\'' + esc(follow.youtube_channel_id) + '\')">Unfollow</button></div></div></div>';
+    });
+    panel.innerHTML = html;
+    follows.forEach(function (follow, index) {
+      var select = document.getElementById("ytFollow" + index + "Channel");
+      if (select) select.value = String(follow.announce_channel_id);
+    });
+  } catch (error) {
+    console.error("YouTube settings error:", error);
+    panel.innerHTML = '<div class="card"><span style="color:#f87171">Failed to load YouTube follows.</span></div>';
+  }
+}
+
+async function saveYoutubeFollow(guildId, channelId, base) {
+  var query = channelId || (document.getElementById("ytNewName") || {}).value;
+  var prefix = base || "ytNew";
+  var channel = document.getElementById(prefix + "Channel");
+  var message = document.getElementById(prefix + "Message");
+  var eventTypes = selectedYoutubeEvents(prefix);
+  if (!query || !channel) return;
+  if (!eventTypes.length) {
+    alert("Choose at least one YouTube notification type.");
+    return;
+  }
+  var res = await fetch(API + "/guild/" + guildId + "/youtube-follows", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      channel: query,
+      youtube_channel_id: channelId || null,
+      announce_channel_id: channel.value,
+      message_template: message ? message.value : null,
+      event_types: eventTypes,
+    }),
+  });
+  if (!res.ok) {
+    var data = await res.json().catch(function () { return {}; });
+    alert("Could not save the YouTube follow: " + (data.detail || "Unknown error"));
+    return;
+  }
+  loadGuildYoutubeTab(guildId);
+}
+
+async function removeYoutubeFollow(guildId, channelId) {
+  if (!confirm("Unfollow this YouTube channel?")) return;
+  var res = await fetch(API + "/guild/" + guildId + "/youtube-follows/" + encodeURIComponent(channelId), { method: "DELETE" });
+  if (!res.ok) {
+    alert("Could not unfollow that YouTube channel.");
+    return;
+  }
+  loadGuildYoutubeTab(guildId);
 }
 
 async function loadGuildLoggerTab(guildId) {
