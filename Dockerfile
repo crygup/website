@@ -50,3 +50,16 @@ RUN mkdir -p /app/downloads /app/logs \
 USER website
 EXPOSE 8002
 CMD ["python", "download_api.py"]
+
+FROM base AS media-api
+
+COPY src/server/media_requirements.txt /app/requirements.txt
+RUN python -m pip install --no-cache-dir --requirement /app/requirements.txt
+
+COPY --chown=website:website src/server/media_api.py src/server/logging_utils.py /app/
+RUN mkdir -p /app/media /app/logs \
+    && chmod -R a=rX /app
+
+USER website
+EXPOSE 8003
+CMD ["python", "media_api.py"]

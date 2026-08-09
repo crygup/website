@@ -60,6 +60,13 @@ if ! compose up --detach --no-deps download-api || ! wait_for_health download-ap
     exit 1
 fi
 
+echo "Starting the temporary media API on 127.0.0.1:8003"
+if ! compose up --detach --no-deps media-api || ! wait_for_health media-api 18; then
+    compose stop media-api || true
+    echo "Temporary media API deployment failed. Set FISHIE_MEDIA_API_KEY in .env and try again."
+    exit 1
+fi
+
 legacy_was_active=false
 if sudo systemctl is-active --quiet "$LEGACY_SERVICE"; then
     legacy_was_active=true
@@ -69,6 +76,7 @@ fi
 echo "Starting the avatar API on 127.0.0.1:8000"
 if ! compose up --detach --no-deps avatar-api || ! wait_for_health avatar-api 30; then
     compose stop avatar-api || true
+    compose stop media-api || true
     if [[ "$legacy_was_active" == true ]]; then
         sudo systemctl start "$LEGACY_SERVICE"
     fi
@@ -84,6 +92,7 @@ if ! sudo nginx -t || ! sudo systemctl reload nginx; then
     sudo install -m 644 "$nginx_backup" /etc/nginx/sites-available/crygup
     sudo nginx -t
     sudo systemctl reload nginx
+    compose stop media-api || true
     rm -f "$nginx_backup"
     echo "Nginx rejected the new configuration. The previous configuration was restored."
     exit 1

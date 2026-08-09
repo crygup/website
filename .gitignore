@@ -225,6 +225,7 @@ __marimo__/
 /config/
 /src/logs/
 /src/downloads/
+/src/media/
 /src/server/config/
 /src/server/cookies/
 /src/server/venv/
