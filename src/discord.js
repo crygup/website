@@ -349,6 +349,7 @@ const TRACKING_ITEMS = [
   { key: "pokemon", label: "Pokémon solve tracking" },
   { key: "corn", label: "Corn reaction tracking" },
   { key: "emoji", label: "Emoji statistics tracking" },
+  { key: "downloads", label: "Download site statistics" },
 ];
 
 const GUILD_TRACKING_ITEMS = [
