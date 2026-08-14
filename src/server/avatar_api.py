@@ -265,7 +265,10 @@ async def get_avatars(
             "SELECT history_public FROM user_settings WHERE user_id = $1",
             user_id,
         )
-        if history_public is False:
+        # A missing setting (NULL) must not make a user's history public.  Only
+        # an explicit TRUE opt-in allows unauthenticated viewers; the owner can
+        # still access their own history through a valid session.
+        if history_public is not True:
             viewer_id = None
             if session_id:
                 viewer_id = await conn.fetchval(

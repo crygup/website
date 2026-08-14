@@ -165,6 +165,21 @@ def _is_public_address(address: str) -> bool:
     )
 
 
+def _validate_connected_peer(response: aiohttp.ClientResponse) -> None:
+    """Reject a response whose socket connected to a private address."""
+
+    connection = response.connection
+    transport = connection.transport if connection is not None else None
+    peer = transport.get_extra_info("peername") if transport is not None else None
+    if not peer or not _is_public_address(str(peer[0])):
+        response.close()
+        raise DownloadFailure(
+            "The remote server did not provide a public network connection."
+            if not peer
+            else "Private and local network addresses are not allowed."
+        )
+
+
 async def _validate_url(url: str) -> str:
     try:
         parsed = urlsplit(url.strip())
@@ -308,6 +323,7 @@ async def _resolve_klipy(url: str, media_format: str) -> str:
     try:
         async with aiohttp.ClientSession(timeout=timeout, headers=headers) as session:
             async with session.get(api_url, allow_redirects=False) as response:
+                _validate_connected_peer(response)
                 if response.status != 200:
                     raise DownloadFailure("Klipy could not provide that GIF.")
                 direct_url = _klipy_media(
@@ -352,10 +368,57 @@ async def _download_media(job: DownloadJob) -> Path:
     else:
         selector = "bestvideo[height<=1080]+bestaudio/best[height<=1080]/best"
 
+    # yt-dlp performs its own requests, including requests to redirected
+    # media hosts.  Run it through a tiny resolver guard so every DNS lookup
+    # rejects private, loopback, link-local, multicast, and reserved peers.
+    # This closes the DNS-rebinding gap between the initial URL validation and
+    # the extractor's later redirects without relying on a shell or a proxy.
+    safe_runner = """
+import ipaddress
+import socket
+
+def _public(value):
+    try:
+        address = ipaddress.ip_address(value)
+    except ValueError:
+        return False
+    return not (address.is_private or address.is_loopback or
+                address.is_link_local or address.is_multicast or
+                address.is_reserved or address.is_unspecified)
+
+_getaddrinfo = socket.getaddrinfo
+def _safe_getaddrinfo(*args, **kwargs):
+    results = _getaddrinfo(*args, **kwargs)
+    addresses = {str(item[4][0]) for item in results if item[4]}
+    if not addresses or any(not _public(address) for address in addresses):
+        raise socket.gaierror("private network address rejected")
+    return results
+
+socket.getaddrinfo = _safe_getaddrinfo
+_gethostbyname = socket.gethostbyname
+def _safe_gethostbyname(host):
+    address = _gethostbyname(host)
+    if not _public(address):
+        raise socket.gaierror("private network address rejected")
+    return address
+
+socket.gethostbyname = _safe_gethostbyname
+_gethostbyname_ex = socket.gethostbyname_ex
+def _safe_gethostbyname_ex(host):
+    result = _gethostbyname_ex(host)
+    addresses = {str(address) for address in result[2]}
+    if not addresses or any(not _public(address) for address in addresses):
+        raise socket.gaierror("private network address rejected")
+    return result
+
+socket.gethostbyname_ex = _safe_gethostbyname_ex
+from yt_dlp import main
+main()
+"""
     args = [
         sys.executable,
-        "-m",
-        "yt_dlp",
+        "-c",
+        safe_runner,
         "--format",
         selector,
         "--output",

@@ -22,7 +22,7 @@ from urllib.parse import quote
 import uvicorn
 from fastapi import FastAPI, Header, HTTPException, Request, Response
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, RedirectResponse
 from logging_utils import get_logger
 
 MAX_MEDIA_BYTES = 500 * 1024 * 1024
@@ -249,7 +249,10 @@ async def upload_media(
 
     logger.info("media_uploaded token=%s bytes=%s", token[:8], size)
     return {
-        "url": f"{PUBLIC_BASE_URL}/files/{token}",
+        # Keep the original extension in the public path.  Discord's media
+        # gallery uses the URL suffix when deciding how to render a remote
+        # attachment, while the token remains the only filesystem identifier.
+        "url": f"{PUBLIC_BASE_URL}/files/{token}/{quote(filename, safe='')}",
         "filename": filename,
         "size": size,
         "expires_in": MEDIA_TTL,
@@ -257,7 +260,8 @@ async def upload_media(
 
 
 @app.api_route("/files/{token}", methods=["GET", "HEAD"])
-async def get_media(token: str):
+@app.api_route("/files/{token}/{requested_filename}", methods=["GET", "HEAD"])
+async def get_media(token: str, requested_filename: str | None = None):
     if not TOKEN_RE.fullmatch(token):
         raise HTTPException(404, "Media not found")
     metadata_path = _metadata_path(token)
@@ -278,6 +282,16 @@ async def get_media(token: str):
     if not path.is_file():
         _remove_entry(metadata_path)
         raise HTTPException(404, "Media not found")
+    canonical_filename = quote(filename, safe="")
+    # Keep previously issued extensionless links working while redirecting
+    # them to the filename-bearing URL Discord can recognize as media.  Also
+    # canonicalize a mismatched suffix so it cannot be used to mislabel the
+    # response.
+    if requested_filename != filename:
+        return RedirectResponse(
+            f"{PUBLIC_BASE_URL}/files/{token}/{canonical_filename}",
+            status_code=307,
+        )
     return FileResponse(
         path,
         media_type=content_type,

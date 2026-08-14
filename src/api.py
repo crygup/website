@@ -1928,8 +1928,9 @@ async def set_command_disable(
 
 
 @app.get("/guild/{guild_id}/prefixes")
-async def get_guild_prefixes(guild_id: int):
-    """Get custom prefixes for a guild."""
+async def get_guild_prefixes(guild_id: int, authorization: str = Header(None)):
+    """Get custom prefixes for a guild managed by the authenticated user."""
+    await _managed_guild(guild_id, authorization)
     pool = _check_pool()
     rows = await pool.fetch(
         "SELECT prefix, author_id, time FROM guild_prefixes WHERE guild_id = $1 ORDER BY time",
