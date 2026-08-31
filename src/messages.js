@@ -44,6 +44,18 @@ function updateCounts() {
   contentCount.textContent = `${contentInput.value.length}/2000`;
 }
 
+async function getMessageChallenge() {
+  const res = await fetch(`${API}/send-message/challenge`, {
+    credentials: "include",
+    cache: "no-store",
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok || !data.token) {
+    throw new Error(data.detail || "Could not verify the message form");
+  }
+  return data.token;
+}
+
 form.addEventListener("submit", async (e) => {
   e.preventDefault();
   const name = nameInput.value.trim();
@@ -54,9 +66,14 @@ form.addEventListener("submit", async (e) => {
   submitBtn.textContent = "Sending…";
 
   try {
+    const challenge = await getMessageChallenge();
     const res = await fetch(`${API}/send-message`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Fishie-Message-Challenge": challenge,
+      },
       body: JSON.stringify({
         name,
         content,

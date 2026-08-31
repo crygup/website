@@ -4,22 +4,37 @@ Fishie bot API | commands, stats, OAuth, and user data history.
 
 from __future__ import annotations
 
-import base64
 import asyncio
+import base64
+import binascii
 import hashlib
 import hmac
+import ipaddress
 import json
+import os
 import re
 import secrets
 import time
+from collections import deque
+from datetime import datetime, timedelta, timezone
 from types import SimpleNamespace
-from typing import Any, TYPE_CHECKING, cast
+from typing import TYPE_CHECKING, Any, cast
 from urllib.parse import parse_qs, urlencode, urlsplit
 
 import aiohttp
-from fastapi import Body, FastAPI, Header, HTTPException, Query, Request
+from fastapi import (
+    Body,
+    Cookie,
+    FastAPI,
+    Header,
+    HTTPException,
+    Query,
+    Request,
+    Response,
+)
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel, Field
+from fastapi.responses import JSONResponse
+from pydantic import BaseModel, ConfigDict, Field
 from server.logging_utils import get_logger
 
 if TYPE_CHECKING:
@@ -30,6 +45,7 @@ logger = get_logger("api")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["https://crygup.com", "https://www.crygup.com"],
+    allow_credentials=True,
     allow_methods=["GET", "POST", "DELETE", "OPTIONS"],
     allow_headers=["*"],
 )
@@ -75,6 +91,25 @@ GUILD_TABLES = {"guild_icons", "guild_name_logs"}
 LASTFM_CALLBACK_URL = "https://crygup.com/fishie"
 LASTFM_API_URL = "https://ws.audioscrobbler.com/2.0/"
 LASTFM_STATE_TTL = 10 * 60
+LASTFM_STATE_COOKIE = "__Host-fishie_lastfm_state"
+MESSAGE_CHALLENGE_COOKIE = "__Host-fishie_message_challenge"
+MESSAGE_CHALLENGE_MAX_AGE = 10 * 60
+WEB_ORIGINS = frozenset({"https://crygup.com", "https://www.crygup.com"})
+SESSION_COOKIE = "__Host-fishie_session"
+OAUTH_STATE_COOKIE = "__Host-fishie_oauth_state"
+STEAM_STATE_COOKIE = "__Host-fishie_steam_state"
+SPOTIFY_STATE_COOKIE = "__Host-fishie_spotify_state"
+ANILIST_STATE_COOKIE = "__Host-fishie_anilist_state"
+SESSION_MAX_AGE = 7 * 24 * 60 * 60
+OAUTH_STATE_MAX_AGE = 10 * 60
+DISCORD_ATTACHMENT_HOSTS = frozenset(
+    {
+        "cdn.discordapp.com",
+        "media.discordapp.net",
+        "images-ext-1.discordapp.net",
+        "images-ext-2.discordapp.net",
+    }
+)
 LASTFM_ACCOUNT_FIELDS = (
     "lastfm",
     "steam",
@@ -87,44 +122,129 @@ STEAM_OPENID_URL = "https://steamcommunity.com/openid/login"
 STEAM_STATE_TTL = 10 * 60
 SPOTIFY_CALLBACK_URL = "https://crygup.com/fishie"
 SPOTIFY_TOKEN_URL = "https://accounts.spotify.com/api/token"
+SPOTIFY_STATE_TTL = 10 * 60
 ANILIST_CALLBACK_URL = "https://crygup.com/fishie"
 ANILIST_TOKEN_URL = "https://anilist.co/api/v2/oauth/token"
 ANILIST_GRAPHQL_URL = "https://graphql.anilist.co"
 ANILIST_STATE_TTL = 10 * 60
 
+_legacy_lastfm_states_used: dict[str, float] = {}
+_spotify_cover_cache: dict[tuple[str, str], tuple[float, str]] = {}
+_spotify_cover_negative_cache: dict[tuple[str, str], float] = {}
+_spotify_cover_rate: dict[str, list[float]] = {}
+_spotify_cover_semaphore = asyncio.Semaphore(4)
+_spotify_cover_token_lock = asyncio.Lock()
+_message_global_requests: deque[float] = deque()
+_message_rate_lock = asyncio.Lock()
+_message_used_challenges: dict[str, float] = {}
+_message_rate_limit: dict[str, float] = {}
+SPOTIFY_COVER_RATE_LIMIT = 30
+SPOTIFY_COVER_RATE_WINDOW = 60
+MESSAGE_GLOBAL_RATE_LIMIT = 60
+MESSAGE_GLOBAL_RATE_WINDOW = 60
 
-def _lastfm_state(user_id: int, source: str) -> str:
+
+@app.middleware("http")
+async def protect_cookie_requests(request: Request, call_next):
+    """Reject cross-origin state changes authenticated by the session cookie.
+
+    CORS is not a CSRF defense: a browser still sends an HttpOnly cookie on a
+    credentialed cross-origin request.  The website is the only allowed caller
+    for cookie-authenticated mutations, while bearer-token API clients remain
+    usable from non-browser integrations.
+    """
+
+    if request.method not in {"GET", "HEAD", "OPTIONS"} and request.cookies.get(
+        SESSION_COOKIE
+    ):
+        if request.headers.get("origin") not in WEB_ORIGINS:
+            return JSONResponse(
+                status_code=403,
+                content={"detail": "Invalid request origin"},
+            )
+    return await call_next(request)
+
+
+def _validate_discord_avatar_url(value: str) -> None:
+    """Reject avatar URLs that could turn the webhook into an SSRF proxy."""
+    parsed = urlsplit(value)
+    hostname = (parsed.hostname or "").casefold().rstrip(".")
+    if parsed.scheme != "https" or hostname not in DISCORD_ATTACHMENT_HOSTS:
+        raise HTTPException(400, "Avatar URLs must use the Discord CDN")
+    if parsed.username is not None or parsed.password is not None:
+        raise HTTPException(400, "Avatar URLs cannot include credentials")
+    try:
+        if parsed.port not in (None, 443):
+            raise HTTPException(400, "Avatar URLs must use HTTPS")
+    except ValueError as error:
+        raise HTTPException(400, "Invalid avatar URL") from error
+
+
+def _session_hash(value: str) -> str:
+    return hashlib.sha256(value.encode("utf-8")).hexdigest()
+
+
+def _lastfm_state(
+    user_id: int,
+    source: str,
+    *,
+    session_id: str | None = None,
+    browser_nonce: str | None = None,
+) -> str:
+    """Create a one-time state bound to the requesting browser session."""
     if not bot_ref:
         raise HTTPException(503, "Bot not ready")
-    payload = json.dumps(
-        {
-            "user_id": str(user_id),
-            "source": source,
-            "expires": int(time.time()) + LASTFM_STATE_TTL,
-        },
-        separators=(",", ":"),
-        sort_keys=True,
-    ).encode()
-    encoded = base64.urlsafe_b64encode(payload).decode().rstrip("=")
-    signature = hmac.new(
-        bot_ref.config["keys"]["lastfm_secret"].encode(),
-        encoded.encode(),
-        hashlib.sha256,
-    ).hexdigest()
-    return f"{encoded}.{signature}"
+    now = int(time.time())
+    states = getattr(bot_ref, "_lastfm_oauth_states", None)
+    if states is None:
+        states = bot_ref._lastfm_oauth_states = {}
+    for token, state_data in list(states.items()):
+        if int(state_data.get("expires", 0)) < now:
+            states.pop(token, None)
+    token = secrets.token_urlsafe(32)
+    state_data: dict[str, int | str] = {
+        "user_id": int(user_id),
+        "source": source,
+        "expires": now + LASTFM_STATE_TTL,
+    }
+    if session_id:
+        state_data["session_hash"] = _session_hash(session_id)
+    if browser_nonce:
+        state_data["browser_nonce_hash"] = _session_hash(browser_nonce)
+    states[token] = state_data
+    return f"lastfm_{token}"
 
 
-def _lastfm_authorization_url(user_id: int, source: str) -> str:
+def _lastfm_authorization_url(
+    user_id: int,
+    source: str,
+    *,
+    session_id: str | None = None,
+    browser_nonce: str | None = None,
+) -> str:
     if not bot_ref:
         raise HTTPException(503, "Bot not ready")
-    state = _lastfm_state(user_id, source)
+    state = _lastfm_state(
+        user_id,
+        source,
+        session_id=session_id,
+        browser_nonce=browser_nonce,
+    )
     callback = f"{LASTFM_CALLBACK_URL}?{urlencode({'lastfm_state': state})}"
     return "https://www.last.fm/api/auth/?" + urlencode(
         {"api_key": bot_ref.config["keys"]["lastfm_cb"], "cb": callback}
     )
 
 
-def _steam_state(user_id: int, source: str) -> str:
+def _steam_state(
+    user_id: int,
+    source: str,
+    channel_id: int | None = None,
+    message_id: int | None = None,
+    *,
+    session_id: str | None = None,
+    browser_nonce: str | None = None,
+) -> str:
     if not bot_ref:
         raise HTTPException(503, "Bot not ready")
     now = int(time.time())
@@ -135,16 +255,35 @@ def _steam_state(user_id: int, source: str) -> str:
         if int(state_data.get("expires", 0)) < now:
             states.pop(token, None)
     token = secrets.token_urlsafe(24)
-    states[token] = {
+    state_data: dict[str, int | str] = {
         "user_id": int(user_id),
         "source": source,
         "expires": now + STEAM_STATE_TTL,
     }
+    if session_id:
+        state_data["session_hash"] = _session_hash(session_id)
+    if browser_nonce:
+        state_data["browser_nonce_hash"] = _session_hash(browser_nonce)
+    if channel_id is not None and message_id is not None:
+        state_data["channel_id"] = int(channel_id)
+        state_data["message_id"] = int(message_id)
+    states[token] = state_data
     return token
 
 
-def _steam_authorization_url(user_id: int, source: str) -> str:
-    state = _steam_state(user_id, source)
+def _steam_authorization_url(
+    user_id: int,
+    source: str,
+    *,
+    session_id: str | None = None,
+    browser_nonce: str | None = None,
+) -> str:
+    state = _steam_state(
+        user_id,
+        source,
+        session_id=session_id,
+        browser_nonce=browser_nonce,
+    )
     callback = f"{STEAM_CALLBACK_URL}?{urlencode({'steam_state': state})}"
     return (
         STEAM_OPENID_URL
@@ -162,17 +301,24 @@ def _steam_authorization_url(user_id: int, source: str) -> str:
     )
 
 
-def _decode_steam_state(state: str) -> tuple[int, str, int | None, int | None]:
+def _decode_steam_state(
+    state: str,
+    *,
+    session_id: str | None = None,
+    browser_nonce: str | None = None,
+) -> tuple[int, str, int | None, int | None]:
     if not bot_ref:
         raise HTTPException(503, "Bot not ready")
     states = getattr(bot_ref, "_steam_oauth_states", None) or {}
-    payload = states.pop(state, None)
+    payload = states.get(state)
     if not isinstance(payload, dict):
         raise HTTPException(400, "Invalid Steam connection state")
     try:
         user_id = int(payload["user_id"])
         source = payload["source"]
         expires = int(payload["expires"])
+        expected_session = payload.get("session_hash")
+        expected_nonce = payload.get("browser_nonce_hash")
         channel_id = int(payload["channel_id"]) if payload.get("channel_id") else None
         message_id = int(payload["message_id"]) if payload.get("message_id") else None
     except (KeyError, TypeError, ValueError):
@@ -181,22 +327,101 @@ def _decode_steam_state(state: str) -> tuple[int, str, int | None, int | None]:
         raise HTTPException(400, "Invalid Steam connection source")
     if expires < int(time.time()):
         raise HTTPException(400, "The Steam connection link has expired")
+    if source == "website":
+        if not expected_session or not session_id or not hmac.compare_digest(
+            str(expected_session), _session_hash(session_id)
+        ):
+            raise HTTPException(400, "Invalid Steam browser session")
+        if not expected_nonce or not browser_nonce or not hmac.compare_digest(
+            str(expected_nonce), _session_hash(browser_nonce)
+        ):
+            raise HTTPException(400, "Invalid Steam browser state")
     if (channel_id is None) != (message_id is None):
         raise HTTPException(400, "Invalid Discord message state")
+    states.pop(state, None)
     return user_id, source, channel_id, message_id
 
 
-def _decode_spotify_state(state: str) -> tuple[int, str, int | None, int | None]:
+def _spotify_state(
+    user_id: int,
+    source: str,
+    channel_id: int | None = None,
+    message_id: int | None = None,
+    *,
+    session_id: str | None = None,
+    browser_nonce: str | None = None,
+) -> str:
+    if not bot_ref:
+        raise HTTPException(503, "Bot not ready")
+    now = int(time.time())
+    states = getattr(bot_ref, "_spotify_oauth_states", None)
+    if states is None:
+        states = bot_ref._spotify_oauth_states = {}
+    for token, state_data in list(states.items()):
+        if int(state_data.get("expires", 0)) < now:
+            states.pop(token, None)
+    token = secrets.token_urlsafe(24)
+    state_data: dict[str, int | str] = {
+        "user_id": int(user_id),
+        "source": source,
+        "expires": now + SPOTIFY_STATE_TTL,
+    }
+    if session_id:
+        state_data["session_hash"] = _session_hash(session_id)
+    if browser_nonce:
+        state_data["browser_nonce_hash"] = _session_hash(browser_nonce)
+    if channel_id is not None and message_id is not None:
+        state_data["channel_id"] = int(channel_id)
+        state_data["message_id"] = int(message_id)
+    states[token] = state_data
+    return token
+
+
+def _spotify_authorization_url(
+    user_id: int,
+    source: str,
+    *,
+    session_id: str | None = None,
+    browser_nonce: str | None = None,
+) -> str:
+    if not bot_ref:
+        raise HTTPException(503, "Bot not ready")
+    state = _spotify_state(
+        user_id,
+        source,
+        session_id=session_id,
+        browser_nonce=browser_nonce,
+    )
+    return "https://accounts.spotify.com/authorize?" + urlencode(
+        {
+            "client_id": bot_ref.config["keys"]["spotify_id"],
+            "response_type": "code",
+            "redirect_uri": SPOTIFY_CALLBACK_URL,
+            "scope": "user-read-private",
+            "state": f"spotify_{state}",
+        }
+    )
+
+
+def _decode_spotify_state(
+    state: str,
+    *,
+    session_id: str | None = None,
+    browser_nonce: str | None = None,
+) -> tuple[int, str, int | None, int | None]:
     if not bot_ref or not state.startswith("spotify_"):
         raise HTTPException(400, "Invalid Spotify connection state")
     states = getattr(bot_ref, "_spotify_oauth_states", None) or {}
-    payload = states.pop(state.removeprefix("spotify_"), None)
+    state_key = state.removeprefix("spotify_")
+    payload = states.get(state_key)
     if not isinstance(payload, dict):
         raise HTTPException(400, "Invalid Spotify connection state")
     try:
         user_id = int(payload["user_id"])
         source = payload["source"]
         expires = int(payload["expires"])
+        expected_session = payload.get("session_hash")
+        expected_nonce = payload.get("browser_nonce_hash")
         channel_id = int(payload["channel_id"]) if payload.get("channel_id") else None
         message_id = int(payload["message_id"]) if payload.get("message_id") else None
     except (KeyError, TypeError, ValueError):
@@ -205,12 +430,30 @@ def _decode_spotify_state(state: str) -> tuple[int, str, int | None, int | None]
         raise HTTPException(400, "Invalid Spotify connection source")
     if expires < int(time.time()):
         raise HTTPException(400, "The Spotify connection link has expired")
+    if source == "website":
+        if not expected_session or not session_id or not hmac.compare_digest(
+            str(expected_session), _session_hash(session_id)
+        ):
+            raise HTTPException(400, "Invalid Spotify browser session")
+        if not expected_nonce or not browser_nonce or not hmac.compare_digest(
+            str(expected_nonce), _session_hash(browser_nonce)
+        ):
+            raise HTTPException(400, "Invalid Spotify browser state")
     if (channel_id is None) != (message_id is None):
         raise HTTPException(400, "Invalid Discord message state")
+    states.pop(state_key, None)
     return user_id, source, channel_id, message_id
 
 
-def _anilist_state(user_id: int, source: str) -> str:
+def _anilist_state(
+    user_id: int,
+    source: str,
+    channel_id: int | None = None,
+    message_id: int | None = None,
+    *,
+    session_id: str | None = None,
+    browser_nonce: str | None = None,
+) -> str:
     if not bot_ref:
         raise HTTPException(503, "Bot not ready")
     now = int(time.time())
@@ -221,18 +464,37 @@ def _anilist_state(user_id: int, source: str) -> str:
         if int(state_data.get("expires", 0)) < now:
             states.pop(token, None)
     token = secrets.token_urlsafe(24)
-    states[token] = {
+    state_data: dict[str, int | str] = {
         "user_id": int(user_id),
         "source": source,
         "expires": now + ANILIST_STATE_TTL,
     }
+    if session_id:
+        state_data["session_hash"] = _session_hash(session_id)
+    if browser_nonce:
+        state_data["browser_nonce_hash"] = _session_hash(browser_nonce)
+    if channel_id is not None and message_id is not None:
+        state_data["channel_id"] = int(channel_id)
+        state_data["message_id"] = int(message_id)
+    states[token] = state_data
     return token
 
 
-def _anilist_authorization_url(user_id: int, source: str) -> str:
+def _anilist_authorization_url(
+    user_id: int,
+    source: str,
+    *,
+    session_id: str | None = None,
+    browser_nonce: str | None = None,
+) -> str:
     if not bot_ref:
         raise HTTPException(503, "Bot not ready")
-    state = _anilist_state(user_id, source)
+    state = _anilist_state(
+        user_id,
+        source,
+        session_id=session_id,
+        browser_nonce=browser_nonce,
+    )
     return "https://anilist.co/api/v2/oauth/authorize?" + urlencode(
         {
             "client_id": bot_ref.config["keys"]["anilist_id"],
@@ -243,31 +505,108 @@ def _anilist_authorization_url(user_id: int, source: str) -> str:
     )
 
 
-def _decode_anilist_state(state: str) -> tuple[int, str, int | None, int | None]:
+def _decode_anilist_state(
+    state: str,
+    *,
+    session_id: str | None = None,
+    browser_nonce: str | None = None,
+) -> tuple[int, str, int | None, int | None]:
     if not bot_ref or not state.startswith("anilist_"):
         raise HTTPException(400, "Invalid AniList connection state")
     states = getattr(bot_ref, "_anilist_oauth_states", None) or {}
-    payload = states.pop(state.removeprefix("anilist_"), None)
+    state_key = state.removeprefix("anilist_")
+    payload = states.get(state_key)
     if not isinstance(payload, dict):
         raise HTTPException(400, "Invalid AniList connection state")
     try:
         user_id = int(payload["user_id"])
         source = payload["source"]
         expires = int(payload["expires"])
+        expected_session = payload.get("session_hash")
+        expected_nonce = payload.get("browser_nonce_hash")
+        channel_id = int(payload["channel_id"]) if payload.get("channel_id") else None
+        message_id = int(payload["message_id"]) if payload.get("message_id") else None
     except (KeyError, TypeError, ValueError):
         raise HTTPException(400, "Invalid AniList connection state")
     if source not in {"discord", "website"}:
         raise HTTPException(400, "Invalid AniList connection source")
     if expires < int(time.time()):
         raise HTTPException(400, "The AniList connection link has expired")
-    return user_id, source, None, None
+    if source == "website":
+        if not expected_session or not session_id or not hmac.compare_digest(
+            str(expected_session), _session_hash(session_id)
+        ):
+            raise HTTPException(400, "Invalid AniList browser session")
+        if not expected_nonce or not browser_nonce or not hmac.compare_digest(
+            str(expected_nonce), _session_hash(browser_nonce)
+        ):
+            raise HTTPException(400, "Invalid AniList browser state")
+    states.pop(state_key, None)
+    if (channel_id is None) != (message_id is None):
+        raise HTTPException(400, "Invalid Discord message state")
+    return user_id, source, channel_id, message_id
 
 
 def _decode_lastfm_state(
     state: str,
+    *,
+    session_id: str | None = None,
+    browser_nonce: str | None = None,
 ) -> tuple[int, str, int | None, int | None]:
     if not bot_ref:
         raise HTTPException(503, "Bot not ready")
+
+    if state.startswith("lastfm_"):
+        states = getattr(bot_ref, "_lastfm_oauth_states", None) or {}
+        state_key = state.removeprefix("lastfm_")
+        # Do not consume a valid state until all browser/session checks pass.
+        # Otherwise a forged callback with a stolen state but the wrong cookie
+        # could invalidate the legitimate OAuth redirect (a denial of service).
+        payload = states.get(state_key)
+        if not isinstance(payload, dict):
+            raise HTTPException(400, "Invalid Last.fm connection state")
+        try:
+            user_id = int(payload["user_id"])
+            source = payload["source"]
+            expires = int(payload["expires"])
+            expected_session = payload.get("session_hash")
+            expected_nonce = payload.get("browser_nonce_hash")
+            channel_id = (
+                int(payload["channel_id"]) if payload.get("channel_id") else None
+            )
+            message_id = (
+                int(payload["message_id"]) if payload.get("message_id") else None
+            )
+        except (KeyError, TypeError, ValueError):
+            raise HTTPException(400, "Invalid Last.fm connection state")
+        if source not in {"discord", "website"}:
+            raise HTTPException(400, "Invalid Last.fm connection source")
+        if expires < int(time.time()):
+            raise HTTPException(400, "The Last.fm connection link has expired")
+        if expected_session and (
+            not session_id
+            or not hmac.compare_digest(str(expected_session), _session_hash(session_id))
+        ):
+            raise HTTPException(400, "Invalid Last.fm browser session")
+        if expected_nonce and (
+            not browser_nonce
+            or not hmac.compare_digest(
+                str(expected_nonce), _session_hash(browser_nonce)
+            )
+        ):
+            raise HTTPException(400, "Invalid Last.fm browser state")
+        if (channel_id is None) != (message_id is None):
+            raise HTTPException(400, "Invalid Discord message state")
+        states.pop(state_key, None)
+        return user_id, source, channel_id, message_id
+
+    legacy_key = hashlib.sha256(state.encode("utf-8")).hexdigest()
+    now = time.time()
+    for key, expires in list(_legacy_lastfm_states_used.items()):
+        if expires <= now:
+            _legacy_lastfm_states_used.pop(key, None)
+    if legacy_key in _legacy_lastfm_states_used:
+        raise HTTPException(400, "Invalid or already used Last.fm connection state")
     try:
         encoded, supplied_signature = state.split(".", 1)
         expected_signature = hmac.new(
@@ -284,7 +623,13 @@ def _decode_lastfm_state(
         expires = int(payload["expires"])
         channel_id = int(payload["channel_id"]) if payload.get("channel_id") else None
         message_id = int(payload["message_id"]) if payload.get("message_id") else None
-    except (KeyError, TypeError, ValueError, json.JSONDecodeError):
+    except (
+        binascii.Error,
+        KeyError,
+        TypeError,
+        ValueError,
+        json.JSONDecodeError,
+    ):
         raise HTTPException(400, "Invalid Last.fm connection state")
     if source not in {"discord", "website"}:
         raise HTTPException(400, "Invalid Last.fm connection source")
@@ -292,6 +637,7 @@ def _decode_lastfm_state(
         raise HTTPException(400, "The Last.fm connection link has expired")
     if (channel_id is None) != (message_id is None):
         raise HTTPException(400, "Invalid Discord message state")
+    _legacy_lastfm_states_used[legacy_key] = now + LASTFM_STATE_TTL
     return user_id, source, channel_id, message_id
 
 
@@ -389,6 +735,58 @@ def _check_pool():
     return pool
 
 
+def _active_application_id() -> int:
+    """Return the OAuth application ID for the running bot instance."""
+    if bot_ref is None:
+        raise HTTPException(503, "Bot not ready")
+    application_id = getattr(bot_ref, "active_application_id", None)
+    if application_id is None:
+        application_id = getattr(bot_ref, "active_bot_id", None)
+    if application_id is None:
+        application_id = bot_ref.config.get("ids", {}).get("bot_id")
+    try:
+        return int(application_id)
+    except (TypeError, ValueError) as error:
+        raise HTTPException(503, "Bot application ID is not configured") from error
+
+
+def _active_client_secret() -> str:
+    """Return the OAuth client secret without exposing it to callers."""
+    if bot_ref is None:
+        raise HTTPException(503, "Bot not ready")
+    secret = getattr(bot_ref, "oauth_client_secret", None)
+    if not secret:
+        secret = bot_ref.config.get("keys", {}).get("client_secret")
+    if not isinstance(secret, str) or not secret:
+        raise HTTPException(503, "Bot client secret is not configured")
+    return secret
+
+
+async def _create_web_session(
+    user_id: int, discord_access_token: str, expires_in: int | None
+) -> tuple[str, int]:
+    """Persist an opaque browser session; the Discord token stays server-side."""
+    pool = _check_pool()
+    try:
+        lifetime = int(expires_in or SESSION_MAX_AGE)
+    except (TypeError, ValueError):
+        lifetime = SESSION_MAX_AGE
+    lifetime = max(60, min(lifetime, SESSION_MAX_AGE))
+    session_id = secrets.token_urlsafe(32)
+    expires_at = datetime.now(timezone.utc) + timedelta(seconds=lifetime)
+    await pool.execute("DELETE FROM web_sessions WHERE expires_at <= now()")
+    await pool.execute(
+        """INSERT INTO web_sessions
+           (session_id_hash, user_id, discord_access_token, expires_at)
+           VALUES ($1, $2, $3, $4)""",
+        _session_hash(session_id),
+        user_id,
+        discord_access_token,
+        expires_at,
+    )
+    return session_id, lifetime
+
+
 async def _check_opted_out(user_id: int) -> bool:
     pool = _check_pool()
     r = await pool.fetchval(
@@ -397,58 +795,196 @@ async def _check_opted_out(user_id: int) -> bool:
     return r is not None
 
 
-VALID_OPTOUTS = {"avatar", "username", "display", "nickname", "discrim", "joins"}
+VALID_OPTOUTS = {
+    "avatar",
+    "username",
+    "display",
+    "nickname",
+    "discrim",
+    "joins",
+    "stag",
+    "xp",
+    "commands",
+    "status",
+    "activity",
+    "pokemon",
+    "corn",
+    "emoji",
+    "downloads",
+    "reactions",
+    "games",
+    "currency",
+    "snipe",
+}
 
 
 @app.get("/user/{user_id}/opted-out")
-async def get_opted_out(user_id: int):
-    """Get the list of tracking methods this user has opted out of."""
+async def get_opted_out(
+    user_id: int,
+    authorization: str | None = Header(None),
+    session_id: str | None = Cookie(None, alias=SESSION_COOKIE),
+):
+    """Get the list of tracking methods for the authenticated user."""
+    me = await _verify_token(authorization, session_id)
+    if int(me["id"]) != user_id:
+        raise HTTPException(403, "You can only view your own settings")
     pool = _check_pool()
     row = await pool.fetchrow("SELECT items FROM opted_out WHERE user_id = $1", user_id)
-    items = row["items"] if row else []
+    items = list(row["items"] if row else [])
+    settings = await pool.fetchrow(
+        "SELECT game_tracking_enabled, currency_tracking_enabled FROM user_settings WHERE user_id = $1",
+        user_id,
+    )
+    if settings and settings.get("game_tracking_enabled") is False:
+        items.append("games")
+    if settings and settings.get("currency_tracking_enabled") is False:
+        items.append("currency")
+    reaction = await pool.fetchval(
+        "SELECT enabled FROM reaction_tracking WHERE user_id = $1", user_id
+    )
+    if reaction is not True:
+        items.append("reactions")
     return {"items": items}
 
 
 @app.post("/user/{user_id}/opted-out")
 async def set_opted_out(
-    user_id: int, payload: dict = Body(...), authorization: str = Header(None)
+    user_id: int,
+    payload: dict = Body(...),
+    authorization: str | None = Header(None),
+    session_id: str | None = Cookie(None, alias=SESSION_COOKIE),
 ):
-    """Set the opted-out tracking methods. Requires OAuth bearer token."""
-    import aiohttp
-
-    if not authorization or not authorization.startswith("Bearer "):
-        raise HTTPException(401, "Missing access token")
-    token = authorization[7:]
-    async with aiohttp.ClientSession() as session:
-        headers = {"Authorization": f"Bearer {token}"}
-        async with session.get(
-            "https://discord.com/api/users/@me", headers=headers
-        ) as resp:
-            if resp.status != 200:
-                raise HTTPException(401, "Invalid access token")
-            me = await resp.json()
+    """Set the opted-out tracking methods for the authenticated user."""
+    me = await _verify_token(authorization, session_id)
     if int(me["id"]) != user_id:
         raise HTTPException(403, "You can only manage your own settings")
 
     items = [i for i in payload.get("items", []) if i in VALID_OPTOUTS]
+    ordinary = [i for i in items if i not in {"games", "currency", "reactions"}]
     pool = _check_pool()
     await pool.execute(
         "INSERT INTO opted_out (user_id, items) VALUES ($1, $2) ON CONFLICT (user_id) DO UPDATE SET items = $2",
         user_id,
-        items,
+        ordinary,
+    )
+    await pool.execute(
+        "INSERT INTO user_settings (user_id, game_tracking_enabled, currency_tracking_enabled) "
+        "VALUES ($1, $2, $3) ON CONFLICT (user_id) DO UPDATE SET "
+        "game_tracking_enabled = EXCLUDED.game_tracking_enabled, "
+        "currency_tracking_enabled = EXCLUDED.currency_tracking_enabled",
+        user_id,
+        "games" not in items,
+        "currency" not in items,
+    )
+    await pool.execute(
+        "INSERT INTO reaction_tracking (user_id, enabled) VALUES ($1, $2) "
+        "ON CONFLICT (user_id) DO UPDATE SET enabled = EXCLUDED.enabled, updated_at = now()",
+        user_id,
+        "reactions" not in items,
     )
 
     if bot_ref:
-        if items:
-            bot_ref.db_cache.opted_out[user_id] = items
+        if ordinary:
+            bot_ref.db_cache.opted_out[user_id] = ordinary
         else:
             bot_ref.db_cache.opted_out.pop(user_id, None)
+        bot_ref.db_cache.set_game_tracking_enabled(user_id, "games" not in items)
+        bot_ref.db_cache.set_currency_tracking_enabled(user_id, "currency" not in items)
+        if "reactions" in items:
+            bot_ref.db_cache.disable_reaction_tracking(user_id)
+        else:
+            bot_ref.db_cache.enable_reaction_tracking(user_id)
 
     return {"items": items}
 
 
-async def _verify_token(authorization: str | None) -> dict:
+@app.get("/user/{user_id}/privacy-settings")
+async def get_user_privacy_settings(
+    user_id: int,
+    authorization: str | None = Header(None),
+    session_id: str | None = Cookie(None, alias=SESSION_COOKIE),
+):
+    """Return global tracking/history settings for the dashboard."""
+    me = await _verify_token(authorization, session_id)
+    if int(me["id"]) != user_id:
+        raise HTTPException(403, "You can only view your own settings")
+    row = await _check_pool().fetchrow(
+        "SELECT tracking_enabled, history_public, game_tracking_enabled, "
+        "game_history_public, currency_tracking_enabled FROM user_settings WHERE user_id = $1",
+        user_id,
+    )
+    return {
+        "tracking_enabled": row["tracking_enabled"] if row else True,
+        "history_public": row["history_public"] if row else False,
+        "game_tracking_enabled": row["game_tracking_enabled"] if row else True,
+        "game_history_public": row["game_history_public"] if row else True,
+        "currency_tracking_enabled": row["currency_tracking_enabled"] if row else True,
+    }
+
+
+@app.post("/user/{user_id}/privacy-settings")
+async def set_user_privacy_settings(
+    user_id: int,
+    payload: dict = Body(...),
+    authorization: str | None = Header(None),
+    session_id: str | None = Cookie(None, alias=SESSION_COOKIE),
+):
+    """Update global tracking and saved-history visibility."""
+    me = await _verify_token(authorization, session_id)
+    if int(me["id"]) != user_id:
+        raise HTTPException(403, "You can only manage your own settings")
+    pool = _check_pool()
+    existing = await pool.fetchrow(
+        "SELECT tracking_enabled, history_public FROM user_settings WHERE user_id = $1",
+        user_id,
+    )
+    tracking = payload.get(
+        "tracking_enabled", existing["tracking_enabled"] if existing else True
+    )
+    history = payload.get(
+        "history_public", existing["history_public"] if existing else False
+    )
+    if not isinstance(tracking, bool) or not isinstance(history, bool):
+        raise HTTPException(400, "tracking_enabled and history_public must be booleans")
+    await pool.execute(
+        "INSERT INTO user_settings (user_id, tracking_enabled, history_public, game_history_public, tracking_consent) "
+        "VALUES ($1, $2, $3, $3, $3) ON CONFLICT (user_id) DO UPDATE SET "
+        "tracking_enabled = EXCLUDED.tracking_enabled, history_public = EXCLUDED.history_public, "
+        "game_history_public = EXCLUDED.game_history_public, "
+        "tracking_consent = CASE WHEN EXCLUDED.history_public THEN TRUE ELSE user_settings.tracking_consent END",
+        user_id,
+        tracking,
+        history,
+    )
+    if bot_ref:
+        bot_ref.db_cache.set_tracking_enabled(user_id, tracking)
+        bot_ref.db_cache.set_history_public(user_id, history)
+        bot_ref.db_cache.set_game_history_public(user_id, history)
+        if history:
+            bot_ref.db_cache.set_tracking_consent(user_id)
+    return {"tracking_enabled": tracking, "history_public": history}
+
+
+async def _verify_token(
+    authorization: str | None, session_id: str | None = None
+) -> dict:
     import aiohttp
+
+    # Prefer the opaque web session when one is present.  The session table
+    # stores the Discord identity server-side, so no bearer token needs to be
+    # exposed to browser JavaScript.
+    if session_id:
+        try:
+            pool = _check_pool()
+            row = await pool.fetchrow(
+                "SELECT user_id FROM web_sessions "
+                "WHERE session_id_hash = $1 AND expires_at > now()",
+                _session_hash(session_id),
+            )
+        except Exception:
+            row = None
+        if row is not None:
+            return {"id": str(row["user_id"])}
 
     if not authorization or not authorization.startswith("Bearer "):
         raise HTTPException(401, "Missing access token")
@@ -463,13 +999,97 @@ async def _verify_token(authorization: str | None) -> dict:
             return await resp.json()
 
 
-VALID_GUILD_OPTOUTS = {"name", "icon"}
+async def _history_visible_to(
+    user_id: int,
+    authorization: str | None,
+    session_id: str | None,
+) -> None:
+    """Allow history only after an explicit public opt-in or owner login."""
+    pool = _check_pool()
+    history_public = await pool.fetchval(
+        "SELECT history_public FROM user_settings WHERE user_id = $1", user_id
+    )
+    # A missing setting is private by default.  This protects newly-seen users
+    # until they explicitly opt in through the privacy settings dashboard.
+    if history_public is True:
+        return
+
+    viewer_id: int | None = None
+    if session_id or authorization:
+        try:
+            viewer = await _verify_token(authorization, session_id)
+        except HTTPException:
+            viewer = None
+        if viewer is not None:
+            try:
+                viewer_id = int(viewer["id"])
+            except (KeyError, TypeError, ValueError):
+                viewer_id = None
+    if viewer_id != user_id:
+        raise HTTPException(403, "This user's saved history is private")
+
+
+async def _require_guild_manager(
+    guild_id: int,
+    authorization: str | None,
+    session_id: str | None,
+):
+    """Authenticate a dashboard request and require Manage Server access."""
+    me = await _verify_token(authorization, session_id)
+    if not bot_ref:
+        raise HTTPException(503, "Bot not ready")
+    guild = bot_ref.get_guild(guild_id)
+    if not guild:
+        raise HTTPException(404, "Guild not found")
+    member = guild.get_member(int(me["id"]))
+    if not member or not member.guild_permissions.manage_guild:
+        raise HTTPException(403, "You need Manage Server permission in this guild")
+    return guild
+
+
+async def _guild_history_visible_to(
+    guild_id: int,
+    authorization: str | None,
+    session_id: str | None,
+) -> None:
+    """Honor a guild's public-history switch while protecting private logs."""
+    history_public = await _check_pool().fetchval(
+        "SELECT history_public FROM guild_settings WHERE guild_id = $1", guild_id
+    )
+    # Guild history has historically been public by default.  Only an
+    # explicit FALSE setting turns it into manager-only data.
+    if history_public is not False:
+        return
+    await _require_guild_manager(guild_id, authorization, session_id)
+
+
+VALID_GUILD_OPTOUTS = {
+    "avatar",
+    "icon",
+    "name",
+    "avatars",
+    "icons",
+    "names",
+    "joins",
+    "status",
+    "commands",
+    "emoji",
+    "downloads",
+    "corn",
+    "reactions",
+    "tags",
+    "mudae",
+}
 
 
 @app.get("/user/{user_id}/guilds")
-async def get_user_guilds(user_id: int, authorization: str = Header(None)):
+async def get_user_guilds(
+    user_id: int,
+    authorization: str | None = Header(None),
+    session_id: str | None = Cookie(None, alias=SESSION_COOKIE),
+):
     """Get guilds where the user has Manage Server. Requires OAuth."""
-    me = await _verify_token(authorization)
+    me = await _verify_token(authorization, session_id)
     if int(me["id"]) != user_id:
         raise HTTPException(403, "You can only view your own guilds")
     if not bot_ref:
@@ -483,12 +1103,20 @@ async def get_user_guilds(user_id: int, authorization: str = Header(None)):
             row = await pool.fetchrow(
                 "SELECT items FROM guild_opted_out WHERE guild_id = $1", guild.id
             )
+            settings = await pool.fetchrow(
+                "SELECT tracking_enabled, history_public FROM guild_settings WHERE guild_id = $1",
+                guild.id,
+            )
             guilds.append(
                 {
                     "id": str(guild.id),
                     "name": guild.name,
                     "icon": str(guild.icon) if guild.icon else None,
                     "opted_out": row["items"] if row else [],
+                    "tracking_enabled": (
+                        settings["tracking_enabled"] if settings else True
+                    ),
+                    "history_public": settings["history_public"] if settings else True,
                 }
             )
 
@@ -497,21 +1125,37 @@ async def get_user_guilds(user_id: int, authorization: str = Header(None)):
 
 
 @app.get("/guild/{guild_id}/opted-out")
-async def get_guild_opted_out(guild_id: int):
-    """Get opted-out tracking items for a guild."""
+async def get_guild_opted_out(
+    guild_id: int,
+    authorization: str | None = Header(None),
+    session_id: str | None = Cookie(None, alias=SESSION_COOKIE),
+):
+    """Get opted-out tracking items for a guild manager."""
+    await _require_guild_manager(guild_id, authorization, session_id)
     pool = _check_pool()
     row = await pool.fetchrow(
         "SELECT items FROM guild_opted_out WHERE guild_id = $1", guild_id
     )
-    return {"items": row["items"] if row else []}
+    settings = await pool.fetchrow(
+        "SELECT tracking_enabled, history_public FROM guild_settings WHERE guild_id = $1",
+        guild_id,
+    )
+    return {
+        "items": row["items"] if row else [],
+        "tracking_enabled": settings["tracking_enabled"] if settings else True,
+        "history_public": settings["history_public"] if settings else True,
+    }
 
 
 @app.post("/guild/{guild_id}/opted-out")
 async def set_guild_opted_out(
-    guild_id: int, payload: dict = Body(...), authorization: str = Header(None)
+    guild_id: int,
+    payload: dict = Body(...),
+    authorization: str | None = Header(None),
+    session_id: str | None = Cookie(None, alias=SESSION_COOKIE),
 ):
     """Set opted-out tracking for a guild. Requires OAuth + Manage Server."""
-    me = await _verify_token(authorization)
+    me = await _verify_token(authorization, session_id)
     if not bot_ref:
         raise HTTPException(503, "Bot not ready")
 
@@ -523,11 +1167,23 @@ async def set_guild_opted_out(
         raise HTTPException(403, "You need Manage Server permission in this guild")
 
     items = [i for i in payload.get("items", []) if i in VALID_GUILD_OPTOUTS]
+    tracking_enabled = payload.get("tracking_enabled", True)
+    history_public = payload.get("history_public", True)
+    if not isinstance(tracking_enabled, bool) or not isinstance(history_public, bool):
+        raise HTTPException(400, "tracking_enabled and history_public must be booleans")
     pool = _check_pool()
     await pool.execute(
         "INSERT INTO guild_opted_out (guild_id, items) VALUES ($1, $2) ON CONFLICT (guild_id) DO UPDATE SET items = $2",
         guild_id,
         items,
+    )
+    await pool.execute(
+        "INSERT INTO guild_settings (guild_id, tracking_enabled, history_public) VALUES ($1, $2, $3) "
+        "ON CONFLICT (guild_id) DO UPDATE SET tracking_enabled = EXCLUDED.tracking_enabled, "
+        "history_public = EXCLUDED.history_public",
+        guild_id,
+        tracking_enabled,
+        history_public,
     )
 
     if bot_ref:
@@ -535,8 +1191,14 @@ async def set_guild_opted_out(
             bot_ref.db_cache.opted_out[guild_id] = items
         else:
             bot_ref.db_cache.opted_out.pop(guild_id, None)
+        bot_ref.db_cache.set_guild_tracking_enabled(guild_id, tracking_enabled)
+        bot_ref.db_cache.set_guild_history_public(guild_id, history_public)
 
-    return {"items": items}
+    return {
+        "items": items,
+        "tracking_enabled": tracking_enabled,
+        "history_public": history_public,
+    }
 
 
 async def _refresh_urls(urls: list[str]) -> list[str]:
@@ -567,9 +1229,14 @@ async def _refresh_urls(urls: list[str]) -> list[str]:
 
 @app.get("/guild/{guild_id}/icons")
 async def get_guild_icons(
-    guild_id: int, page: int = Query(1, ge=1), per_page: int = Query(80, ge=1, le=100)
+    guild_id: int,
+    page: int = Query(1, ge=1),
+    per_page: int = Query(80, ge=1, le=100),
+    authorization: str | None = Header(None),
+    session_id: str | None = Cookie(None, alias=SESSION_COOKIE),
 ):
     """Get guild icon history."""
+    await _guild_history_visible_to(guild_id, authorization, session_id)
     pool = _check_pool()
     count = await pool.fetchval(
         "SELECT COUNT(*) FROM guild_icons WHERE guild_id = $1", guild_id
@@ -598,9 +1265,14 @@ async def get_guild_icons(
 
 @app.get("/guild/{guild_id}/names")
 async def get_guild_names(
-    guild_id: int, page: int = Query(1, ge=1), per_page: int = Query(80, ge=1, le=100)
+    guild_id: int,
+    page: int = Query(1, ge=1),
+    per_page: int = Query(80, ge=1, le=100),
+    authorization: str | None = Header(None),
+    session_id: str | None = Cookie(None, alias=SESSION_COOKIE),
 ):
     """Get guild name history."""
+    await _guild_history_visible_to(guild_id, authorization, session_id)
     pool = _check_pool()
     count = await pool.fetchval(
         "SELECT COUNT(*) FROM guild_name_logs WHERE guild_id = $1", guild_id
@@ -745,55 +1417,240 @@ async def bot_stats():
     }
 
 
-@app.get("/oauth/exchange")
-@app.post("/oauth/exchange")
-async def oauth_exchange(
-    code: str = Query(...),
+class OAuthExchangePayload(BaseModel):
+    """JSON body accepted by the browser OAuth callback."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    code: str = Field(min_length=1, max_length=2048)
+    state: str = Field(min_length=32, max_length=256)
+    redirect_uri: str = "https://crygup.com/dashboard"
+
+
+def _oauth_redirect_uri(value: str) -> str:
+    # Redirects are deliberately an exact allow-list.  In particular, do not
+    # accept arbitrary subdomains or query strings supplied by the browser.
+    if value not in {"https://crygup.com", "https://crygup.com/dashboard"}:
+        raise HTTPException(400, "Invalid OAuth redirect URI")
+    return value
+
+
+@app.get("/oauth/start")
+async def oauth_start(
+    response: Response,
     redirect_uri: str = Query("https://crygup.com/dashboard"),
 ):
+    """Create a one-time OAuth state and PKCE verifier for Discord."""
     if not bot_ref:
         raise HTTPException(503, "Bot not ready")
-    if redirect_uri not in {"https://crygup.com", "https://crygup.com/dashboard"}:
-        raise HTTPException(400, "Invalid OAuth redirect URI")
-    data = {
-        "client_id": str(bot_ref.config["ids"]["bot_id"]),
-        "client_secret": bot_ref.config["keys"]["client_secret"],
-        "code": code,
-        "redirect_uri": redirect_uri,
-        "grant_type": "authorization_code",
-    }
-    async with aiohttp.ClientSession() as session:
-        async with session.post(
+    redirect_uri = _oauth_redirect_uri(redirect_uri)
+    state = secrets.token_urlsafe(32)
+    verifier = secrets.token_urlsafe(64)
+    challenge = base64.urlsafe_b64encode(
+        hashlib.sha256(verifier.encode("ascii")).digest()
+    ).decode("ascii").rstrip("=")
+    pool = _check_pool()
+    await pool.execute("DELETE FROM oauth_states WHERE expires_at <= now()")
+    await pool.execute(
+        "INSERT INTO oauth_states (state_hash, code_verifier, redirect_uri, expires_at) "
+        "VALUES ($1, $2, $3, now() + interval '10 minutes')",
+        _session_hash(state),
+        verifier,
+        redirect_uri,
+    )
+    response.set_cookie(
+        key=OAUTH_STATE_COOKIE,
+        value=state,
+        max_age=OAUTH_STATE_MAX_AGE,
+        secure=True,
+        httponly=True,
+        samesite="lax",
+        path="/",
+    )
+    response.headers["Cache-Control"] = "no-store"
+    query = urlencode(
+        {
+            "client_id": str(_active_application_id()),
+            "redirect_uri": redirect_uri,
+            "response_type": "code",
+            "scope": "identify",
+            "state": state,
+            "code_challenge": challenge,
+            "code_challenge_method": "S256",
+        }
+    )
+    return {"url": f"https://discord.com/oauth2/authorize?{query}"}
+
+
+@app.post("/oauth/exchange")
+async def oauth_exchange(
+    response: Response,
+    payload: OAuthExchangePayload,
+    oauth_state: str | None = Cookie(None, alias=OAUTH_STATE_COOKIE),
+):
+    """Consume a browser OAuth state and issue an HttpOnly web session."""
+    if not bot_ref:
+        raise HTTPException(503, "Bot not ready")
+    redirect_uri = _oauth_redirect_uri(payload.redirect_uri)
+    if not oauth_state or not hmac.compare_digest(oauth_state, payload.state):
+        raise HTTPException(400, "Invalid OAuth state")
+
+    # DELETE ... RETURNING atomically consumes the state, preventing replay.
+    row = await _check_pool().fetchrow(
+        "DELETE FROM oauth_states WHERE state_hash = $1 AND expires_at > now() "
+        "RETURNING code_verifier, redirect_uri",
+        _session_hash(payload.state),
+    )
+    if row is None or row["redirect_uri"] != redirect_uri:
+        raise HTTPException(400, "Invalid or expired OAuth state")
+
+    token_data: dict[str, Any]
+    http_session = getattr(bot_ref, "session", None)
+    owns_session = http_session is None
+    if owns_session:
+        http_session = aiohttp.ClientSession()
+    try:
+        data = {
+            "client_id": str(_active_application_id()),
+            "client_secret": _active_client_secret(),
+            "code": payload.code,
+            "redirect_uri": redirect_uri,
+            "grant_type": "authorization_code",
+            "code_verifier": row["code_verifier"],
+        }
+        async with http_session.post(
             "https://discord.com/api/oauth2/token", data=data
-        ) as resp:
-            if resp.status != 200:
-                err = await resp.text()
-                raise HTTPException(400, f"OAuth exchange failed: {err}")
-            token_data = await resp.json()
-        headers = {"Authorization": f"Bearer {token_data['access_token']}"}
-        async with session.get(
-            "https://discord.com/api/users/@me", headers=headers
-        ) as resp:
-            user_data = await resp.json()
-    return {"user": user_data, "access_token": token_data["access_token"]}
+        ) as token_response:
+            if token_response.status != 200:
+                raise HTTPException(400, "OAuth exchange failed")
+            try:
+                token_data = await token_response.json(content_type=None)
+            except (ValueError, aiohttp.ContentTypeError) as error:
+                raise HTTPException(400, "OAuth exchange failed") from error
+            if not isinstance(token_data, dict):
+                raise HTTPException(400, "OAuth exchange failed")
+        access_token = token_data.get("access_token")
+        if not isinstance(access_token, str) or not access_token:
+            raise HTTPException(400, "OAuth exchange failed")
+        async with http_session.get(
+            "https://discord.com/api/users/@me",
+            headers={"Authorization": f"Bearer {access_token}"},
+        ) as user_response:
+            if user_response.status != 200:
+                raise HTTPException(400, "Discord user lookup failed")
+            try:
+                user_data = await user_response.json(content_type=None)
+            except (ValueError, aiohttp.ContentTypeError) as error:
+                raise HTTPException(400, "Discord user lookup failed") from error
+    finally:
+        if owns_session:
+            await http_session.close()
+
+    try:
+        user_id = int(user_data["id"])
+    except (KeyError, TypeError, ValueError) as error:
+        raise HTTPException(400, "Discord user lookup failed") from error
+    session_id, max_age = await _create_web_session(
+        user_id, access_token, token_data.get("expires_in")
+    )
+    response.set_cookie(
+        key=SESSION_COOKIE,
+        value=session_id,
+        max_age=max_age,
+        secure=True,
+        httponly=True,
+        samesite="lax",
+        path="/",
+    )
+    response.delete_cookie(key=OAUTH_STATE_COOKIE, path="/")
+    response.headers["Cache-Control"] = "no-store"
+    # Never return Discord's access token to browser JavaScript.
+    return {"user": user_data}
+
+
+@app.post("/oauth/logout")
+async def oauth_logout(
+    response: Response,
+    session_id: str | None = Cookie(None, alias=SESSION_COOKIE),
+):
+    if session_id:
+        await _check_pool().execute(
+            "DELETE FROM web_sessions WHERE session_id_hash = $1",
+            _session_hash(session_id),
+        )
+    response.delete_cookie(key=SESSION_COOKIE, path="/")
+    response.headers["Cache-Control"] = "no-store"
+    return {"ok": True}
+
+
+@app.get("/oauth/me")
+async def oauth_me(
+    response: Response,
+    authorization: str | None = Header(None),
+    session_id: str | None = Cookie(None, alias=SESSION_COOKIE),
+):
+    """Return the authenticated Discord identity without exposing credentials."""
+    response.headers["Cache-Control"] = "private, no-store"
+    if not session_id and not (authorization and authorization.startswith("Bearer ")):
+        return {"authenticated": False, "user": None}
+    try:
+        user = await _verify_token(authorization, session_id)
+    except HTTPException as error:
+        if error.status_code == 401:
+            if session_id:
+                response.delete_cookie(key=SESSION_COOKIE, path="/")
+            return {"authenticated": False, "user": None}
+        raise
+    return {"authenticated": True, "user": user}
 
 
 @app.get("/lastfm/connect")
-async def lastfm_connect(authorization: str = Header(None)):
+async def lastfm_connect(
+    response: Response,
+    authorization: str | None = Header(None),
+    session_id: str | None = Cookie(None, alias=SESSION_COOKIE),
+):
     """Create a Last.fm authorization URL for the authenticated Discord user."""
-    me = await _verify_token(authorization)
-    return {"url": _lastfm_authorization_url(int(me["id"]), "website")}
+    me = await _verify_token(authorization, session_id)
+    browser_nonce = secrets.token_urlsafe(32)
+    response.set_cookie(
+        key=LASTFM_STATE_COOKIE,
+        value=browser_nonce,
+        max_age=LASTFM_STATE_TTL,
+        secure=True,
+        httponly=True,
+        samesite="lax",
+        path="/",
+    )
+    return {
+        "url": _lastfm_authorization_url(
+            int(me["id"]),
+            "website",
+            session_id=session_id,
+            browser_nonce=browser_nonce,
+        )
+    }
 
 
 @app.get("/lastfm/callback")
-async def lastfm_callback(token: str = Query(...), state: str = Query(...)):
+async def lastfm_callback(
+    response: Response,
+    token: str = Query(...),
+    state: str = Query(...),
+    session_id: str | None = Cookie(None, alias=SESSION_COOKIE),
+    browser_nonce: str | None = Cookie(None, alias=LASTFM_STATE_COOKIE),
+):
     """Exchange a Last.fm callback token and persist the verified account."""
     if not bot_ref:
         raise HTTPException(503, "Bot not ready")
     if not re.fullmatch(r"[A-Za-z0-9_-]{32}", token):
         raise HTTPException(400, "Invalid Last.fm authentication token")
 
-    user_id, source, channel_id, message_id = _decode_lastfm_state(state)
+    user_id, source, channel_id, message_id = _decode_lastfm_state(
+        state,
+        session_id=session_id,
+        browser_nonce=browser_nonce,
+    )
     api_key = bot_ref.config["keys"]["lastfm_cb"]
     api_secret = bot_ref.config["keys"]["lastfm_cb_secret"]
     payload = {
@@ -836,22 +1693,55 @@ async def lastfm_callback(token: str = Query(...), state: str = Query(...)):
     )
     bot_ref.db_cache.add_account(user_id, username)
     await _refresh_discord_accounts_message(user_id, channel_id, message_id)
+    response.delete_cookie(key=LASTFM_STATE_COOKIE, path="/")
     return {"username": username, "source": source}
 
 
 @app.get("/steam/connect")
-async def steam_connect(authorization: str = Header(None)):
+async def steam_connect(
+    response: Response,
+    authorization: str | None = Header(None),
+    session_id: str | None = Cookie(None, alias=SESSION_COOKIE),
+):
     """Create a Steam OpenID URL for the authenticated Discord user."""
-    me = await _verify_token(authorization)
-    return {"url": _steam_authorization_url(int(me["id"]), "website")}
+    me = await _verify_token(authorization, session_id)
+    if not session_id:
+        raise HTTPException(401, "A browser session is required to connect Steam")
+    browser_nonce = secrets.token_urlsafe(32)
+    response.set_cookie(
+        key=STEAM_STATE_COOKIE,
+        value=browser_nonce,
+        max_age=STEAM_STATE_TTL,
+        secure=True,
+        httponly=True,
+        samesite="lax",
+        path="/",
+    )
+    response.headers["Cache-Control"] = "private, no-store"
+    return {
+        "url": _steam_authorization_url(
+            int(me["id"]),
+            "website",
+            session_id=session_id,
+            browser_nonce=browser_nonce,
+        )
+    }
 
 
 @app.get("/steam/callback")
-async def steam_callback(request: Request, steam_state: str = Query(...)):
+async def steam_callback(
+    request: Request,
+    response: Response,
+    steam_state: str = Query(...),
+    session_id: str | None = Cookie(None, alias=SESSION_COOKIE),
+    browser_nonce: str | None = Cookie(None, alias=STEAM_STATE_COOKIE),
+):
     """Verify a Steam OpenID response and persist the user's SteamID64."""
     if not bot_ref:
         raise HTTPException(503, "Bot not ready")
-    user_id, source, channel_id, message_id = _decode_steam_state(steam_state)
+    user_id, source, channel_id, message_id = _decode_steam_state(
+        steam_state, session_id=session_id, browser_nonce=browser_nonce
+    )
     openid = {
         key: value
         for key, value in request.query_params.items()
@@ -918,12 +1808,24 @@ async def steam_callback(request: Request, steam_state: str = Query(...)):
         steam_id,
     )
     await _refresh_discord_accounts_message(user_id, channel_id, message_id)
+    response.delete_cookie(key=STEAM_STATE_COOKIE, path="/")
     return {"steamid": steam_id, "personaname": persona_name, "source": source}
 
 
 @app.get("/spotify/callback")
 async def spotify_callback(code: str = Query(...), state: str = Query(...)):
-    """Exchange a Spotify authorization code and persist the user's account."""
+    """Reject the retired, unauthenticated Spotify callback.
+
+    Spotify account linking is served by the active Fishie API, whose callback
+    binds a one-time state to the authenticated browser session.  This legacy
+    website route had no way to establish that binding, so it must not accept
+    authorization codes or mutate the shared accounts table.
+    """
+    raise HTTPException(410, "Spotify connections are handled by Fishie's API")
+
+    # Kept below only as historical context for deployments that still carry
+    # this source file; the unconditional response above makes the old flow
+    # unreachable and prevents token exchange/account mutation.
     if not bot_ref:
         raise HTTPException(503, "Bot not ready")
     user_id, source, channel_id, message_id = _decode_spotify_state(state)
@@ -1081,18 +1983,50 @@ async def spotify_callback(code: str = Query(...), state: str = Query(...)):
 
 
 @app.get("/anilist/connect")
-async def anilist_connect(authorization: str = Header(None)):
+async def anilist_connect(
+    response: Response,
+    authorization: str | None = Header(None),
+    session_id: str | None = Cookie(None, alias=SESSION_COOKIE),
+):
     """Create an AniList authorization URL for the authenticated Discord user."""
-    me = await _verify_token(authorization)
-    return {"url": _anilist_authorization_url(int(me["id"]), "website")}
+    me = await _verify_token(authorization, session_id)
+    if not session_id:
+        raise HTTPException(401, "A browser session is required to connect AniList")
+    browser_nonce = secrets.token_urlsafe(32)
+    response.set_cookie(
+        key=ANILIST_STATE_COOKIE,
+        value=browser_nonce,
+        max_age=ANILIST_STATE_TTL,
+        secure=True,
+        httponly=True,
+        samesite="lax",
+        path="/",
+    )
+    response.headers["Cache-Control"] = "private, no-store"
+    return {
+        "url": _anilist_authorization_url(
+            int(me["id"]),
+            "website",
+            session_id=session_id,
+            browser_nonce=browser_nonce,
+        )
+    }
 
 
 @app.get("/anilist/callback")
-async def anilist_callback(code: str = Query(...), state: str = Query(...)):
+async def anilist_callback(
+    response: Response,
+    code: str = Query(...),
+    state: str = Query(...),
+    session_id: str | None = Cookie(None, alias=SESSION_COOKIE),
+    browser_nonce: str | None = Cookie(None, alias=ANILIST_STATE_COOKIE),
+):
     """Exchange an AniList code and persist the verified profile credentials."""
     if not bot_ref:
         raise HTTPException(503, "Bot not ready")
-    user_id, source, channel_id, message_id = _decode_anilist_state(state)
+    user_id, source, channel_id, message_id = _decode_anilist_state(
+        state, session_id=session_id, browser_nonce=browser_nonce
+    )
     payload = {
         "grant_type": "authorization_code",
         "client_id": bot_ref.config["keys"]["anilist_id"],
@@ -1142,11 +2076,17 @@ async def anilist_callback(code: str = Query(...), state: str = Query(...)):
         access_token,
     )
     await _refresh_discord_accounts_message(user_id, channel_id, message_id)
+    response.delete_cookie(key=ANILIST_STATE_COOKIE, path="/")
     return {"username": username, "source": source}
 
 
 @app.get("/user/{user_id}")
-async def get_user_data(user_id: int):
+async def get_user_data(
+    user_id: int,
+    authorization: str | None = Header(None),
+    session_id: str | None = Cookie(None, alias=SESSION_COOKIE),
+):
+    await _history_visible_to(user_id, authorization, session_id)
     pool = _check_pool()
     async with pool.acquire() as conn:
         return {
@@ -1169,9 +2109,13 @@ async def get_user_data(user_id: int):
 
 
 @app.get("/user/{user_id}/xp")
-async def get_user_xp(user_id: int, authorization: str = Header(None)):
+async def get_user_xp(
+    user_id: int,
+    authorization: str | None = Header(None),
+    session_id: str | None = Cookie(None, alias=SESSION_COOKIE),
+):
     """Get XP and message count for a user. Requires OAuth."""
-    me = await _verify_token(authorization)
+    me = await _verify_token(authorization, session_id)
     if int(me["id"]) != user_id:
         raise HTTPException(403, "You can only view your own XP")
     pool = _check_pool()
@@ -1185,8 +2129,13 @@ async def get_user_xp(user_id: int, authorization: str = Header(None)):
 
 @app.get("/usernames/{user_id}")
 async def get_usernames(
-    user_id: int, page: int = Query(1, ge=1), per_page: int = Query(100, ge=1, le=100)
+    user_id: int,
+    page: int = Query(1, ge=1),
+    per_page: int = Query(100, ge=1, le=100),
+    authorization: str | None = Header(None),
+    session_id: str | None = Cookie(None, alias=SESSION_COOKIE),
 ):
+    await _history_visible_to(user_id, authorization, session_id)
     pool = _check_pool()
     async with pool.acquire() as conn:
         count = await conn.fetchval(
@@ -1216,8 +2165,13 @@ async def get_usernames(
 
 @app.get("/display-names/{user_id}")
 async def get_display_names(
-    user_id: int, page: int = Query(1, ge=1), per_page: int = Query(100, ge=1, le=100)
+    user_id: int,
+    page: int = Query(1, ge=1),
+    per_page: int = Query(100, ge=1, le=100),
+    authorization: str | None = Header(None),
+    session_id: str | None = Cookie(None, alias=SESSION_COOKIE),
 ):
+    await _history_visible_to(user_id, authorization, session_id)
     pool = _check_pool()
     async with pool.acquire() as conn:
         count = await conn.fetchval(
@@ -1247,8 +2201,13 @@ async def get_display_names(
 
 @app.get("/discrims/{user_id}")
 async def get_discrims(
-    user_id: int, page: int = Query(1, ge=1), per_page: int = Query(100, ge=1, le=100)
+    user_id: int,
+    page: int = Query(1, ge=1),
+    per_page: int = Query(100, ge=1, le=100),
+    authorization: str | None = Header(None),
+    session_id: str | None = Cookie(None, alias=SESSION_COOKIE),
 ):
+    await _history_visible_to(user_id, authorization, session_id)
     pool = _check_pool()
     async with pool.acquire() as conn:
         count = await conn.fetchval(
@@ -1278,21 +2237,12 @@ async def get_discrims(
 
 @app.delete("/user/{user_id}")
 async def delete_user_data(
-    user_id: int, table: str = Query(None), authorization: str = Header(None)
+    user_id: int,
+    table: str | None = Query(None),
+    authorization: str | None = Header(None),
+    session_id: str | None = Cookie(None, alias=SESSION_COOKIE),
 ):
-    import aiohttp
-
-    if not authorization or not authorization.startswith("Bearer "):
-        raise HTTPException(401, "Missing access token")
-    token = authorization[7:]
-    async with aiohttp.ClientSession() as session:
-        headers = {"Authorization": f"Bearer {token}"}
-        async with session.get(
-            "https://discord.com/api/users/@me", headers=headers
-        ) as resp:
-            if resp.status != 200:
-                raise HTTPException(401, "Invalid access token")
-            me = await resp.json()
+    me = await _verify_token(authorization, session_id)
 
     tables = [table] if table else list(TABLE_MAP.keys())
     deleted = 0
@@ -1354,22 +2304,14 @@ async def resolve_user(q: str = Query(...)):
 
 @app.delete("/item/{table}/{user_id}")
 async def delete_item(
-    table: str, user_id: int, key: str = Query(...), authorization: str = Header(None)
+    table: str,
+    user_id: int,
+    key: str = Query(...),
+    authorization: str | None = Header(None),
+    session_id: str | None = Cookie(None, alias=SESSION_COOKIE),
 ):
-    """Delete a specific logged item. Token is the OAuth access token from login."""
-    import aiohttp
-
-    if not authorization or not authorization.startswith("Bearer "):
-        raise HTTPException(401, "Missing access token")
-    token = authorization[7:]
-    async with aiohttp.ClientSession() as session:
-        headers = {"Authorization": f"Bearer {token}"}
-        async with session.get(
-            "https://discord.com/api/users/@me", headers=headers
-        ) as resp:
-            if resp.status != 200:
-                raise HTTPException(401, "Invalid access token")
-            me = await resp.json()
+    """Delete a specific logged item for the authenticated owner/manager."""
+    me = await _verify_token(authorization, session_id)
 
     pool = _check_pool()
     async with pool.acquire() as conn:
@@ -1386,13 +2328,13 @@ async def delete_item(
             if not member or not member.guild_permissions.manage_guild:
                 raise HTTPException(403, "You need Manage Server in this guild")
             if table == "guild_icons":
-                r = await conn.execute(
+                await conn.execute(
                     f"DELETE FROM {db_table} WHERE guild_id = $1 AND icon_key = $2",
                     user_id,
                     key,
                 )
             else:
-                r = await conn.execute(
+                await conn.execute(
                     f"DELETE FROM {db_table} WHERE guild_id = $1 AND id = $2",
                     user_id,
                     int(key),
@@ -1400,7 +2342,7 @@ async def delete_item(
         elif table == "avatars":
             if int(me["id"]) != user_id:
                 raise HTTPException(403, "You can only delete your own data")
-            r = await conn.execute(
+            await conn.execute(
                 f"DELETE FROM {db_table} WHERE user_id = $1 AND avatar_key = $2",
                 user_id,
                 key,
@@ -1408,7 +2350,7 @@ async def delete_item(
         else:
             if int(me["id"]) != user_id:
                 raise HTTPException(403, "You can only delete your own data")
-            r = await conn.execute(
+            await conn.execute(
                 f"DELETE FROM {db_table} WHERE user_id = $1 AND id = $2",
                 user_id,
                 int(key),
@@ -1416,88 +2358,347 @@ async def delete_item(
     return {"deleted": True}
 
 
-@app.get("/spotify-cover")
-async def spotify_cover(artist: str = Query(...), track: str = Query(...)):
-    """Search Spotify for a track cover image. Falls back if Last.fm has no cover."""
-    import base64
+def _require_website_origin(request: Request) -> None:
+    if request.headers.get("origin") not in WEB_ORIGINS:
+        raise HTTPException(403, "This endpoint is available from the Fishie website")
 
+
+def _client_ip(request: Request) -> str:
+    remote = request.client.host if request.client else ""
+    configured = os.environ.get("FISHIE_TRUSTED_PROXIES", "127.0.0.1,::1").split(",")
+    networks: list[ipaddress._BaseNetwork] = []
+    for value in configured:
+        try:
+            network = ipaddress.ip_network(value.strip(), strict=False)
+        except ValueError:
+            continue
+        if network.prefixlen:
+            networks.append(network)
+    try:
+        remote_ip = ipaddress.ip_address(remote)
+        trusted = any(remote_ip in network for network in networks)
+    except ValueError:
+        trusted = False
+    candidate = remote
+    if trusted:
+        candidate = (
+            (
+                request.headers.get("CF-Connecting-IP")
+                or request.headers.get("X-Real-IP")
+                or remote
+            )
+            .split(",", 1)[0]
+            .strip()
+        )
+    try:
+        return str(ipaddress.ip_address(candidate))
+    except ValueError as error:
+        raise HTTPException(400, "Invalid client address") from error
+
+
+def _normalise_spotify_query(value: str) -> str:
+    return " ".join(value.casefold().split())
+
+
+def _check_spotify_cover_rate(ip: str) -> None:
+    now = time.monotonic()
+    timestamps = [
+        timestamp
+        for timestamp in _spotify_cover_rate.get(ip, [])
+        if now - timestamp < SPOTIFY_COVER_RATE_WINDOW
+    ]
+    if len(timestamps) >= SPOTIFY_COVER_RATE_LIMIT:
+        retry_after = max(
+            1,
+            int(SPOTIFY_COVER_RATE_WINDOW - (now - timestamps[0])) + 1,
+        )
+        raise HTTPException(
+            429,
+            "Too many cover lookups; please try again later",
+            headers={"Retry-After": str(retry_after)},
+        )
+    timestamps.append(now)
+    _spotify_cover_rate[ip] = timestamps
+
+
+def _spotify_cache_get(
+    cache: dict[tuple[str, str], tuple[float, str]],
+    key: tuple[str, str],
+) -> str | None:
+    entry = cache.get(key)
+    if entry is None:
+        return None
+    expires, value = entry
+    if expires <= time.monotonic():
+        cache.pop(key, None)
+        return None
+    return value
+
+
+@app.get("/spotify-cover")
+async def spotify_cover(
+    request: Request,
+    artist: str = Query(..., min_length=1, max_length=200),
+    track: str = Query(..., min_length=1, max_length=200),
+):
+    """Search Spotify for a track cover image with bounded public access."""
     if not bot_ref:
         raise HTTPException(503, "Bot not ready")
+    _require_website_origin(request)
+    ip = _client_ip(request)
+    _check_spotify_cover_rate(ip)
+    cache_key = (_normalise_spotify_query(artist), _normalise_spotify_query(track))
+    cached = _spotify_cache_get(_spotify_cover_cache, cache_key)
+    if cached:
+        return {"url": cached}
+    negative_until = _spotify_cover_negative_cache.get(cache_key)
+    if negative_until and negative_until > time.monotonic():
+        raise HTTPException(404, "No cover found")
+    if negative_until:
+        _spotify_cover_negative_cache.pop(cache_key, None)
+
     sid = bot_ref.config["keys"]["spotify_id"]
     ss = bot_ref.config["keys"]["spotify_secret"]
     encoded = base64.b64encode(f"{sid}:{ss}".encode("ascii")).decode("ascii")
-    async with aiohttp.ClientSession() as session:
-        # Get token
-        async with session.post(
-            "https://accounts.spotify.com/api/token",
-            data={"grant_type": "client_credentials"},
-            headers={
-                "Authorization": f"Basic {encoded}",
-                "Content-Type": "application/x-www-form-urlencoded",
-            },
-        ) as resp:
-            if resp.status != 200:
-                raise HTTPException(502, "Spotify auth failed")
-            token_data = await resp.json()
-        # Search
-        headers = {"Authorization": f"Bearer {token_data['access_token']}"}
-        q = f"track:{track} artist:{artist}"
-        async with session.get(
-            "https://api.spotify.com/v1/search",
-            params={"q": q, "type": "track", "limit": 1},
-            headers=headers,
-        ) as resp:
-            if resp.status != 200:
-                raise HTTPException(502, "Spotify search failed")
-            data = await resp.json()
+    async with _spotify_cover_semaphore:
+        session = getattr(bot_ref, "session", None)
+        owns_session = session is None
+        if owns_session:
+            session = aiohttp.ClientSession()
+        try:
+            token = getattr(bot_ref, "spotify_key", None)
+            if token is None:
+                async with _spotify_cover_token_lock:
+                    token = getattr(bot_ref, "spotify_key", None)
+                    if token is None:
+                        async with session.post(
+                            "https://accounts.spotify.com/api/token",
+                            data={"grant_type": "client_credentials"},
+                            headers={
+                                "Authorization": f"Basic {encoded}",
+                                "Content-Type": "application/x-www-form-urlencoded",
+                            },
+                            timeout=aiohttp.ClientTimeout(total=10),
+                        ) as resp:
+                            if resp.status != 200:
+                                raise HTTPException(502, "Spotify auth failed")
+                            token_data = await resp.json()
+                        token = token_data.get("access_token")
+                        if not isinstance(token, str) or not token:
+                            raise HTTPException(502, "Spotify auth returned no token")
+                        bot_ref.spotify_key = token
+            async with session.get(
+                "https://api.spotify.com/v1/search",
+                params={
+                    "q": f"track:{track} artist:{artist}",
+                    "type": "track",
+                    "limit": 1,
+                },
+                headers={"Authorization": f"Bearer {token}"},
+                timeout=aiohttp.ClientTimeout(total=10),
+            ) as resp:
+                if resp.status != 200:
+                    raise HTTPException(502, "Spotify search failed")
+                data = await resp.json()
+        finally:
+            if owns_session:
+                await session.close()
     items = data.get("tracks", {}).get("items", [])
-    if not items:
+    images = items[0].get("album", {}).get("images", []) if items else []
+    cover_url = images[0].get("url") if images and isinstance(images[0], dict) else None
+    if not isinstance(cover_url, str) or not cover_url:
+        _spotify_cover_negative_cache[cache_key] = time.monotonic() + 300
         raise HTTPException(404, "No cover found")
-    images = items[0].get("album", {}).get("images", [])
-    if not images:
-        raise HTTPException(404, "No cover found")
-    return {"url": images[0]["url"]}
+    _spotify_cover_cache[cache_key] = (time.monotonic() + 600, cover_url)
+    return {"url": cover_url}
 
 
 class MessagePayload(BaseModel):
     name: str = Field(..., min_length=1, max_length=50)
     content: str = Field(..., min_length=1, max_length=2000)
-    avatar_url: str | None = None
-    discord_id: str | None = None
+    avatar_url: str | None = Field(None, max_length=2048)
+    discord_id: str | None = Field(None, pattern=r"^[0-9]{1,20}$")
 
 
 _msg_rate_limit: dict[str, float] = {}
 
 
+def _message_challenge_secret() -> bytes:
+    if bot_ref is None:
+        raise HTTPException(503, "Bot not ready")
+    keys = bot_ref.config.get("keys", {})
+    secret = (
+        keys.get("message_challenge")
+        or keys.get("message_challenge_secret")
+        or keys.get("client_secret")
+    )
+    if not isinstance(secret, str) or not secret:
+        raise HTTPException(503, "Message challenge is not configured")
+    return secret.encode()
+
+
+def _message_challenge(ip: str) -> str:
+    issued = int(time.time())
+    secret = _message_challenge_secret()
+    payload = json.dumps(
+        {
+            "issued": issued,
+            "nonce": secrets.token_urlsafe(24),
+            "ip": hmac.new(secret, ip.encode(), hashlib.sha256).hexdigest(),
+        },
+        separators=(",", ":"),
+        sort_keys=True,
+    ).encode()
+    encoded = base64.urlsafe_b64encode(payload).decode().rstrip("=")
+    signature = hmac.new(secret, encoded.encode(), hashlib.sha256).hexdigest()
+    return f"{encoded}.{signature}"
+
+
+def _verify_message_challenge(
+    supplied: str | None,
+    cookie: str | None,
+    ip: str,
+) -> str:
+    if not supplied or not cookie or not hmac.compare_digest(supplied, cookie):
+        raise HTTPException(403, "Missing or invalid message challenge")
+    try:
+        encoded, signature = supplied.split(".", 1)
+        secret = _message_challenge_secret()
+        expected = hmac.new(secret, encoded.encode(), hashlib.sha256).hexdigest()
+        if not hmac.compare_digest(signature, expected):
+            raise ValueError("invalid signature")
+        padding = "=" * (-len(encoded) % 4)
+        payload = json.loads(base64.urlsafe_b64decode(encoded + padding))
+        issued = int(payload["issued"])
+        ip_digest = str(payload["ip"])
+    except (
+        binascii.Error,
+        KeyError,
+        TypeError,
+        ValueError,
+        json.JSONDecodeError,
+    ):
+        raise HTTPException(403, "Missing or invalid message challenge")
+    if abs(time.time() - issued) > MESSAGE_CHALLENGE_MAX_AGE:
+        raise HTTPException(403, "Message challenge expired")
+    expected_ip = hmac.new(secret, ip.encode(), hashlib.sha256).hexdigest()
+    if not hmac.compare_digest(ip_digest, expected_ip):
+        raise HTTPException(403, "Message challenge does not match this client")
+    token_hash = hashlib.sha256(supplied.encode()).hexdigest()
+    now = time.time()
+    for key, expires in list(_message_used_challenges.items()):
+        if expires <= now:
+            _message_used_challenges.pop(key, None)
+    if token_hash in _message_used_challenges:
+        raise HTTPException(403, "Message challenge has already been used")
+    return token_hash
+
+
+async def _consume_message_challenge(token_hash: str, ip: str) -> None:
+    now = time.monotonic()
+    async with _message_rate_lock:
+        if token_hash in _message_used_challenges:
+            raise HTTPException(403, "Message challenge has already been used")
+        last = _msg_rate_limit.get(ip, 0)
+        if now - last < 60:
+            retry_after = max(1, int(60 - (now - last)) + 1)
+            raise HTTPException(
+                429,
+                "Please wait before sending another message",
+                headers={"Retry-After": str(retry_after)},
+            )
+        while (
+            _message_global_requests
+            and now - _message_global_requests[0] >= MESSAGE_GLOBAL_RATE_WINDOW
+        ):
+            _message_global_requests.popleft()
+        if len(_message_global_requests) >= MESSAGE_GLOBAL_RATE_LIMIT:
+            retry_after = max(
+                1,
+                int(MESSAGE_GLOBAL_RATE_WINDOW - (now - _message_global_requests[0]))
+                + 1,
+            )
+            raise HTTPException(
+                429,
+                "Message service is busy; please try again later",
+                headers={"Retry-After": str(retry_after)},
+            )
+        _message_global_requests.append(now)
+        _msg_rate_limit[ip] = now
+        _message_used_challenges[token_hash] = time.time() + MESSAGE_CHALLENGE_MAX_AGE
+
+
+def _sanitize_message_text(value: str) -> str:
+    return re.sub(
+        r"@(everyone|here|&\d+|!?\d+)",
+        lambda match: "@\u200b" + match.group(1),
+        value,
+        flags=re.IGNORECASE,
+    )
+
+
+@app.get("/send-message/challenge")
+async def send_message_challenge(response: Response, request: Request):
+    _require_website_origin(request)
+    ip = _client_ip(request)
+    token = _message_challenge(ip)
+    response.set_cookie(
+        key=MESSAGE_CHALLENGE_COOKIE,
+        value=token,
+        max_age=MESSAGE_CHALLENGE_MAX_AGE,
+        secure=True,
+        httponly=True,
+        samesite="strict",
+        path="/",
+    )
+    response.headers["Cache-Control"] = "no-store"
+    return {"token": token, "expires_in": MESSAGE_CHALLENGE_MAX_AGE}
+
+
 @app.post("/send-message")
-async def send_message(payload: MessagePayload, request: Request):
+async def send_message(
+    payload: MessagePayload,
+    request: Request,
+    authorization: str | None = Header(None),
+    session_id: str | None = Cookie(None, alias=SESSION_COOKIE),
+    challenge: str | None = Header(None, alias="X-Fishie-Message-Challenge"),
+    challenge_cookie: str | None = Cookie(None, alias=MESSAGE_CHALLENGE_COOKIE),
+):
     if not bot_ref:
         raise HTTPException(503, "Bot not ready")
+
+    _require_website_origin(request)
 
     webhook_url = bot_ref.config["webhooks"].get("messages", "")
     if not webhook_url:
         raise HTTPException(500, "Webhook not configured")
 
-    # rate limit: 1 per minute per IP
-    ip = (
-        request.headers.get("CF-Connecting-IP")
-        or request.headers.get("X-Real-IP")
-        or (request.client.host if request.client else "unknown")
-    )
-    ip = ip.split(",")[0].strip()
+    ip = _client_ip(request)
 
     if ip in bot_ref.cached_banned_ips:
         raise HTTPException(403, "You are banned from sending messages")
 
-    now = time.time()
-    last = _msg_rate_limit.get(ip, 0)
-    if now - last < 60:
-        raise HTTPException(429, "Please wait before sending another message")
-    _msg_rate_limit[ip] = now
+    challenge_hash = _verify_message_challenge(challenge, challenge_cookie, ip)
+    await _consume_message_challenge(challenge_hash, ip)
+
+    if payload.avatar_url:
+        _validate_discord_avatar_url(payload.avatar_url)
+
+    # A Discord ID is an identity claim, so it must always be tied to an
+    # authenticated Fishie session (or bearer token). Anonymous submissions
+    # remain available when no ID is supplied.
+    if payload.discord_id:
+        user = await _verify_token(authorization, session_id)
+        if not hmac.compare_digest(str(user.get("id", "")), payload.discord_id):
+            raise HTTPException(403, "The Discord identity does not match your session")
 
     # sanitize
-    name = payload.name.replace("discord.com/api/webhooks", "[redacted]")
-    content = payload.content.replace("discord.com/api/webhooks", "[redacted]")
+    name = _sanitize_message_text(
+        payload.name.replace("discord.com/api/webhooks", "[redacted]")
+    )
+    content = _sanitize_message_text(
+        payload.content.replace("discord.com/api/webhooks", "[redacted]")
+    )
 
     embed = {
         "author": (
@@ -1513,7 +2714,14 @@ async def send_message(payload: MessagePayload, request: Request):
         embed["footer"]["text"] += f" · ID: {payload.discord_id}"
 
     async with aiohttp.ClientSession() as session:
-        async with session.post(webhook_url, json={"embeds": [embed]}) as resp:
+        async with session.post(
+            webhook_url,
+            json={
+                "embeds": [embed],
+                "allowed_mentions": {"parse": []},
+            },
+            timeout=aiohttp.ClientTimeout(total=10),
+        ) as resp:
             if resp.status not in (200, 204):
                 raise HTTPException(500, f"Webhook returned {resp.status}")
 
@@ -1550,9 +2758,13 @@ async def get_ror2_items():
 
 
 @app.get("/user/{user_id}/reminders")
-async def get_user_reminders(user_id: int, authorization: str = Header(None)):
+async def get_user_reminders(
+    user_id: int,
+    authorization: str | None = Header(None),
+    session_id: str | None = Cookie(None, alias=SESSION_COOKIE),
+):
     """Get reminders for a user. Requires OAuth."""
-    me = await _verify_token(authorization)
+    me = await _verify_token(authorization, session_id)
     if int(me["id"]) != user_id:
         raise HTTPException(403, "You can only view your own reminders")
     pool = _check_pool()
@@ -1575,8 +2787,13 @@ async def get_user_reminders(user_id: int, authorization: str = Header(None)):
 
 
 @app.get("/user/{user_id}/first-command")
-async def get_user_first_command(user_id: int):
+async def get_user_first_command(
+    user_id: int,
+    authorization: str | None = Header(None),
+    session_id: str | None = Cookie(None, alias=SESSION_COOKIE),
+):
     """Get the date of a user's first command use."""
+    await _history_visible_to(user_id, authorization, session_id)
     pool = _check_pool()
     row = await pool.fetchrow(
         "SELECT created_at FROM command_logs WHERE user_id = $1 ORDER BY created_at ASC LIMIT 1",
@@ -1586,9 +2803,13 @@ async def get_user_first_command(user_id: int):
 
 
 @app.get("/user/{user_id}/accounts")
-async def get_user_accounts(user_id: int, authorization: str = Header(None)):
+async def get_user_accounts(
+    user_id: int,
+    authorization: str | None = Header(None),
+    session_id: str | None = Cookie(None, alias=SESSION_COOKIE),
+):
     """Get connected accounts for a user. Requires OAuth."""
-    me = await _verify_token(authorization)
+    me = await _verify_token(authorization, session_id)
     if int(me["id"]) != user_id:
         raise HTTPException(403, "You can only view your own accounts")
     pool = _check_pool()
@@ -1605,10 +2826,13 @@ async def get_user_accounts(user_id: int, authorization: str = Header(None)):
 
 @app.post("/user/{user_id}/accounts")
 async def set_user_accounts(
-    user_id: int, payload: dict = Body(...), authorization: str = Header(None)
+    user_id: int,
+    payload: dict = Body(...),
+    authorization: str | None = Header(None),
+    session_id: str | None = Cookie(None, alias=SESSION_COOKIE),
 ):
     """Set connected accounts. Requires OAuth."""
-    me = await _verify_token(authorization)
+    me = await _verify_token(authorization, session_id)
     if int(me["id"]) != user_id:
         raise HTTPException(403, "Not your account")
     # Last.fm and Steam can only be changed through their authorization flows.
@@ -1628,9 +2852,13 @@ async def set_user_accounts(
 
 
 @app.delete("/user/{user_id}/lastfm")
-async def disconnect_lastfm(user_id: int, authorization: str = Header(None)):
+async def disconnect_lastfm(
+    user_id: int,
+    authorization: str | None = Header(None),
+    session_id: str | None = Cookie(None, alias=SESSION_COOKIE),
+):
     """Disconnect Last.fm for the authenticated Discord user."""
-    me = await _verify_token(authorization)
+    me = await _verify_token(authorization, session_id)
     if int(me["id"]) != user_id:
         raise HTTPException(403, "Not your account")
     pool = _check_pool()
@@ -1644,9 +2872,13 @@ async def disconnect_lastfm(user_id: int, authorization: str = Header(None)):
 
 
 @app.delete("/user/{user_id}/steam")
-async def disconnect_steam(user_id: int, authorization: str = Header(None)):
+async def disconnect_steam(
+    user_id: int,
+    authorization: str | None = Header(None),
+    session_id: str | None = Cookie(None, alias=SESSION_COOKIE),
+):
     """Disconnect Steam for the authenticated Discord user."""
-    me = await _verify_token(authorization)
+    me = await _verify_token(authorization, session_id)
     if int(me["id"]) != user_id:
         raise HTTPException(403, "Not your account")
     pool = _check_pool()
@@ -1655,9 +2887,13 @@ async def disconnect_steam(user_id: int, authorization: str = Header(None)):
 
 
 @app.delete("/user/{user_id}/anilist")
-async def disconnect_anilist(user_id: int, authorization: str = Header(None)):
+async def disconnect_anilist(
+    user_id: int,
+    authorization: str | None = Header(None),
+    session_id: str | None = Cookie(None, alias=SESSION_COOKIE),
+):
     """Disconnect AniList for the authenticated Discord user."""
-    me = await _verify_token(authorization)
+    me = await _verify_token(authorization, session_id)
     if int(me["id"]) != user_id:
         raise HTTPException(403, "Not your account")
     pool = _check_pool()
@@ -1670,9 +2906,13 @@ async def disconnect_anilist(user_id: int, authorization: str = Header(None)):
 
 
 @app.get("/guild/{guild_id}/settings")
-async def get_guild_settings(guild_id: int, authorization: str = Header(None)):
+async def get_guild_settings(
+    guild_id: int,
+    authorization: str | None = Header(None),
+    session_id: str | None = Cookie(None, alias=SESSION_COOKIE),
+):
     """Get guild settings. Requires OAuth."""
-    me = await _verify_token(authorization)
+    me = await _verify_token(authorization, session_id)
     if not bot_ref:
         raise HTTPException(503, "Bot not ready")
     guild = bot_ref.get_guild(guild_id)
@@ -1705,9 +2945,12 @@ async def get_guild_settings(guild_id: int, authorization: str = Header(None)):
 
 @app.post("/guild/{guild_id}/settings")
 async def set_guild_settings(
-    guild_id: int, payload: dict = Body(...), authorization: str = Header(None)
+    guild_id: int,
+    payload: dict = Body(...),
+    authorization: str | None = Header(None),
+    session_id: str | None = Cookie(None, alias=SESSION_COOKIE),
 ):
-    me = await _verify_token(authorization)
+    me = await _verify_token(authorization, session_id)
     if not bot_ref:
         raise HTTPException(503, "Bot not ready")
     guild = bot_ref.get_guild(guild_id)
@@ -1837,23 +3080,22 @@ def _dashboard_command_list():
     return sorted(commands_by_name.values(), key=lambda item: item["name"].casefold())
 
 
-async def _managed_guild(guild_id: int, authorization: str):
-    me = await _verify_token(authorization)
-    if not bot_ref:
-        raise HTTPException(503, "Bot not ready")
-    guild = bot_ref.get_guild(guild_id)
-    if not guild:
-        raise HTTPException(404, "Guild not found")
-    member = guild.get_member(int(me["id"]))
-    if not member or not member.guild_permissions.manage_guild:
-        raise HTTPException(403, "Need Manage Server permission")
-    return guild
+async def _managed_guild(
+    guild_id: int,
+    authorization: str | None,
+    session_id: str | None = None,
+):
+    return await _require_guild_manager(guild_id, authorization, session_id)
 
 
 @app.get("/guild/{guild_id}/command-disables")
-async def get_command_disables(guild_id: int, authorization: str = Header(None)):
+async def get_command_disables(
+    guild_id: int,
+    authorization: str | None = Header(None),
+    session_id: str | None = Cookie(None, alias=SESSION_COOKIE),
+):
     """Return command controls for a server managed by the authenticated user."""
-    guild = await _managed_guild(guild_id, authorization)
+    guild = await _managed_guild(guild_id, authorization, session_id)
     pool = _check_pool()
     rows = await pool.fetch(
         "SELECT command, channel_id FROM command_disables WHERE guild_id = $1",
@@ -1874,10 +3116,13 @@ async def get_command_disables(guild_id: int, authorization: str = Header(None))
 
 @app.post("/guild/{guild_id}/command-disables")
 async def set_command_disable(
-    guild_id: int, payload: dict = Body(...), authorization: str = Header(None)
+    guild_id: int,
+    payload: dict = Body(...),
+    authorization: str | None = Header(None),
+    session_id: str | None = Cookie(None, alias=SESSION_COOKIE),
 ):
     """Enable or disable one command server-wide or in a text channel."""
-    guild = await _managed_guild(guild_id, authorization)
+    guild = await _managed_guild(guild_id, authorization, session_id)
     if not bot_ref:
         raise HTTPException(503, "Bot not ready")
 
@@ -1928,9 +3173,13 @@ async def set_command_disable(
 
 
 @app.get("/guild/{guild_id}/prefixes")
-async def get_guild_prefixes(guild_id: int, authorization: str = Header(None)):
+async def get_guild_prefixes(
+    guild_id: int,
+    authorization: str | None = Header(None),
+    session_id: str | None = Cookie(None, alias=SESSION_COOKIE),
+):
     """Get custom prefixes for a guild managed by the authenticated user."""
-    await _managed_guild(guild_id, authorization)
+    await _managed_guild(guild_id, authorization, session_id)
     pool = _check_pool()
     rows = await pool.fetch(
         "SELECT prefix, author_id, time FROM guild_prefixes WHERE guild_id = $1 ORDER BY time",
@@ -1946,11 +3195,14 @@ async def get_guild_prefixes(guild_id: int, authorization: str = Header(None)):
 
 @app.post("/guild/{guild_id}/prefixes")
 async def add_guild_prefix(
-    guild_id: int, payload: dict = Body(...), authorization: str = Header(None)
+    guild_id: int,
+    payload: dict = Body(...),
+    authorization: str | None = Header(None),
+    session_id: str | None = Cookie(None, alias=SESSION_COOKIE),
 ):
     """Add a custom prefix. Requires OAuth + Manage Server."""
     try:
-        me = await _verify_token(authorization)
+        me = await _verify_token(authorization, session_id)
         if not bot_ref:
             raise HTTPException(503, "Bot not ready")
         guild = bot_ref.get_guild(guild_id)
@@ -1981,10 +3233,13 @@ async def add_guild_prefix(
 
 @app.delete("/guild/{guild_id}/prefixes")
 async def remove_guild_prefix(
-    guild_id: int, payload: dict = Body(...), authorization: str = Header(None)
+    guild_id: int,
+    payload: dict = Body(...),
+    authorization: str | None = Header(None),
+    session_id: str | None = Cookie(None, alias=SESSION_COOKIE),
 ):
     """Remove a custom prefix. Requires OAuth + Manage Server."""
-    me = await _verify_token(authorization)
+    me = await _verify_token(authorization, session_id)
     if not bot_ref:
         raise HTTPException(503, "Bot not ready")
     guild = bot_ref.get_guild(guild_id)
@@ -2006,9 +3261,13 @@ async def remove_guild_prefix(
 
 
 @app.delete("/guild/{guild_id}/data")
-async def delete_guild_data(guild_id: int, authorization: str = Header(None)):
+async def delete_guild_data(
+    guild_id: int,
+    authorization: str | None = Header(None),
+    session_id: str | None = Cookie(None, alias=SESSION_COOKIE),
+):
     """Delete all tracking data for a guild. Requires OAuth + Manage Server."""
-    me = await _verify_token(authorization)
+    me = await _verify_token(authorization, session_id)
     if not bot_ref:
         raise HTTPException(503, "Bot not ready")
     guild = bot_ref.get_guild(guild_id)

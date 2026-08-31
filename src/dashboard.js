@@ -225,6 +225,9 @@ async function loadUserSettings(userId) {
       { k: "activity", l: "Game and activity" },
       { k: "pokemon", l: "Pokémon solves" },
       { k: "corn", l: "Corn reactions" },
+      { k: "reactions", l: "Reaction history" },
+      { k: "games", l: "Game statistics" },
+      { k: "currency", l: "Currency history" },
     ];
 
     var html =
@@ -238,7 +241,7 @@ async function loadUserSettings(userId) {
       userId +
       '\',\'tracking_enabled\',t.classList.contains(\'on\'))"></div></div>' +
       '<div class="setting-toggle"><div class="label">Public saved history</div><div class="toggle ' +
-      (privacyData.history_public !== false ? "on" : "") +
+      (privacyData.history_public === true ? "on" : "") +
       '" onclick="var t=this;t.classList.toggle(\'on\');togUserPrivacy(\'' +
       userId +
       '\',\'history_public\',t.classList.contains(\'on\'))"></div></div>' +
@@ -922,10 +925,30 @@ async function loadGuildSettings(guildId) {
     html += "</div></div>";
     }
 
-    html += '<div class="settings-group"><h4>Tracking Opt-Out</h4>';
+    html += '<div class="settings-group"><h4>Server tracking and privacy</h4>';
+    html +=
+      '<div class="setting-toggle"><div class="label">Track new server activity</div><div class="toggle ' +
+      (optData.tracking_enabled !== false ? "on" : "") +
+      '" onclick="var t=this;t.classList.toggle(\'on\');togGuildPrivacy(\'' +
+      guildId +
+      '\',\'tracking_enabled\',t.classList.contains(\'on\'))"></div></div>' +
+      '<div class="setting-toggle"><div class="label">Public saved server history</div><div class="toggle ' +
+      (optData.history_public === true ? "on" : "") +
+      '" onclick="var t=this;t.classList.toggle(\'on\');togGuildPrivacy(\'' +
+      guildId +
+      '\',\'history_public\',t.classList.contains(\'on\'))"></div></div>';
     var tItems = [
-      { k: "name", l: "Server name logging" },
-      { k: "icon", l: "Server icon logging" },
+      { k: "icon", l: "Server icon history" },
+      { k: "name", l: "Server name history" },
+      { k: "joins", l: "Member join history" },
+      { k: "status", l: "Member status history" },
+      { k: "commands", l: "Server command logs" },
+      { k: "emoji", l: "Emoji statistics" },
+      { k: "downloads", l: "Download statistics" },
+      { k: "corn", l: "Corn reactions" },
+      { k: "reactions", l: "Reaction history" },
+      { k: "tags", l: "Server tags" },
+      { k: "mudae", l: "Mudae wishes and timers" },
     ];
     for (var ti = 0; ti < tItems.length; ti++) {
       var on = !optedOut.has(tItems[ti].k);
@@ -1309,7 +1332,29 @@ async function togGOpt(guildId, item, enable) {
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ items: items }),
+      body: JSON.stringify({
+        items: items,
+        tracking_enabled: data.tracking_enabled !== false,
+        history_public: data.history_public !== false,
+      }),
+    });
+  } catch (_) {}
+}
+
+async function togGuildPrivacy(guildId, key, value) {
+  try {
+    var res = await fetch(API + "/guild/" + guildId + "/opted-out");
+    var data = await res.json();
+    var payload = {
+      items: data.items || [],
+      tracking_enabled: data.tracking_enabled !== false,
+      history_public: data.history_public === true,
+    };
+    payload[key] = value;
+    await fetch(API + "/guild/" + guildId + "/opted-out", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
     });
   } catch (_) {}
 }

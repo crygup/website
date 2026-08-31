@@ -350,11 +350,23 @@ const TRACKING_ITEMS = [
   { key: "corn", label: "Corn reaction tracking" },
   { key: "emoji", label: "Emoji statistics tracking" },
   { key: "downloads", label: "Download site statistics" },
+  { key: "reactions", label: "Reaction history" },
+  { key: "games", label: "Game statistics" },
+  { key: "currency", label: "Currency history" },
 ];
 
 const GUILD_TRACKING_ITEMS = [
-  { key: "icon", label: "Server icon tracking" },
-  { key: "name", label: "Server name tracking" },
+  { key: "icon", label: "Server icon history" },
+  { key: "name", label: "Server name history" },
+  { key: "joins", label: "Member join history" },
+  { key: "status", label: "Member status history" },
+  { key: "commands", label: "Server command logs" },
+  { key: "emoji", label: "Emoji statistics" },
+  { key: "downloads", label: "Download statistics" },
+  { key: "corn", label: "Corn reactions" },
+  { key: "reactions", label: "Reaction history" },
+  { key: "tags", label: "Server tags" },
+  { key: "mudae", label: "Mudae wishes and timers" },
 ];
 
 async function fetchGuilds() {
@@ -412,7 +424,7 @@ function fetchGuildOptOuts(guildId) {
   const guilds = document.getElementById("guild-select")._guildData || [];
   const guild = guilds.find((g) => g.id === guildId);
   if (!guild) return;
-  renderGuildToggles(guild.opted_out || [], guildId);
+    renderGuildToggles(guild.opted_out || [], guildId);
 }
 
 function renderGuildToggles(optedOut, guildId) {
@@ -442,12 +454,18 @@ async function saveGuildOptOuts(guildId) {
     return input && !input.checked;
   }).map((item) => item.key);
   try {
+    const current = await fetch(`${FISHIE_API}/guild/${guildId}/opted-out`);
+    const currentData = current.ok ? await current.json() : {};
     await fetch(`${FISHIE_API}/guild/${guildId}/opted-out`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ items: optedOut }),
+      body: JSON.stringify({
+        items: optedOut,
+        tracking_enabled: currentData.tracking_enabled !== false,
+        history_public: currentData.history_public !== false,
+      }),
     });
   } catch {
     /* silently fail */
@@ -489,7 +507,7 @@ function renderPrivacyToggles(settings) {
     </label>
     <label class="toggle-row">
       <span class="toggle-label">Public saved history</span>
-      <input type="checkbox" class="toggle-input privacy-toggle" data-key="history_public" ${settings.history_public !== false ? "checked" : ""}>
+      <input type="checkbox" class="toggle-input privacy-toggle" data-key="history_public" ${settings.history_public === true ? "checked" : ""}>
       <span class="toggle-switch"></span>
     </label>`;
   container.querySelectorAll(".privacy-toggle").forEach((input) => {
