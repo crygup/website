@@ -78,6 +78,8 @@ def _authorized(api_key: str | None, *, owner_override: bool = False) -> None:
 
 def _content_type(request: Request) -> str:
     value = request.headers.get("content-type", "").split(";", 1)[0].strip().lower()
+    if value == "image/svg+xml":
+        raise HTTPException(415, "SVG uploads are not supported")
     if not (
         value.startswith(("image/", "video/", "audio/"))
         or value == "application/octet-stream"
@@ -292,13 +294,16 @@ async def get_media(token: str, requested_filename: str | None = None):
             f"{PUBLIC_BASE_URL}/files/{token}/{canonical_filename}",
             status_code=307,
         )
+    disposition = "attachment" if content_type == "image/svg+xml" else "inline"
     return FileResponse(
         path,
         media_type=content_type,
         headers={
             "Cache-Control": f"public, max-age={MEDIA_TTL}, immutable",
-            "Content-Disposition": f"inline; filename*=UTF-8''{quote(filename)}",
+            "Content-Disposition": f"{disposition}; filename*=UTF-8''{quote(filename)}",
+            "Content-Security-Policy": "default-src 'none'; sandbox",
             "X-Content-Type-Options": "nosniff",
+            "X-Download-Options": "noopen",
         },
     )
 
