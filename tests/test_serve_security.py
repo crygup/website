@@ -10,6 +10,7 @@ sys.path.insert(0, str(Path(__file__).parents[1] / "src"))
 _argv = sys.argv
 sys.argv = [sys.argv[0]]
 from serve import Handler  # noqa: E402
+
 sys.argv = _argv
 
 
@@ -36,7 +37,7 @@ class StaticPathSecurityTests(unittest.TestCase):
 
     def test_double_encoded_traversal_is_literal_and_confined(self) -> None:
         resolved = _handler()._safe_full_path("/%252e%252e/api.py")
-        self.assertIsNotNone(resolved)
+        assert resolved is not None
         self.assertTrue(
             str(Path(resolved)).startswith(str(Path(__file__).parents[1] / "src"))
         )
