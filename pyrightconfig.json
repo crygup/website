@@ -3,6 +3,12 @@
   "pythonVersion": "3.13",
   "venvPath": "src",
   "venv": ".venv",
-  "extraPaths": ["../fish"],
-  "exclude": ["backup", "src/.venv"]
+  "extraPaths": [
+    "src",
+    "src/server"
+  ],
+  "exclude": [
+    "backup",
+    "src/.venv"
+  ]
 }

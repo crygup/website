@@ -1,0 +1,4 @@
+-r src/server/requirements.txt
+-r src/server/download_requirements.txt
+-r src/server/media_requirements.txt
+pyright==1.1.411
