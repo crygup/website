@@ -117,7 +117,7 @@ async function readError(response, fallback) {
 
 async function pollJob(jobId) {
   try {
-    const response = await fetch(`/download-api/jobs/${encodeURIComponent(jobId)}`, {
+    const response = await FishieWeb.fetch(`/download-api/jobs/${encodeURIComponent(jobId)}`, {
       cache: "no-store",
     });
     if (!response.ok) {
@@ -165,7 +165,7 @@ downloadForm.addEventListener("submit", async (event) => {
   showStatus("", "Checking the URL", "Making sure the media can be downloaded safely.");
 
   try {
-    const response = await fetch("/download-api/jobs", {
+    const response = await FishieWeb.fetch("/download-api/jobs", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({

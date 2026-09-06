@@ -3,22 +3,7 @@ const REDIRECT = "https://crygup.com/dashboard";
 
 // Authentication is provided by the API's HttpOnly session cookie. Strip any
 // legacy bearer header and include the cookie on cross-origin API requests.
-(() => {
-  const nativeFetch = window.fetch.bind(window);
-  window.fetch = (input, init = {}) => {
-    const options = init || {};
-    const headers = new Headers(options.headers || {});
-    headers.delete("Authorization");
-    const requestUrl =
-      typeof input === "string" ? input : input?.url || String(input);
-    const credentials = requestUrl.startsWith("https://api.crygup.com/")
-      ? "include"
-      : options.credentials || "same-origin";
-    return nativeFetch(input, { ...options, credentials, headers });
-  };
-})();
 
-localStorage.removeItem("fishie_token");
 function esc(s) {
   return String(s)
     .replace(/&/g, "&amp;")
@@ -36,7 +21,7 @@ if (code && state) {
   (async () => {
     window.history.replaceState({}, document.title, "/dashboard");
     try {
-      const res = await fetch(API + "/oauth/exchange", {
+      const res = await FishieWeb.fetch(API + "/oauth/exchange", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ code, state, redirect_uri: REDIRECT }),
@@ -53,7 +38,7 @@ if (code && state) {
     }
   })();
 } else {
-  fetch(API + "/oauth/me")
+  FishieWeb.fetch(API + "/oauth/me")
     .then((res) => {
       if (res.status === 401) {
         console.info("Fishie session not found; user is not logged in.");
@@ -79,7 +64,7 @@ if (code && state) {
 }
 
 async function logout() {
-  await fetch(API + "/oauth/logout", { method: "POST" });
+  await FishieWeb.fetch(API + "/oauth/logout", { method: "POST" });
   localStorage.removeItem("fishie_user");
   location.reload();
 }
@@ -93,7 +78,7 @@ var _login = document.getElementById("loginBtn");
 if (_login)
   _login.onclick = async function () {
     try {
-      const res = await fetch(
+      const res = await FishieWeb.fetch(
         API + "/oauth/start?redirect_uri=" + encodeURIComponent(REDIRECT),
       );
       const data = await res.json();
@@ -164,7 +149,7 @@ async function initDashboard() {
   };
 
   try {
-    var fcRes = await fetch(API + "/user/" + user.id + "/first-command");
+    var fcRes = await FishieWeb.fetch(API + "/user/" + user.id + "/first-command");
     var fcData = await fcRes.json();
     if (fcData.first_command) {
       var d = new Date(fcData.first_command);
@@ -189,15 +174,15 @@ async function loadUserSettings(userId) {
   var div = document.getElementById("userSettingsContent");
   try {
     var [optRes, privacyRes, remRes, accRes, xpRes] = await Promise.all([
-      fetch(API + "/user/" + userId + "/opted-out", {
+      FishieWeb.fetch(API + "/user/" + userId + "/opted-out", {
       }),
-      fetch(API + "/user/" + userId + "/privacy-settings", {
+      FishieWeb.fetch(API + "/user/" + userId + "/privacy-settings", {
       }),
-      fetch(API + "/user/" + userId + "/reminders", {
+      FishieWeb.fetch(API + "/user/" + userId + "/reminders", {
       }),
-      fetch(API + "/user/" + userId + "/accounts", {
+      FishieWeb.fetch(API + "/user/" + userId + "/accounts", {
       }),
-      fetch(API + "/user/" + userId + "/xp", {
+      FishieWeb.fetch(API + "/user/" + userId + "/xp", {
       }),
     ]);
     if (![optRes, privacyRes, remRes, accRes, xpRes].every(function (res) {
@@ -424,7 +409,7 @@ async function loadUserHighlights(userId) {
   if (!panel) return;
   panel.innerHTML = '<div class="card"><span style="color:#64748b">Loading highlights...</span></div>';
   try {
-    var res = await fetch(API + "/user/" + userId + "/highlights", { credentials: "include" });
+    var res = await FishieWeb.fetch(API + "/user/" + userId + "/highlights", { credentials: "include" });
     var data = await res.json();
     if (!res.ok) throw new Error(data.detail || "Could not load highlights");
     _userHighlightGuilds = data.guilds || [];
@@ -489,7 +474,7 @@ function removeUserHighlight(index) {
 }
 
 async function saveUserHighlights(guildId) {
-  var res = await fetch(API + "/user/" + (JSON.parse(localStorage.getItem("fishie_user") || "{}").id || "") + "/highlights", {
+  var res = await FishieWeb.fetch(API + "/user/" + (JSON.parse(localStorage.getItem("fishie_user") || "{}").id || "") + "/highlights", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ guild_id: guildId, words: _userHighlightWords[guildId] || [] }),
@@ -505,7 +490,7 @@ async function saveUserHighlights(guildId) {
 
 async function togUserOpt(userId, item, enable) {
   try {
-    var res = await fetch(API + "/user/" + userId + "/opted-out", {
+    var res = await FishieWeb.fetch(API + "/user/" + userId + "/opted-out", {
     });
     var data = await res.json();
     var items = data.items || [];
@@ -516,7 +501,7 @@ async function togUserOpt(userId, item, enable) {
     else {
       if (!items.includes(item)) items.push(item);
     }
-    await fetch(API + "/user/" + userId + "/opted-out", {
+    await FishieWeb.fetch(API + "/user/" + userId + "/opted-out", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -528,11 +513,11 @@ async function togUserOpt(userId, item, enable) {
 
 async function togUserPrivacy(userId, setting, enabled) {
   try {
-    var res = await fetch(API + "/user/" + userId + "/privacy-settings");
+    var res = await FishieWeb.fetch(API + "/user/" + userId + "/privacy-settings");
     if (!res.ok) throw new Error("Could not load privacy settings");
     var data = await res.json();
     data[setting] = enabled;
-    var saveRes = await fetch(API + "/user/" + userId + "/privacy-settings", {
+    var saveRes = await FishieWeb.fetch(API + "/user/" + userId + "/privacy-settings", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -554,7 +539,7 @@ async function saveAllAccounts(userId) {
     var el = document.getElementById("acct-" + svcs[si]);
     if (el) payload[svcs[si]] = el.value.trim();
   }
-  await fetch(API + "/user/" + userId + "/accounts", {
+  await FishieWeb.fetch(API + "/user/" + userId + "/accounts", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -565,7 +550,7 @@ async function saveAllAccounts(userId) {
 
 async function connectLastfm() {
   try {
-    var res = await fetch(API + "/lastfm/connect", {
+    var res = await FishieWeb.fetch(API + "/lastfm/connect", {
     });
     var data = await res.json();
     if (!res.ok || !data.url)
@@ -578,7 +563,7 @@ async function connectLastfm() {
 
 async function connectSteam() {
   try {
-    var res = await fetch(API + "/steam/connect", {
+    var res = await FishieWeb.fetch(API + "/steam/connect", {
     });
     var data = await res.json();
     if (!res.ok || !data.url)
@@ -591,7 +576,7 @@ async function connectSteam() {
 
 async function connectAnilist() {
   try {
-    var res = await fetch(API + "/anilist/connect", {
+    var res = await FishieWeb.fetch(API + "/anilist/connect", {
     });
     var data = await res.json();
     if (!res.ok || !data.url)
@@ -605,7 +590,7 @@ async function connectAnilist() {
 async function disconnectLastfm(userId) {
   if (!confirm("Disconnect your Last.fm account from Fishie?")) return;
   try {
-    var res = await fetch(API + "/user/" + userId + "/lastfm", {
+    var res = await FishieWeb.fetch(API + "/user/" + userId + "/lastfm", {
       method: "DELETE",
     });
     var data = await res.json();
@@ -619,7 +604,7 @@ async function disconnectLastfm(userId) {
 async function disconnectSteam(userId) {
   if (!confirm("Disconnect your Steam account from Fishie?")) return;
   try {
-    var res = await fetch(API + "/user/" + userId + "/steam", {
+    var res = await FishieWeb.fetch(API + "/user/" + userId + "/steam", {
       method: "DELETE",
     });
     var data = await res.json();
@@ -633,7 +618,7 @@ async function disconnectSteam(userId) {
 async function disconnectAnilist(userId) {
   if (!confirm("Disconnect your AniList account from Fishie?")) return;
   try {
-    var res = await fetch(API + "/user/" + userId + "/anilist", {
+    var res = await FishieWeb.fetch(API + "/user/" + userId + "/anilist", {
       method: "DELETE",
     });
     var data = await res.json();
@@ -646,7 +631,7 @@ async function disconnectAnilist(userId) {
 
 async function loadGuilds(userId) {
   try {
-    var res = await fetch(API + "/user/" + userId + "/guilds", {
+    var res = await FishieWeb.fetch(API + "/user/" + userId + "/guilds", {
     });
     var data = await res.json();
     var list = document.getElementById("guildDropdownList");
@@ -725,13 +710,13 @@ async function loadGuildSettings(guildId) {
   try {
     var user = JSON.parse(localStorage.getItem("fishie_user") || "{}");
     var [gRes, setRes, optRes, preRes, cmdRes] = await Promise.all([
-      fetch(API + "/user/" + user.id + "/guilds", {
+      FishieWeb.fetch(API + "/user/" + user.id + "/guilds", {
       }),
-      fetch(API + "/guild/" + guildId + "/settings", {
+      FishieWeb.fetch(API + "/guild/" + guildId + "/settings", {
       }),
-      fetch(API + "/guild/" + guildId + "/opted-out"),
-      fetch(API + "/guild/" + guildId + "/prefixes"),
-      fetch(API + "/guild/" + guildId + "/command-disables"),
+      FishieWeb.fetch(API + "/guild/" + guildId + "/opted-out"),
+      FishieWeb.fetch(API + "/guild/" + guildId + "/prefixes"),
+      FishieWeb.fetch(API + "/guild/" + guildId + "/command-disables"),
     ]);
     var gData = await gRes.json();
     var guild = null;
@@ -840,13 +825,9 @@ async function loadGuildSettings(guildId) {
         html +=
           '<span class="prefix-tag">' +
           esc(prefixes[pi].prefix) +
-          ' <span class="remove" onclick="remPrefix(' +
-          "'" +
-          guildId +
-          "'" +
-          ",'" +
+          ' <span class="remove" data-prefix="' +
           esc(prefixes[pi].prefix) +
-          "')\">×</span></span>";
+          '">×</span></span>';
       }
     }
     html += "</div>";
@@ -972,6 +953,14 @@ async function loadGuildSettings(guildId) {
       '</div><div id="guildTwitchTab" style="display:none"></div><div id="guildYoutubeTab" style="display:none"></div><div id="guildLoggerTab" style="display:none"></div>';
 
     div.innerHTML = html;
+    var prefixList = div.querySelector("#prefixList");
+    if (prefixList) {
+      prefixList.querySelectorAll(".remove").forEach(function (removeButton) {
+        removeButton.addEventListener("click", function () {
+          remPrefix(guildId, removeButton.dataset.prefix || "");
+        });
+      });
+    }
     loadGuildTwitchTab(guildId);
     loadGuildYoutubeTab(guildId);
     loadGuildLoggerTab(guildId);
@@ -995,7 +984,7 @@ async function loadGuildTwitchTab(guildId) {
   var panel = document.getElementById("guildTwitchTab");
   if (!panel) return;
   try {
-    var res = await fetch(API + "/guild/" + guildId + "/twitch-follows");
+    var res = await FishieWeb.fetch(API + "/guild/" + guildId + "/twitch-follows");
     var data = await res.json();
     if (!res.ok) throw new Error(data.detail || "Could not load Twitch follows");
     var channels = data.channels || [];
@@ -1046,7 +1035,7 @@ async function saveTwitchFollow(guildId, channelName, base) {
   if (!name || !channel) return;
   // Discord snowflake IDs exceed JavaScript's safe integer range. Keep the
   // selected value as a string so it reaches the API without rounding.
-  var res = await fetch(API + "/guild/" + guildId + "/twitch-follows", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ channel_name: name, announce_channel_id: channel.value, message_template: message ? message.value : null }) });
+  var res = await FishieWeb.fetch(API + "/guild/" + guildId + "/twitch-follows", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ channel_name: name, announce_channel_id: channel.value, message_template: message ? message.value : null }) });
   if (!res.ok) {
     var detail = await res.text();
     console.error("Twitch follow save failed", res.status, detail);
@@ -1058,7 +1047,7 @@ async function saveTwitchFollow(guildId, channelName, base) {
 
 async function removeTwitchFollow(guildId, channelName) {
   if (!confirm("Unfollow " + channelName + "?")) return;
-  var res = await fetch(API + "/guild/" + guildId + "/twitch-follows/" + encodeURIComponent(channelName), { method: "DELETE" });
+  var res = await FishieWeb.fetch(API + "/guild/" + guildId + "/twitch-follows/" + encodeURIComponent(channelName), { method: "DELETE" });
   if (!res.ok) { alert("Could not unfollow that Twitch channel."); return; }
   loadGuildTwitchTab(guildId);
 }
@@ -1082,7 +1071,7 @@ async function loadGuildYoutubeTab(guildId) {
   var panel = document.getElementById("guildYoutubeTab");
   if (!panel) return;
   try {
-    var res = await fetch(API + "/guild/" + guildId + "/youtube-follows");
+    var res = await FishieWeb.fetch(API + "/guild/" + guildId + "/youtube-follows");
     var data = await res.json();
     if (!res.ok) throw new Error(data.detail || "Could not load YouTube follows");
     var channels = data.channels || [];
@@ -1132,7 +1121,7 @@ async function saveYoutubeFollow(guildId, channelId, base) {
     alert("Choose at least one YouTube notification type.");
     return;
   }
-  var res = await fetch(API + "/guild/" + guildId + "/youtube-follows", {
+  var res = await FishieWeb.fetch(API + "/guild/" + guildId + "/youtube-follows", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -1153,7 +1142,7 @@ async function saveYoutubeFollow(guildId, channelId, base) {
 
 async function removeYoutubeFollow(guildId, channelId) {
   if (!confirm("Unfollow this YouTube channel?")) return;
-  var res = await fetch(API + "/guild/" + guildId + "/youtube-follows/" + encodeURIComponent(channelId), { method: "DELETE" });
+  var res = await FishieWeb.fetch(API + "/guild/" + guildId + "/youtube-follows/" + encodeURIComponent(channelId), { method: "DELETE" });
   if (!res.ok) {
     alert("Could not unfollow that YouTube channel.");
     return;
@@ -1165,7 +1154,7 @@ async function loadGuildLoggerTab(guildId) {
   var panel = document.getElementById("guildLoggerTab");
   if (!panel) return;
   try {
-    var res = await fetch(API + "/guild/" + guildId + "/logger");
+    var res = await FishieWeb.fetch(API + "/guild/" + guildId + "/logger");
     var data = await res.json();
     if (!res.ok) throw new Error(data.detail || "Could not load logger settings");
     var channels = data.channels || [];
@@ -1201,7 +1190,7 @@ async function saveLoggerEvent(guildId, event) {
   var url = API + "/guild/" + guildId + "/logger";
   var options = { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ event: event, channel_id: input.value }) };
   if (!input.value) { options.method = "DELETE"; url += "/" + encodeURIComponent(event); delete options.body; }
-  var res = await fetch(url, options);
+  var res = await FishieWeb.fetch(url, options);
   if (!res.ok) { alert("Could not update that logger event."); return; }
   loadGuildLoggerTab(guildId);
 }
@@ -1215,7 +1204,7 @@ async function saveGChan(guildId, key) {
   var val = el ? el.value.trim() : "";
   var payload = {};
   payload[key] = val || null;
-  await fetch(API + "/guild/" + guildId + "/settings", {
+  await FishieWeb.fetch(API + "/guild/" + guildId + "/settings", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -1227,7 +1216,7 @@ async function saveGChan(guildId, key) {
 async function togGSet(guildId, key, enable) {
   var payload = {};
   payload[key] = enable;
-  await fetch(API + "/guild/" + guildId + "/settings", {
+  await FishieWeb.fetch(API + "/guild/" + guildId + "/settings", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -1241,7 +1230,7 @@ async function setGuildCommand(guildId, disabled) {
   var channel = document.getElementById("gCommandChannel");
   if (!command || !command.value) return;
   try {
-    var res = await fetch(API + "/guild/" + guildId + "/command-disables", {
+    var res = await FishieWeb.fetch(API + "/guild/" + guildId + "/command-disables", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -1260,7 +1249,7 @@ async function setGuildCommand(guildId, disabled) {
 
 async function enableGuildCommand(guildId, command, channelId) {
   try {
-    var res = await fetch(API + "/guild/" + guildId + "/command-disables", {
+    var res = await FishieWeb.fetch(API + "/guild/" + guildId + "/command-disables", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -1283,7 +1272,7 @@ async function addPrefix(guildId) {
   if (!prefix || prefix.length > 10) return;
   var user = JSON.parse(localStorage.getItem("fishie_user") || "{}");
   try {
-    var res = await fetch(API + "/guild/" + guildId + "/prefixes", {
+    var res = await FishieWeb.fetch(API + "/guild/" + guildId + "/prefixes", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -1305,7 +1294,7 @@ async function addPrefix(guildId) {
 }
 
 async function remPrefix(guildId, prefix) {
-  await fetch(API + "/guild/" + guildId + "/prefixes", {
+  await FishieWeb.fetch(API + "/guild/" + guildId + "/prefixes", {
     method: "DELETE",
     headers: {
       "Content-Type": "application/json",
@@ -1317,7 +1306,7 @@ async function remPrefix(guildId, prefix) {
 
 async function togGOpt(guildId, item, enable) {
   try {
-    var res = await fetch(API + "/guild/" + guildId + "/opted-out");
+    var res = await FishieWeb.fetch(API + "/guild/" + guildId + "/opted-out");
     var data = await res.json();
     var items = data.items || [];
     if (enable)
@@ -1327,7 +1316,7 @@ async function togGOpt(guildId, item, enable) {
     else {
       if (!items.includes(item)) items.push(item);
     }
-    await fetch(API + "/guild/" + guildId + "/opted-out", {
+    await FishieWeb.fetch(API + "/guild/" + guildId + "/opted-out", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -1343,7 +1332,7 @@ async function togGOpt(guildId, item, enable) {
 
 async function togGuildPrivacy(guildId, key, value) {
   try {
-    var res = await fetch(API + "/guild/" + guildId + "/opted-out");
+    var res = await FishieWeb.fetch(API + "/guild/" + guildId + "/opted-out");
     var data = await res.json();
     var payload = {
       items: data.items || [],
@@ -1351,7 +1340,7 @@ async function togGuildPrivacy(guildId, key, value) {
       history_public: data.history_public === true,
     };
     payload[key] = value;
-    await fetch(API + "/guild/" + guildId + "/opted-out", {
+    await FishieWeb.fetch(API + "/guild/" + guildId + "/opted-out", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),

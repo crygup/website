@@ -1,24 +1,9 @@
-(() => {
-  const nativeFetch = window.fetch.bind(window);
-  window.fetch = (input, init = {}) => {
-    const options = init || {};
-    const headers = new Headers(options.headers || {});
-    headers.delete("Authorization");
-    const requestUrl =
-      typeof input === "string" ? input : input?.url || String(input);
-    const credentials = requestUrl.startsWith("https://api.crygup.com/fishie")
-      ? "include"
-      : options.credentials || "same-origin";
-    return nativeFetch(input, { ...options, credentials, headers });
-  };
-})();
-localStorage.removeItem("discord_token");
 
 const FISHIE_API_BASE = "https://api.crygup.com/fishie";
 const FISHIE_HOME_REDIRECT = "https://crygup.com";
 
 window.startFishieOAuth = async function (redirectUri = FISHIE_HOME_REDIRECT) {
-  const response = await fetch(
+  const response = await FishieWeb.fetch(
     `${FISHIE_API_BASE}/oauth/start?redirect_uri=${encodeURIComponent(redirectUri)}`,
   );
   const data = await response.json().catch(() => ({}));
@@ -59,12 +44,21 @@ window.startFishieOAuth = async function (redirectUri = FISHIE_HOME_REDIRECT) {
     const user = JSON.parse(localStorage.getItem("discord_user") || "null");
     let section = "";
     if (user) {
-      const avatarUrl = user.avatar
-        ? `https://cdn.discordapp.com/avatars/${user.id}/${user.avatar}.png?size=64`
+      const userId = /^\d{1,22}$/.test(String(user.id || ""))
+        ? String(user.id)
+        : "";
+      const avatarHash = /^[A-Za-z0-9_-]+$/.test(String(user.avatar || ""))
+        ? String(user.avatar)
+        : "";
+      const avatarUrl = userId && avatarHash
+        ? `https://cdn.discordapp.com/avatars/${userId}/${avatarHash}.png?size=64`
         : "https://cdn.discordapp.com/embed/avatars/0.png";
+      const displayName = escapeHtml(
+        String(user.global_name || user.username || "Discord user"),
+      );
       section += `<div class="sidebar-user">`;
       section += `<img src="${avatarUrl}" alt="" class="sidebar-avatar">`;
-      section += `<span class="sidebar-username">${user.global_name || user.username}</span>`;
+      section += `<span class="sidebar-username">${displayName}</span>`;
       section += `<button class="sidebar-logout">Logout</button>`;
       section += `</div>`;
     } else {
@@ -97,7 +91,7 @@ window.startFishieOAuth = async function (redirectUri = FISHIE_HOME_REDIRECT) {
     const btn = sidebar.querySelector(".sidebar-logout");
     if (btn) {
       btn.addEventListener("click", () => {
-        fetch("https://api.crygup.com/fishie/oauth/logout", {
+        FishieWeb.fetch("https://api.crygup.com/fishie/oauth/logout", {
           method: "POST",
         }).finally(() => {
           localStorage.removeItem("discord_user");
@@ -197,7 +191,7 @@ As well, Fishie offers a wide range of useful features that make it a valuable a
 
 You'll also find a download command, which supports a variety of websites, essential moderation tools, including a honeypot system that can automatically ban spammers, along with many other features to help everyone in your server.
 
-<a href="https://discord.com/oauth2/authorize?client_id=876391494485950504&scope=bot+applications.commands&permissions=138513074240" target="_blank" rel="noopener">Invite here.</a>`,
+<a href="https://discord.com/oauth2/authorize?client_id=1537535633038381190&scope=bot+applications.commands&permissions=138513074240" target="_blank" rel="noopener">Invite here.</a>`,
     },
     {
       name: "Mudae Tools",
@@ -556,7 +550,7 @@ if (list) {
 const npSection = document.getElementById("now-playing");
 
 async function fetchNowPlaying() {
-  const res = await fetch(
+  const res = await FishieWeb.fetch(
     `${LASTFM_PROXY}/?method=user.getrecenttracks&user=${LASTFM_USER}&limit=1&format=json`,
   );
   if (!res.ok) throw new Error("Last.fm fetch failed");
@@ -575,7 +569,7 @@ async function fetchNowPlaying() {
 }
 
 async function fetchTrackPlays(artist, track) {
-  const res = await fetch(
+  const res = await FishieWeb.fetch(
     `${LASTFM_PROXY}/?method=track.getinfo&user=${LASTFM_USER}&artist=${encodeURIComponent(artist)}&track=${encodeURIComponent(track)}&format=json`,
   );
   if (!res.ok) return null;
@@ -587,7 +581,7 @@ async function fetchTrackPlays(artist, track) {
 }
 
 async function fetchTotalScrobbles() {
-  const res = await fetch(
+  const res = await FishieWeb.fetch(
     `${LASTFM_PROXY}/?method=user.getinfo&user=${LASTFM_USER}&format=json`,
   );
   if (!res.ok) return null;
@@ -647,7 +641,7 @@ function renderNowPlaying(track, trackInfo, totalScrobbles) {
 
 async function fetchSpotifyCover(artist, name) {
   try {
-    const res = await fetch(
+    const res = await FishieWeb.fetch(
       `https://api.crygup.com/fishie/spotify-cover?artist=${encodeURIComponent(artist)}&track=${encodeURIComponent(name)}`,
     );
     if (!res.ok) return;
@@ -685,7 +679,7 @@ function formatCount(n) {
 }
 
 async function fetchLatestVideos() {
-  const chRes = await fetch(
+  const chRes = await FishieWeb.fetch(
     `${YOUTUBE_PROXY}/channels?part=contentDetails&forHandle=${YOUTUBE_CHANNEL}`,
   );
   if (!chRes.ok) throw new Error(`channel: ${chRes.status}`);
@@ -694,7 +688,7 @@ async function fetchLatestVideos() {
     chData.items?.[0]?.contentDetails?.relatedPlaylists?.uploads;
   if (!uploadsId) throw new Error("No uploads playlist found");
 
-  const plRes = await fetch(
+  const plRes = await FishieWeb.fetch(
     `${YOUTUBE_PROXY}/playlistItems?part=snippet&playlistId=${uploadsId}&maxResults=12`,
   );
   if (!plRes.ok) throw new Error(`playlist: ${plRes.status}`);
@@ -703,7 +697,7 @@ async function fetchLatestVideos() {
   if (items.length === 0) return [];
   const ids = items.map((i) => i.snippet.resourceId.videoId).join(",");
 
-  const vRes = await fetch(
+  const vRes = await FishieWeb.fetch(
     `${YOUTUBE_PROXY}/videos?part=statistics,snippet,contentDetails&id=${ids}`,
   );
   if (!vRes.ok) throw new Error(`videos: ${vRes.status}`);
@@ -720,7 +714,7 @@ async function fetchLatestVideos() {
   const checks = await Promise.all(
     videos.map(async (v) => {
       try {
-        const oeRes = await fetch(
+        const oeRes = await FishieWeb.fetch(
           `https://www.youtube.com/oembed?url=https://www.youtube.com/shorts/${v.id}&format=json`,
         );
         if (!oeRes.ok) return v;
@@ -771,9 +765,13 @@ function renderVideoCard(v) {
 
   const info = document.createElement("div");
   info.className = "video-info";
-  info.innerHTML = `
-    <p class="video-title">${v.title}</p>
-    <p class="video-stats">${formatCount(v.views)} views &middot; ${formatCount(v.likes)} likes &middot; ${date}</p>`;
+  const title = document.createElement("p");
+  title.className = "video-title";
+  title.textContent = v.title;
+  const stats = document.createElement("p");
+  stats.className = "video-stats";
+  stats.innerHTML = `${formatCount(v.views)} views &middot; ${formatCount(v.likes)} likes &middot; ${date}`;
+  info.append(title, stats);
 
   card.appendChild(thumb);
   card.appendChild(info);
@@ -824,7 +822,7 @@ function escapeHtml(s) {
       if (key.startsWith("openid.")) callbackParams.set(key, value);
     });
     window.history.replaceState({}, "", window.location.pathname);
-    fetch(`${FISHIE_API}/steam/callback?${callbackParams.toString()}`)
+    FishieWeb.fetch(`${FISHIE_API}/steam/callback?${callbackParams.toString()}`)
       .then(async (r) => {
         const data = await r.json();
         if (!r.ok) throw new Error(data.detail || "Steam connection failed");
@@ -847,7 +845,7 @@ function escapeHtml(s) {
 
   if (spotifyCode && spotifyState && spotifyState.startsWith("spotify_")) {
     window.history.replaceState({}, "", window.location.pathname);
-    fetch(
+    FishieWeb.fetch(
       `${FISHIE_API}/spotify/callback?code=${encodeURIComponent(spotifyCode)}&state=${encodeURIComponent(spotifyState)}`,
     )
       .then(async (r) => {
@@ -867,7 +865,7 @@ function escapeHtml(s) {
 
   if (anilistCode && anilistState && anilistState.startsWith("anilist_")) {
     window.history.replaceState({}, "", window.location.pathname);
-    fetch(
+    FishieWeb.fetch(
       `${FISHIE_API}/anilist/callback?code=${encodeURIComponent(anilistCode)}&state=${encodeURIComponent(anilistState)}`,
     )
       .then(async (r) => {
@@ -887,7 +885,7 @@ function escapeHtml(s) {
 
   if (lastfmToken && lastfmState) {
     window.history.replaceState({}, "", window.location.pathname);
-    fetch(
+    FishieWeb.fetch(
       `${FISHIE_API}/lastfm/callback?token=${encodeURIComponent(lastfmToken)}&state=${encodeURIComponent(lastfmState)}`,
     )
       .then(async (r) => {
@@ -911,7 +909,7 @@ function escapeHtml(s) {
   window.__fishieOAuthPending = true;
   window.history.replaceState({}, "", window.location.pathname);
 
-  fetch(`${FISHIE_API}/oauth/exchange`, {
+  FishieWeb.fetch(`${FISHIE_API}/oauth/exchange`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({

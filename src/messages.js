@@ -45,7 +45,7 @@ function updateCounts() {
 }
 
 async function getMessageChallenge() {
-  const res = await fetch(`${API}/send-message/challenge`, {
+  const res = await FishieWeb.fetch(`${API}/send-message/challenge`, {
     credentials: "include",
     cache: "no-store",
   });
@@ -67,7 +67,7 @@ form.addEventListener("submit", async (e) => {
 
   try {
     const challenge = await getMessageChallenge();
-    const res = await fetch(`${API}/send-message`, {
+    const res = await FishieWeb.fetch(`${API}/send-message`, {
       method: "POST",
       credentials: "include",
       headers: {

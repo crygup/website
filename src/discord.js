@@ -1,22 +1,8 @@
 console.log("discord.js v3 loaded");
 
 const FISHIE_API = "https://api.crygup.com/fishie";
-const CLIENT_ID = "876391494485950504";
+const CLIENT_ID = "1537535633038381190";
 
-(() => {
-  const nativeFetch = window.fetch.bind(window);
-  window.fetch = (input, init = {}) => {
-    const options = init || {};
-    const headers = new Headers(options.headers || {});
-    headers.delete("Authorization");
-    const requestUrl =
-      typeof input === "string" ? input : input?.url || String(input);
-    const credentials = requestUrl.startsWith("https://api.crygup.com/")
-      ? "include"
-      : options.credentials || "same-origin";
-    return nativeFetch(input, { ...options, credentials, headers });
-  };
-})();
 
 let currentTab = "user";
 let currentSubtab = "avatars";
@@ -24,12 +10,11 @@ let currentPage = 1;
 let userQuery = "";
 let guildQuery = "";
 let loggedInUser = JSON.parse(localStorage.getItem("discord_user") || "null");
-localStorage.removeItem("discord_token");
 let currentUserId = null;
 let currentGuildId = null;
 
 if (!loggedInUser && !window.__fishieOAuthPending) {
-  fetch(`${FISHIE_API}/oauth/me`)
+  FishieWeb.fetch(`${FISHIE_API}/oauth/me`)
     .then((res) => {
       if (res.status === 401) {
         console.info("Fishie session not found; user is not logged in.");
@@ -250,7 +235,7 @@ function renderSettings() {
     document
       .getElementById("settings-logout-btn")
       .addEventListener("click", () => {
-        fetch(`${FISHIE_API}/oauth/logout`, { method: "POST" }).finally(() => {
+        FishieWeb.fetch(`${FISHIE_API}/oauth/logout`, { method: "POST" }).finally(() => {
           localStorage.removeItem("discord_user");
           loggedInUser = null;
           hideSettingsPanel();
@@ -375,7 +360,7 @@ async function fetchGuilds() {
   select.disabled = true;
   select.innerHTML = '<option value="">Loading…</option>';
   try {
-    const res = await fetch(`${FISHIE_API}/user/${loggedInUser.id}/guilds`, {
+    const res = await FishieWeb.fetch(`${FISHIE_API}/user/${loggedInUser.id}/guilds`, {
     });
     if (!res.ok) throw new Error("Failed to fetch guilds");
     const data = await res.json();
@@ -406,7 +391,7 @@ async function loadManagedGuilds() {
     return;
   }
   try {
-    const res = await fetch(`${FISHIE_API}/user/${loggedInUser.id}/guilds`, {
+    const res = await FishieWeb.fetch(`${FISHIE_API}/user/${loggedInUser.id}/guilds`, {
     });
     if (res.ok) {
       const data = await res.json();
@@ -454,9 +439,9 @@ async function saveGuildOptOuts(guildId) {
     return input && !input.checked;
   }).map((item) => item.key);
   try {
-    const current = await fetch(`${FISHIE_API}/guild/${guildId}/opted-out`);
+    const current = await FishieWeb.fetch(`${FISHIE_API}/guild/${guildId}/opted-out`);
     const currentData = current.ok ? await current.json() : {};
-    await fetch(`${FISHIE_API}/guild/${guildId}/opted-out`, {
+    await FishieWeb.fetch(`${FISHIE_API}/guild/${guildId}/opted-out`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -478,8 +463,8 @@ async function fetchOptOuts() {
   if (!container || !privacyContainer || !loggedInUser) return;
   try {
     const [optRes, privacyRes] = await Promise.all([
-      fetch(`${FISHIE_API}/user/${loggedInUser.id}/opted-out`),
-      fetch(`${FISHIE_API}/user/${loggedInUser.id}/privacy-settings`),
+      FishieWeb.fetch(`${FISHIE_API}/user/${loggedInUser.id}/opted-out`),
+      FishieWeb.fetch(`${FISHIE_API}/user/${loggedInUser.id}/privacy-settings`),
     ]);
     if (!optRes.ok || !privacyRes.ok) throw new Error("Failed to fetch");
     const [optData, privacyData] = await Promise.all([
@@ -524,7 +509,7 @@ async function savePrivacySettings() {
     '#privacy-toggles .privacy-toggle[data-key="history_public"]',
   );
   if (!tracking || !history) return;
-  const res = await fetch(
+  const res = await FishieWeb.fetch(
     `${FISHIE_API}/user/${loggedInUser.id}/privacy-settings`,
     {
       method: "POST",
@@ -571,7 +556,7 @@ async function saveOptOuts() {
     })
     .map((item) => item.key);
   try {
-    await fetch(`${FISHIE_API}/user/${loggedInUser.id}/opted-out`, {
+    await FishieWeb.fetch(`${FISHIE_API}/user/${loggedInUser.id}/opted-out`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -637,7 +622,7 @@ async function fetchData() {
   try {
     let id = activeQuery();
     if (currentTab === "user" && !/^\d+$/.test(activeQuery())) {
-      const r = await fetch(
+      const r = await FishieWeb.fetch(
         `${FISHIE_API}/resolve?q=${encodeURIComponent(activeQuery())}`,
       );
       if (!r.ok) {
@@ -648,7 +633,7 @@ async function fetchData() {
     }
     if (currentTab === "user") {
       currentUserId = id;
-      const res = await fetch(USER_ENDPOINTS[currentSubtab](id, currentPage));
+      const res = await FishieWeb.fetch(USER_ENDPOINTS[currentSubtab](id, currentPage));
       if (!res.ok) {
         const e = await res.json().catch(() => ({}));
         throw new Error(e.detail || "Not found");
@@ -660,7 +645,7 @@ async function fetchData() {
       statusEl.textContent = data.total ? `${data.total} found` : "No results.";
     } else if (currentTab === "guild") {
       currentGuildId = id;
-      const res = await fetch(GUILD_ENDPOINTS[currentSubtab](id, currentPage));
+      const res = await FishieWeb.fetch(GUILD_ENDPOINTS[currentSubtab](id, currentPage));
       if (!res.ok) {
         const e = await res.json().catch(() => ({}));
         throw new Error(e.detail || "Not found");
@@ -727,7 +712,7 @@ async function deleteItem(table, key) {
   if (!confirm("Delete this entry?")) return;
   const targetId = currentTab === "user" ? currentUserId : currentGuildId;
   try {
-    const res = await fetch(
+    const res = await FishieWeb.fetch(
       `${FISHIE_API}/item/${table}/${targetId}?key=${encodeURIComponent(key)}`,
       { method: "DELETE" },
     );
@@ -750,7 +735,7 @@ async function deleteAll() {
   if (!confirm("Are you sure? This data will be permanently deleted.")) return;
   const targetId = currentTab === "user" ? currentUserId : currentGuildId;
   try {
-    const res = await fetch(
+    const res = await FishieWeb.fetch(
       `${FISHIE_API}/user/${targetId}?table=${TABLE_MAP[currentSubtab]}`,
       { method: "DELETE" },
     );

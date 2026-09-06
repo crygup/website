@@ -1,5 +1,5 @@
 const FISHIE_API = "https://api.crygup.com/fishie";
-const CLIENT_ID = "876391494485950504";
+const CLIENT_ID = "1537535633038381190";
 const content = document.getElementById("tab-content");
 const tabs = document.querySelectorAll("#fishie-tabs .tab-btn[data-tab]");
 
@@ -34,7 +34,7 @@ function renderAbout() {
 async function renderStats() {
   content.innerHTML = '<p class="fishie-loading">Loading…</p>';
   try {
-    const res = await fetch(`${FISHIE_API}/stats`);
+    const res = await FishieWeb.fetch(`${FISHIE_API}/stats`);
     const data = await res.json();
     content.innerHTML = `
       <div class="fishie-card">
@@ -63,7 +63,7 @@ async function renderStats() {
 async function renderCommands() {
   content.innerHTML = '<p class="fishie-loading">Loading…</p>';
   try {
-    const res = await fetch(`${FISHIE_API}/commands`);
+    const res = await FishieWeb.fetch(`${FISHIE_API}/commands`);
     const data = await res.json();
     const allCmds = data.commands;
     const cats = {};
@@ -295,7 +295,7 @@ const TERMS_URL   = "https://raw.githubusercontent.com/crygup/fish/refs/heads/re
 async function renderPrivacy() {
   content.innerHTML = '<p class="fishie-loading">Loading…</p>';
   try {
-    const res = await fetch(PRIVACY_URL);
+    const res = await FishieWeb.fetch(PRIVACY_URL);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const md = await res.text();
     content.innerHTML = `<div class="policy-content">${renderMarkdown(md)}</div>`;
@@ -307,7 +307,7 @@ async function renderPrivacy() {
 async function renderTerms() {
   content.innerHTML = '<p class="fishie-loading">Loading…</p>';
   try {
-    const res = await fetch(TERMS_URL);
+    const res = await FishieWeb.fetch(TERMS_URL);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const md = await res.text();
     content.innerHTML = `<div class="policy-content">${renderMarkdown(md)}</div>`;
