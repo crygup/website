@@ -5,7 +5,6 @@ ROOT="$(dirname "$(realpath "$0")")"
 COMPOSE_FILE="$ROOT/compose.production.yaml"
 ENV_FILE="$ROOT/.env"
 NGINX_CONFIG="$ROOT/nginx/crygup.conf"
-LEGACY_SERVICE="avatar-lookup.service"
 
 if [[ ! -f "$ENV_FILE" ]]; then
     echo "Missing $ENV_FILE. Copy .env.example to .env and set the host UID and GID."
@@ -67,25 +66,18 @@ if ! compose up --detach --no-deps media-api || ! wait_for_health media-api 18; 
     exit 1
 fi
 
-legacy_was_active=false
-if sudo systemctl is-active --quiet "$LEGACY_SERVICE"; then
-    legacy_was_active=true
-    sudo systemctl stop "$LEGACY_SERVICE"
-fi
-
 echo "Starting the avatar API on 127.0.0.1:8000"
 if ! compose up --detach --no-deps avatar-api || ! wait_for_health avatar-api 30; then
     compose stop avatar-api || true
     compose stop media-api || true
-    if [[ "$legacy_was_active" == true ]]; then
-        sudo systemctl start "$LEGACY_SERVICE"
-    fi
-    echo "Avatar API deployment failed. The previous systemd service was restored when applicable."
+    echo "Avatar API deployment failed. Inspect the container logs before retrying."
     exit 1
 fi
 
 echo "Installing and validating the Nginx proxy configuration"
-nginx_backup="$(mktemp)"
+backup_dir="$ROOT/../backup/website-deploy-$(date -u +%Y%m%dT%H%M%S)-$$"
+mkdir -p "$backup_dir"
+nginx_backup="$backup_dir/nginx-crygup.conf"
 sudo cp /etc/nginx/sites-available/crygup "$nginx_backup"
 sudo install -m 644 "$NGINX_CONFIG" /etc/nginx/sites-available/crygup
 if ! sudo nginx -t || ! sudo systemctl reload nginx; then
@@ -93,13 +85,10 @@ if ! sudo nginx -t || ! sudo systemctl reload nginx; then
     sudo nginx -t
     sudo systemctl reload nginx
     compose stop media-api || true
-    rm -f "$nginx_backup"
     echo "Nginx rejected the new configuration. The previous configuration was restored."
     exit 1
 fi
-rm -f "$nginx_backup"
 
-sudo systemctl disable "$LEGACY_SERVICE" 2>/dev/null || true
 
 echo "Website containers are running"
 compose ps
