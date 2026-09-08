@@ -7,6 +7,7 @@
   <link rel="stylesheet" href="style.css?s=13">
   <link rel="stylesheet" href="oc.css?s=1">
   <link rel="stylesheet" href="oq.css?s=3">
+  <link rel="stylesheet" href="ot.css?s=1">
   <link rel="icon" type="image/x-icon" href="images/pfp.ico">
 </head>
 <body data-page="mudae">
@@ -17,6 +18,7 @@
     <nav class="tab-bar" id="mudae-tabs" aria-label="Mudae solvers">
       <button class="tab-btn active" data-tab="oc" type="button">OC Solver</button>
       <button class="tab-btn" data-tab="oq" type="button">OQ Solver</button>
+      <button class="tab-btn" data-tab="ot" type="button">OT Solver</button>
     </nav>
 
     <section class="tab-panel" id="oc-panel" data-panel="oc">
@@ -32,7 +34,7 @@
     </section>
 
     <section class="tab-panel hidden" id="oq-panel" data-panel="oq">
-      <p class="oc-hint">Click cells to cycle through colors. White outline = recommended next click.</p>
+      <p class="oc-hint">Click cells to mark revealed colors. The <span class="best-indicator">highlighted</span> cell is the recommended next click.</p>
 
       <div id="oq-grid"></div>
       <p id="oq-status"></p>
@@ -42,6 +44,21 @@
         <button id="oq-emoji-toggle" type="button">Show Emojis</button>
       </div>
     </section>
+    <section class="tab-panel hidden" id="ot-panel" data-panel="ot">
+      <p class="oc-hint">Click cells to mark revealed colors. The <span class="best-indicator">highlighted</span> cells are recommended next clicks.</p>
+      <p class="oc-hint">Green = guaranteed safe · Red = guaranteed blue. Only blue spheres use clicks.</p>
+      <div id="ot-grid"></div>
+      <p id="ot-status" role="status" aria-live="polite"></p>
+      <div id="ot-controls">
+        <label for="ot-colors">Number of colors</label>
+        <select id="ot-colors">
+          <option value="6">6</option><option value="7">7</option>
+          <option value="8">8</option><option value="9">9</option>
+        </select>
+        <button id="ot-reset" type="button">Reset Grid</button>
+        <button id="ot-emoji-toggle" type="button">Show Emojis</button>
+      </div>
+    </section>
   </main>
 
   <footer>
@@ -49,9 +66,10 @@
   </footer>
 
   <script src="session.js?s=1"></script>
-  <script src="script.js?s=12"></script>
+  <script src="script.js?s=15"></script>
   <script src="oc.js?s=1"></script>
   <script src="oq.js?s=4"></script>
-  <script src="mudae.js?s=1"></script>
+  <script src="ot.js?s=1"></script>
+  <script src="mudae.js?s=2"></script>
 </body>
 </html>

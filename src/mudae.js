@@ -30,5 +30,5 @@
   });
 
   const requestedTab = new URLSearchParams(window.location.search).get("tab");
-  selectTab(requestedTab === "oq" ? "oq" : "oc", false);
+  selectTab(["oq", "ot"].includes(requestedTab) ? requestedTab : "oc", false);
 })();

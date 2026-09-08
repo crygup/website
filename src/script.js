@@ -619,15 +619,12 @@ function renderNowPlaying(track, trackInfo, totalScrobbles) {
     .filter(Boolean)
     .join(" · ");
 
-  const cover = track.cover
-    ? `<img class="np-cover" src="${track.cover}" alt="${escapeHtml(track.name)}" onerror="this.style.display='none';this.nextElementSibling.style.display='';fetchSpotifyCover(${JSON.stringify(track.artist)},${JSON.stringify(track.name)})">`
-    : "";
   const placeholder = `<div class="np-cover placeholder np-cover-placeholder" style="${track.cover ? "display:none" : ""}"></div>`;
 
   const heart = loved ? ' <span class="np-loved">\u2665</span>' : "";
 
   npSection.innerHTML = `
-    ${cover}${placeholder}
+    ${placeholder}
     <div class="np-info">
       <span class="np-label">${label}</span>
       <span class="np-track" title="${escapeHtml(track.name)}">${escapeHtml(track.name)}${heart}</span>
@@ -635,6 +632,19 @@ function renderNowPlaying(track, trackInfo, totalScrobbles) {
       ${playsLine ? `<span class="np-plays">${playsLine}</span>` : ""}
     </div>`;
   npSection.classList.remove("hidden");
+
+  if (track.cover) {
+    const image = document.createElement("img");
+    image.className = "np-cover";
+    image.alt = track.name;
+    image.addEventListener("error", () => {
+      image.style.display = "none";
+      npSection.querySelector(".np-cover-placeholder").style.display = "";
+      fetchSpotifyCover(track.artist, track.name);
+    }, { once: true });
+    image.src = track.cover;
+    npSection.prepend(image);
+  }
 
   if (!track.cover) fetchSpotifyCover(track.artist, track.name);
 }

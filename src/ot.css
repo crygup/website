@@ -1,0 +1,44 @@
+/* Reuse the OQ sphere colors and button style. */
+#ot-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 0.4rem;
+  max-width: 360px;
+  margin: 0 auto;
+}
+#ot-grid .oq-cell::after { content: none; }
+#ot-grid .oq-cell img { width: 50%; height: 50%; object-fit: contain; }
+#ot-grid [data-color="light"] { background: #f9a8d4; color: #1a1d20; }
+#ot-grid [data-color="rainbow"] { background: linear-gradient(135deg, #ef4444, #eab308, #22c55e, #3b82f6); }
+#ot-grid [data-color="dark"] { background: #171717; }
+#ot-grid [data-color="chaos"] { background: #713f12; }
+#ot-grid .ot-safe { background: #15803d; }
+#ot-grid .ot-danger { background: #b91c1c; }
+#ot-grid .oq-cell:focus-visible { outline: 2px solid white; outline-offset: 3px; }
+#ot-status {
+  text-align: center;
+  font-size: 0.85rem;
+  color: #94a3b8;
+  margin: 1rem 0 0.5rem;
+  min-height: 1.25rem;
+}
+#ot-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+  font-size: 0.85rem;
+  color: #94a3b8;
+}
+#ot-controls button, #ot-controls select {
+  padding: 0.5rem 1rem;
+  font: inherit;
+  color: #94a3b8;
+  background: #332b37;
+  border: none;
+  border-radius: 0.25rem;
+  cursor: pointer;
+}
+#ot-controls button:hover { background: #232b2e; color: #cbd5e1; }
