@@ -80,7 +80,7 @@
     render();
     timer = setTimeout(() => {
       try {
-        worker = new Worker("ot-solver.js?s=1");
+        worker = new Worker("ot-solver.js");
         worker.onmessage = ({data}) => {
           if (data.id !== revision) return;
           analysis = data;

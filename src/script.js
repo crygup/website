@@ -466,9 +466,11 @@ if (dp) {
   ]).then(() => {
     updateBounds();
     const nameRect = nameEl.getBoundingClientRect();
+    // Lower the can to the letters' visual center within the heading line box.
+    const opticalOffset = parseFloat(getComputedStyle(nameEl).fontSize) * 0.15;
     setPosition(
       window.scrollX + nameRect.right + 4,
-      window.scrollY + nameRect.top + nameRect.height / 2 - dp.offsetHeight / 2,
+      window.scrollY + nameRect.top + nameRect.height / 2 - dp.offsetHeight / 2 + opticalOffset,
     );
     dp.classList.add("positioned");
   });

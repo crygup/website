@@ -95,10 +95,10 @@ select optgroup option { color: #ddd; padding-left: 0.5rem; }
 
 <script>
 (async () => {
-  const res = await fetch("/ror2-data/items.json?t=" + Date.now());
+  const res = await fetch("/ror2-data/items.json");
   const data = await res.json();
 
-  const enemiesRes = await fetch("/ror2-data/enemies.json?t=" + Date.now());
+  const enemiesRes = await fetch("/ror2-data/enemies.json");
   const enemiesData = await enemiesRes.json();
   const enemyMap = {};
   for (const e of enemiesData.enemies) {

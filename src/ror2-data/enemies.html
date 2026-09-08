@@ -85,10 +85,10 @@ h1 { color: #f8fafc; margin-bottom: 0.5rem; }
 
 <script>
 (async () => {
-  const res = await fetch("/ror2-data/enemies.json?t=" + Date.now());
+  const res = await fetch("/ror2-data/enemies.json");
   const data = await res.json();
   document.getElementById("count").textContent = data.count + " enemies loaded";
-  const itemsRes = await fetch("/ror2-data/items.json?t=" + Date.now());
+  const itemsRes = await fetch("/ror2-data/items.json");
   const itemsData = await itemsRes.json();
   const itemMap = {};
   for (const item of itemsData.items) {
