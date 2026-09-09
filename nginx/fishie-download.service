@@ -1,0 +1,17 @@
+[Unit]
+Description=Fishie downloader with required outbound firewall
+Requires=docker.service fishie-download-egress.service
+After=docker.service fishie-download-egress.service
+BindsTo=docker.service fishie-download-egress.service
+PartOf=docker.service fishie-download-egress.service
+
+[Service]
+WorkingDirectory=/home/zil/projects/website
+ExecStart=/usr/bin/docker compose --env-file .env -f compose.production.yaml up --no-build --no-deps --abort-on-container-exit --exit-code-from download-api download-api
+ExecStop=/usr/bin/docker compose --env-file .env -f compose.production.yaml stop download-api
+Restart=always
+RestartSec=5
+TimeoutStopSec=30
+
+[Install]
+WantedBy=multi-user.target

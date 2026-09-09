@@ -14,6 +14,7 @@ import mimetypes
 import os
 import re
 import secrets
+import shutil
 import time
 from contextlib import asynccontextmanager, suppress
 from pathlib import Path
@@ -45,6 +46,9 @@ PUBLIC_BASE_URL = os.getenv(
 ).rstrip("/")
 logger = get_logger("media")
 upload_slots = asyncio.Semaphore(MAX_ACTIVE_UPLOADS)
+storage_lock = asyncio.Lock()
+reserved_bytes = 0
+STORAGE_HEADROOM = 64 * 1024 * 1024
 cleanup_task: asyncio.Task[None] | None = None
 
 
@@ -214,6 +218,14 @@ async def upload_media(
             raise HTTPException(400, "Invalid content length") from error
 
     async with upload_slots:
+        global reserved_bytes
+        reservation = int(content_length) if content_length else max_media_bytes
+        if reservation < 0:
+            raise HTTPException(400, "Invalid content length")
+        async with storage_lock:
+            if reservation + reserved_bytes + STORAGE_HEADROOM > shutil.disk_usage(MEDIA_ROOT).free:
+                raise HTTPException(503, "Temporary media storage is full. Try again later.")
+            reserved_bytes += reservation
         token = secrets.token_urlsafe(32)
         filename = _safe_filename(x_filename, content_type)
         partial = MEDIA_ROOT / f"{token}.part"
@@ -225,9 +237,12 @@ async def upload_media(
             with partial.open("wb") as output:
                 async for chunk in request.stream():
                     size += len(chunk)
-                    if size > max_media_bytes:
+                    if size > max_media_bytes or len(chunk) > reservation:
                         raise HTTPException(413, f"Media is limited to {limit_mb} MB")
                     await asyncio.to_thread(output.write, chunk)
+                    async with storage_lock:
+                        reserved_bytes -= len(chunk)
+                        reservation -= len(chunk)
             if size == 0:
                 raise HTTPException(400, "The uploaded media is empty")
             metadata = {
@@ -242,12 +257,15 @@ async def upload_media(
             )
             metadata_partial.replace(metadata_path)
             partial.replace(target)
-        except Exception:
+        except BaseException:
             partial.unlink(missing_ok=True)
             metadata_partial.unlink(missing_ok=True)
             metadata_path.unlink(missing_ok=True)
             target.unlink(missing_ok=True)
             raise
+        finally:
+            async with storage_lock:
+                reserved_bytes -= reservation
 
     logger.info("media_uploaded token=%s bytes=%s", token[:8], size)
     return {
@@ -293,13 +311,14 @@ async def get_media(token: str, requested_filename: str | None = None):
         return RedirectResponse(
             f"{PUBLIC_BASE_URL}/files/{token}/{canonical_filename}",
             status_code=307,
+            headers={"Cache-Control": "no-store"},
         )
     disposition = "attachment" if content_type == "image/svg+xml" else "inline"
     return FileResponse(
         path,
         media_type=content_type,
         headers={
-            "Cache-Control": f"public, max-age={MEDIA_TTL}, immutable",
+            "Cache-Control": "private, no-store",
             "Content-Disposition": f"{disposition}; filename*=UTF-8''{quote(filename)}",
             "Content-Security-Policy": "default-src 'none'; sandbox",
             "X-Content-Type-Options": "nosniff",
@@ -309,4 +328,4 @@ async def get_media(token: str, requested_filename: str | None = None):
 
 
 if __name__ == "__main__":
-    uvicorn.run(app, host=MEDIA_HOST, port=MEDIA_PORT)
+    uvicorn.run(app, host=MEDIA_HOST, port=MEDIA_PORT, access_log=False)

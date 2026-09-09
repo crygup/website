@@ -109,12 +109,13 @@ services:
       TZ: Europe/Berlin
     volumes:
       - ./src/server/cookies:/app/cookies:ro
-      - ./src/downloads:/app/downloads
       - ./src/logs:/app/logs
       - /etc/localtime:/etc/localtime:ro
       - /etc/timezone:/etc/timezone:ro
     ports:
       - "127.0.0.1:8002:8002"
+    networks:
+      - download-isolated
     healthcheck:
       test:
         - CMD
@@ -131,15 +132,17 @@ services:
     read_only: true
     tmpfs:
       - /tmp:rw,nosuid,nodev,noexec,size=128m
+      - /app/downloads:rw,nosuid,nodev,noexec,size=2g,uid=${WEBSITE_UID:?set WEBSITE_UID},gid=${WEBSITE_GID:?set WEBSITE_GID},mode=0700
     cap_drop:
       - ALL
     security_opt:
       - no-new-privileges:true
     pids_limit: 128
-    mem_limit: 2g
+    mem_limit: 3g
     cpus: 2.0
     stop_grace_period: 15s
-    restart: unless-stopped
+    # Managed by fishie-download.service, which requires the firewall.
+    restart: "no"
     logging:
       driver: local
       options:
@@ -185,13 +188,13 @@ services:
     tmpfs:
       # The media API runs as WEBSITE_UID/GID, so the tmpfs must be writable
       # by that user rather than the default root owner.
-      - /app/media:rw,nosuid,nodev,size=2g,uid=${WEBSITE_UID:?set WEBSITE_UID},gid=${WEBSITE_GID:?set WEBSITE_GID},mode=0750
+      - /app/media:rw,nosuid,nodev,size=3g,uid=${WEBSITE_UID:?set WEBSITE_UID},gid=${WEBSITE_GID:?set WEBSITE_GID},mode=0750
       - /tmp:rw,nosuid,nodev,size=128m
     cap_drop:
       - ALL
     security_opt:
       - no-new-privileges:true
-    mem_limit: 2g
+    mem_limit: 4g
     cpus: 2.0
     stop_grace_period: 15s
     restart: unless-stopped
@@ -200,3 +203,9 @@ services:
       options:
         max-size: 20m
         max-file: "5"
+
+networks:
+  download-isolated:
+    driver: bridge
+    driver_opts:
+      com.docker.network.bridge.name: fish-download
