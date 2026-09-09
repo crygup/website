@@ -1,4 +1,4 @@
-console.log("discord.js v3 loaded");
+
 
 const FISHIE_API = "https://api.crygup.com/fishie";
 const CLIENT_ID = "1537535633038381190";
@@ -9,15 +9,22 @@ let currentSubtab = "avatars";
 let currentPage = 1;
 let userQuery = "";
 let guildQuery = "";
-let loggedInUser = JSON.parse(localStorage.getItem("discord_user") || "null");
+let loggedInUser = null;
+try { loggedInUser = JSON.parse(localStorage.getItem("discord_user") || "null"); } catch { localStorage.removeItem("discord_user"); }
+let requestVersion = 0;
+let lastTotal = 0;
+let requestController;
 let currentUserId = null;
 let currentGuildId = null;
 
-if (!loggedInUser && !window.__fishieOAuthPending) {
+if (!window.__fishieOAuthPending) {
   FishieWeb.fetch(`${FISHIE_API}/oauth/me`)
     .then((res) => {
       if (res.status === 401) {
-        console.info("Fishie session not found; user is not logged in.");
+        loggedInUser = null;
+        localStorage.removeItem("discord_user");
+        updateDeleteAllLabel();
+        if (currentTab === "settings") showSettingsPanel();
         return null;
       }
       if (!res.ok) throw new Error(`Session check failed (${res.status})`);
@@ -28,8 +35,10 @@ if (!loggedInUser && !window.__fishieOAuthPending) {
         console.info("Fishie session not found; user is not logged in.");
         return;
       }
+      loggedInUser = data.user;
       localStorage.setItem("discord_user", JSON.stringify(data.user));
-      window.location.reload();
+      loadManagedGuilds();
+      if (currentTab === "settings") showSettingsPanel();
     })
     .catch((error) => {
       console.error("Could not restore Fishie session:", error);
@@ -85,6 +94,10 @@ document.getElementById("discord-tabs").addEventListener("click", (e) => {
 
   tabs.forEach((b) => b.classList.remove("active"));
   btn.classList.add("active");
+  requestVersion++;
+  requestController?.abort();
+  currentUserId = currentGuildId = null;
+  pagination.classList.add("hidden");
   currentTab = btn.dataset.tab;
   currentPage = 1;
 
@@ -114,6 +127,7 @@ document.getElementById("discord-tabs").addEventListener("click", (e) => {
   statusEl.textContent = "";
   input.value = activeQuery();
   updateDeleteAllLabel();
+  if (activeQuery()) fetchData();
 });
 
 userSubtabs.addEventListener("click", (e) => {
@@ -123,11 +137,14 @@ userSubtabs.addEventListener("click", (e) => {
     .querySelectorAll(".subtab-btn")
     .forEach((b) => b.classList.remove("active"));
   btn.classList.add("active");
+  requestVersion++;
+  requestController?.abort();
   currentSubtab = btn.dataset.subtab;
   currentPage = 1;
   updateDeleteAllLabel();
   grid.innerHTML = "";
   statusEl.textContent = "";
+  if (activeQuery()) fetchData();
 });
 
 guildSubtabs.addEventListener("click", (e) => {
@@ -137,11 +154,14 @@ guildSubtabs.addEventListener("click", (e) => {
     .querySelectorAll(".subtab-btn")
     .forEach((b) => b.classList.remove("active"));
   btn.classList.add("active");
+  requestVersion++;
+  requestController?.abort();
   currentSubtab = btn.dataset.subtab;
   currentPage = 1;
   updateDeleteAllLabel();
   grid.innerHTML = "";
   statusEl.textContent = "";
+  if (activeQuery()) fetchData();
 });
 
 function renderLogin() {
@@ -162,229 +182,93 @@ function updateDeleteAllLabel() {
   }
 }
 
-function showSettingsPanel() {
-  if (!settingsPanel) {
-    console.error("#settings-panel not found in DOM");
+async function showSettingsPanel() {
+  for (const element of [searchForm, userSubtabs, guildSubtabs, grid, pagination, statusEl, inviteBanner]) element.classList.add("hidden");
+  document.getElementById("delete-all-container").classList.add("hidden");
+  settingsPanel.classList.remove("hidden");
+  if (!loggedInUser) {
+    settingsPanel.innerHTML = '<p>Log in to delete or restore your Fishie data.</p><button class="discord-login-btn" id="privacy-login">Login with Discord</button>';
+    settingsPanel.querySelector("button").onclick = async () => {
+      localStorage.setItem("settings_pending", "1");
+      try { await window.startFishieOAuth(); }
+      catch (error) { settingsPanel.querySelector("p").textContent = error.message; }
+    };
     return;
   }
-  searchForm.classList.add("hidden");
-  userSubtabs.classList.add("hidden");
-  guildSubtabs.classList.add("hidden");
-  document.getElementById("delete-all-container").classList.add("hidden");
-  grid.classList.add("hidden");
-  pagination.classList.add("hidden");
-  statusEl.classList.add("hidden");
-  if (inviteBanner) inviteBanner.classList.add("hidden");
-  loginSection.classList.add("hidden");
-  settingsPanel.classList.remove("hidden");
-  renderSettings();
+  const categories = [
+    ["avatars", "Avatars"], ["username_logs", "Usernames"], ["display_name_logs", "Display names"],
+    ["discrim_logs", "Discriminators"], ["stag_logs", "Server tags"], ["nickname_logs", "Nicknames"],
+    ["user_status_history", "Statuses"]
+  ];
+  settingsPanel.innerHTML = '<div class="privacy-controls"><h3>Your Fishie data</h3>' +
+    '<p>Deleted data is hidden immediately. You have 31 days to restore it before it is permanently deleted.</p>' +
+    '<button class="small-btn danger" id="privacy-delete-account">Delete entire account</button>' +
+    '<p>This removes your wallet, inventory, linked accounts, settings and saved history. Website login sessions are revoked immediately and are not restored.</p>' +
+    '<label for="privacy-category">Delete a specific log</label><select id="privacy-category" class="guild-select">' +
+    categories.map(([key,label]) => '<option value="' + key + '">' + label + '</option>').join("") +
+    '</select><button class="small-btn danger" id="privacy-delete-category">Delete selected log</button>' +
+    '<hr><p>Restore user data</p><button class="small-btn hidden" id="privacy-restore">Restore all data</button>' +
+    '<p id="privacy-pending" role="status"></p>' +
+    '<div id="privacy-server-section"><hr><label for="privacy-guild">Restore server data</label>' +
+    '<select id="privacy-guild" class="guild-select hidden"></select><button class="small-btn hidden" id="privacy-restore-guild">Restore server data</button>' +
+    '<p id="privacy-server-pending" role="status">Loading pending deletions…</p></div></div>';
+  const status = settingsPanel.querySelector("#privacy-pending");
+  const userId = loggedInUser.id;
+  const request = async (path, method, base = "/user/" + userId) => {
+    const res = await FishieWeb.fetch(FISHIE_API + base + path, {method, signal: AbortSignal.timeout(120000)});
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.detail || "Could not update your data.");
+    return data;
+  };
+  const refresh = async () => {
+    const data = await request("/pending-deletions", "GET");
+    settingsPanel.querySelector("#privacy-restore").classList.toggle("hidden", !data.records);
+    status.textContent = data.records ? "Records pending deletion: " + data.records.toLocaleString() + ". Next expiry: " + new Date(data.next_expiry).toLocaleString() + "." : "No data is pending deletion.";
+  };
+  const run = async action => {
+    const buttons = settingsPanel.querySelectorAll("button");
+    buttons.forEach(button => button.disabled = true);
+    try { await action(); }
+    catch (error) { status.textContent = error.message; }
+    finally { buttons.forEach(button => button.disabled = false); }
+  };
+  settingsPanel.querySelector("#privacy-delete-account").onclick = () => {
+    if (!confirm("Delete your entire Fishie account, including wallet, inventory, linked accounts, settings and history? You have 31 days to restore it. You will need to log in again.")) return;
+    run(async () => {
+      await request("", "DELETE");
+      loggedInUser = null;
+      localStorage.removeItem("discord_user");
+      window.dispatchEvent(new CustomEvent("discord-login"));
+      await showSettingsPanel();
+      settingsPanel.insertAdjacentHTML("afterbegin", "<p>Your account data is pending deletion for 31 days. Log in again to restore it.</p>");
+    });
+  };
+  settingsPanel.querySelector("#privacy-delete-category").onclick = () => {
+    const select = settingsPanel.querySelector("#privacy-category");
+    if (!confirm("Delete all your " + select.selectedOptions[0].textContent.toLowerCase() + "? They will be hidden immediately and can be restored for 31 days.")) return;
+    run(async () => { await request("?table=" + select.value, "DELETE"); await refresh(); });
+  };
+  settingsPanel.querySelector("#privacy-restore").onclick = () => run(async () => {
+    const data = await request("/restore", "POST");
+    await refresh();
+    if (data.pending) status.textContent = "Records restored: " + data.restored.toLocaleString() + "." +
+      (data.pending ? " Still pending: " + data.pending.toLocaleString() + ", due to expired tasks, current data conflicts or another deletion request." : "");
+  });
+  settingsPanel.querySelector("#privacy-restore-guild").onclick = () => run(async () => {
+    const guildId = settingsPanel.querySelector("#privacy-guild").value;
+    if (!guildId) return;
+    const data = await request("/restore", "POST", "/guild/" + guildId);
+    await loadManagedGuilds();
+    if (data.pending) settingsPanel.querySelector("#privacy-server-pending").textContent = "Server records restored: " + data.restored.toLocaleString() + ". Still pending: " + data.pending.toLocaleString() + ".";
+  });
+  loadManagedGuilds();
+  try { await refresh(); } catch (error) { status.textContent = error.message; }
 }
-
 function hideSettingsPanel() {
-  searchForm.classList.remove("hidden");
-  if (currentTab === "user") userSubtabs.classList.remove("hidden");
-  else if (currentTab === "guild") guildSubtabs.classList.remove("hidden");
-  document.getElementById("delete-all-container").classList.remove("hidden");
-  grid.classList.remove("hidden");
-  statusEl.classList.remove("hidden");
-  if (inviteBanner) inviteBanner.classList.remove("hidden");
-  loginSection.classList.remove("hidden");
   settingsPanel.classList.add("hidden");
+  for (const element of [searchForm, grid, statusEl, inviteBanner]) element.classList.remove("hidden");
+  document.getElementById("delete-all-container").classList.remove("hidden");
 }
-
-function renderSettings() {
-  if (loggedInUser) {
-    settingsPanel.innerHTML = `
-      <div class="settings-card">
-        <div class="settings-header">
-          <p class="settings-greeting">Hello, <strong>${escapeHtml(loggedInUser.global_name || loggedInUser.username)}</strong></p>
-          <button id="settings-logout-btn" class="small-btn">Logout</button>
-        </div>
-        <nav class="settings-subtabs" id="settings-subtabs">
-          <button class="subtab-btn active" data-subtab="user">User</button>
-          <button class="subtab-btn" data-subtab="guild">Server</button>
-        </nav>
-        <div class="subtab-panel" id="subtab-user">
-          <div class="settings-tracking">
-            <p class="settings-section-title">Privacy settings</p>
-            <p class="settings-hint">Control new tracking and who can view your saved history.</p>
-            <div class="tracking-toggles" id="privacy-toggles">
-              <span class="toggle-status">Loading…</span>
-            </div>
-            <p class="settings-section-title">Individual tracking settings</p>
-            <p class="settings-hint">Choose which types of new activity Fishie can save.</p>
-            <div class="tracking-toggles" id="tracking-toggles">
-              <span class="toggle-status">Loading…</span>
-            </div>
-            <p class="settings-disclaimer">Turning tracking off stops future tracking but does not remove existing data. History visibility controls whether other users can look up saved information. You can change these settings whenever you want.</p>
-          </div>
-        </div>
-        <div class="subtab-panel hidden" id="subtab-guild">
-          <p class="settings-section-title">Server tracking settings</p>
-          <p class="settings-hint">Select a server to manage its tracking opt-outs.</p>
-          <div class="guild-select-wrapper">
-            <select id="guild-select" class="guild-select">
-              <option value="">Select a server…</option>
-            </select>
-          </div>
-          <div class="tracking-toggles hidden" id="guild-toggles"></div>
-        </div>
-        <p class="settings-invite">Want to track your avatars (and more)? Join the <a href="https://discord.gg/rM9u4MRFBE" target="_blank" rel="noopener">Discord server</a> or invite the <a href="https://discord.com/oauth2/authorize?client_id=${CLIENT_ID}&scope=bot+applications.commands&permissions=138513074240" target="_blank" rel="noopener">Discord bot</a></p>
-      </div>`;
-
-    document
-      .getElementById("settings-logout-btn")
-      .addEventListener("click", () => {
-        FishieWeb.fetch(`${FISHIE_API}/oauth/logout`, { method: "POST" }).finally(() => {
-          localStorage.removeItem("discord_user");
-          loggedInUser = null;
-          hideSettingsPanel();
-          tabs.forEach((b) => b.classList.remove("active"));
-          const userBtn = document.querySelector(
-            '#discord-tabs [data-tab="user"]',
-          );
-          if (userBtn) userBtn.classList.add("active");
-          currentTab = "user";
-          currentSubtab = "avatars";
-          userSubtabs.classList.remove("hidden");
-          renderLogin();
-        });
-      });
-
-    document
-      .querySelectorAll("#settings-subtabs .subtab-btn")
-      .forEach((btn) => {
-        btn.addEventListener("click", () => {
-          document
-            .querySelectorAll("#settings-subtabs .subtab-btn")
-            .forEach((b) => b.classList.remove("active"));
-          btn.classList.add("active");
-          document
-            .querySelectorAll(".subtab-panel")
-            .forEach((p) => p.classList.add("hidden"));
-          const panel = document.getElementById(`subtab-${btn.dataset.subtab}`);
-          if (panel) panel.classList.remove("hidden");
-          if (btn.dataset.subtab === "guild") {
-            document.getElementById("guild-toggles").classList.add("hidden");
-            fetchGuilds();
-          } else {
-            document.getElementById("guild-select").value = "";
-            document.getElementById("guild-toggles").classList.add("hidden");
-          }
-        });
-      });
-
-    document.getElementById("guild-select").addEventListener("change", (e) => {
-      const guildId = e.target.value;
-      if (guildId) fetchGuildOptOuts(guildId);
-      else document.getElementById("guild-toggles").classList.add("hidden");
-    });
-
-    fetchOptOuts();
-  } else {
-    settingsPanel.innerHTML = `
-      <div class="settings-card">
-        <p class="settings-greeting">You are not logged in.</p>
-        <p class="settings-prompt">Would you like to log in with Discord?</p>
-        <div class="settings-actions">
-          <button id="settings-login-yes" class="small-btn">Yes</button>
-          <button id="settings-login-no" class="small-btn">No</button>
-        </div>
-        <p class="settings-invite">Want to track your avatars (and more)? Join the <a href="https://discord.gg/rM9u4MRFBE" target="_blank" rel="noopener">Discord server</a> or invite the <a href="https://discord.com/oauth2/authorize?client_id=${CLIENT_ID}&scope=bot+applications.commands&permissions=138513074240" target="_blank" rel="noopener">Discord bot</a></p>
-      </div>`;
-    document
-      .getElementById("settings-login-yes")
-      .addEventListener("click", async () => {
-        localStorage.setItem("settings_pending", "1");
-        try {
-          await window.startFishieOAuth("https://crygup.com");
-        } catch (error) {
-          localStorage.removeItem("settings_pending");
-          console.error("Could not start Discord login:", error);
-        }
-      });
-    document
-      .getElementById("settings-login-no")
-      .addEventListener("click", () => {
-        hideSettingsPanel();
-        tabs.forEach((b) => b.classList.remove("active"));
-        const userBtn = document.querySelector(
-          '#discord-tabs [data-tab="user"]',
-        );
-        if (userBtn) userBtn.classList.add("active");
-        currentTab = "user";
-        currentSubtab = "avatars";
-        userSubtabs.classList.remove("hidden");
-      });
-  }
-}
-
-const TRACKING_ITEMS = [
-  { key: "avatar", label: "Avatar tracking" },
-  { key: "username", label: "Username tracking" },
-  { key: "display", label: "Display name tracking" },
-  { key: "nickname", label: "Nickname tracking" },
-  { key: "discrim", label: "Discriminator tracking", disabled: true },
-  { key: "stag", label: "Server tag tracking" },
-  { key: "status", label: "Status tracking" },
-  { key: "joins", label: "Server join tracking" },
-  { key: "xp", label: "XP and message count tracking" },
-  { key: "commands", label: "Command usage tracking" },
-  { key: "activity", label: "Game and activity tracking" },
-  { key: "pokemon", label: "Pokémon solve tracking" },
-  { key: "corn", label: "Corn reaction tracking" },
-  { key: "emoji", label: "Emoji statistics tracking" },
-  { key: "downloads", label: "Download site statistics" },
-  { key: "reactions", label: "Reaction history" },
-  { key: "games", label: "Game statistics" },
-  { key: "currency", label: "Currency history" },
-];
-
-const GUILD_TRACKING_ITEMS = [
-  { key: "icon", label: "Server icon history" },
-  { key: "name", label: "Server name history" },
-  { key: "joins", label: "Member join history" },
-  { key: "status", label: "Member status history" },
-  { key: "commands", label: "Server command logs" },
-  { key: "emoji", label: "Emoji statistics" },
-  { key: "downloads", label: "Download statistics" },
-  { key: "corn", label: "Corn reactions" },
-  { key: "reactions", label: "Reaction history" },
-  { key: "tags", label: "Server tags" },
-  { key: "mudae", label: "Mudae wishes and timers" },
-];
-
-async function fetchGuilds() {
-  const select = document.getElementById("guild-select");
-  if (!select || !loggedInUser) return;
-  select.disabled = true;
-  select.innerHTML = '<option value="">Loading…</option>';
-  try {
-    const res = await FishieWeb.fetch(`${FISHIE_API}/user/${loggedInUser.id}/guilds`, {
-    });
-    if (!res.ok) throw new Error("Failed to fetch guilds");
-    const data = await res.json();
-    if (!data.guilds.length) {
-      select.innerHTML = '<option value="">No eligible servers</option>';
-      return;
-    }
-    select.innerHTML =
-      '<option value="">Select a server…</option>' +
-      data.guilds
-        .map(
-          (g) =>
-            `<option value="${escapeHtml(g.id)}">${escapeHtml(g.name)}</option>`,
-        )
-        .join("");
-    managedGuildIds = data.guilds.map((g) => g.id);
-    select._guildData = data.guilds;
-  } catch {
-    select.innerHTML = '<option value="">Failed to load servers</option>';
-  } finally {
-    select.disabled = false;
-  }
-}
-
 async function loadManagedGuilds() {
   if (!loggedInUser) {
     managedGuildIds = [];
@@ -393,178 +277,24 @@ async function loadManagedGuilds() {
   try {
     const res = await FishieWeb.fetch(`${FISHIE_API}/user/${loggedInUser.id}/guilds`, {
     });
-    if (res.ok) {
+    if (!res.ok) throw new Error("Could not load pending server deletions. Please try again.");
+    {
       const data = await res.json();
       managedGuildIds = data.guilds.map((g) => g.id);
+      const picker = document.getElementById("privacy-guild");
+      if (picker) {
+        const pending = data.guilds.filter(g => g.pending_deletion);
+        picker.innerHTML = pending.map(g => '<option value="' + escapeHtml(g.id) + '">' + escapeHtml(g.name) + '</option>').join("");
+        picker.classList.toggle("hidden", !pending.length);
+        document.getElementById("privacy-restore-guild").classList.toggle("hidden", !pending.length);
+        document.getElementById("privacy-server-pending").textContent = pending.length ? "" : "No data is pending deletion.";
+      }
       updateDeleteAllLabel();
     }
   } catch {
     managedGuildIds = [];
-  }
-}
-
-function fetchGuildOptOuts(guildId) {
-  const container = document.getElementById("guild-toggles");
-  if (!container) return;
-  const guilds = document.getElementById("guild-select")._guildData || [];
-  const guild = guilds.find((g) => g.id === guildId);
-  if (!guild) return;
-    renderGuildToggles(guild.opted_out || [], guildId);
-}
-
-function renderGuildToggles(optedOut, guildId) {
-  const container = document.getElementById("guild-toggles");
-  if (!container) return;
-  container.innerHTML = GUILD_TRACKING_ITEMS.map((item) => {
-    const enabled = !optedOut.includes(item.key);
-    return `
-      <label class="toggle-row">
-        <span class="toggle-label">${escapeHtml(item.label)}</span>
-        <input type="checkbox" class="toggle-input guild-toggle" data-key="${escapeHtml(item.key)}" data-guild="${escapeHtml(guildId)}" ${enabled ? "checked" : ""}>
-        <span class="toggle-switch"></span>
-      </label>`;
-  }).join("");
-  container.classList.remove("hidden");
-  container.querySelectorAll(".guild-toggle").forEach((input) => {
-    input.addEventListener("change", () => saveGuildOptOuts(guildId));
-  });
-}
-
-async function saveGuildOptOuts(guildId) {
-  if (!loggedInUser) return;
-  const optedOut = GUILD_TRACKING_ITEMS.filter((item) => {
-    const input = document.querySelector(
-      `#guild-toggles .guild-toggle[data-key="${item.key}"]`,
-    );
-    return input && !input.checked;
-  }).map((item) => item.key);
-  try {
-    const current = await FishieWeb.fetch(`${FISHIE_API}/guild/${guildId}/opted-out`);
-    const currentData = current.ok ? await current.json() : {};
-    await FishieWeb.fetch(`${FISHIE_API}/guild/${guildId}/opted-out`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        items: optedOut,
-        tracking_enabled: currentData.tracking_enabled !== false,
-        history_public: currentData.history_public !== false,
-      }),
-    });
-  } catch {
-    /* silently fail */
-  }
-}
-
-async function fetchOptOuts() {
-  const container = document.getElementById("tracking-toggles");
-  const privacyContainer = document.getElementById("privacy-toggles");
-  if (!container || !privacyContainer || !loggedInUser) return;
-  try {
-    const [optRes, privacyRes] = await Promise.all([
-      FishieWeb.fetch(`${FISHIE_API}/user/${loggedInUser.id}/opted-out`),
-      FishieWeb.fetch(`${FISHIE_API}/user/${loggedInUser.id}/privacy-settings`),
-    ]);
-    if (!optRes.ok || !privacyRes.ok) throw new Error("Failed to fetch");
-    const [optData, privacyData] = await Promise.all([
-      optRes.json(),
-      privacyRes.json(),
-    ]);
-    renderPrivacyToggles(privacyData);
-    renderToggles(optData.items || []);
-  } catch {
-    container.innerHTML =
-      '<span class="toggle-status">Failed to load tracking settings.</span>';
-    privacyContainer.innerHTML =
-      '<span class="toggle-status">Failed to load privacy settings.</span>';
-  }
-}
-
-function renderPrivacyToggles(settings) {
-  const container = document.getElementById("privacy-toggles");
-  if (!container) return;
-  container.innerHTML = `
-    <label class="toggle-row">
-      <span class="toggle-label">Track new activity</span>
-      <input type="checkbox" class="toggle-input privacy-toggle" data-key="tracking_enabled" ${settings.tracking_enabled !== false ? "checked" : ""}>
-      <span class="toggle-switch"></span>
-    </label>
-    <label class="toggle-row">
-      <span class="toggle-label">Public saved history</span>
-      <input type="checkbox" class="toggle-input privacy-toggle" data-key="history_public" ${settings.history_public === true ? "checked" : ""}>
-      <span class="toggle-switch"></span>
-    </label>`;
-  container.querySelectorAll(".privacy-toggle").forEach((input) => {
-    input.addEventListener("change", savePrivacySettings);
-  });
-}
-
-async function savePrivacySettings() {
-  if (!loggedInUser) return;
-  const tracking = document.querySelector(
-    '#privacy-toggles .privacy-toggle[data-key="tracking_enabled"]',
-  );
-  const history = document.querySelector(
-    '#privacy-toggles .privacy-toggle[data-key="history_public"]',
-  );
-  if (!tracking || !history) return;
-  const res = await FishieWeb.fetch(
-    `${FISHIE_API}/user/${loggedInUser.id}/privacy-settings`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        tracking_enabled: tracking.checked,
-        history_public: history.checked,
-      }),
-    },
-  );
-  if (!res.ok) {
-    await fetchOptOuts();
-  }
-}
-
-function renderToggles(optedOut) {
-  const container = document.getElementById("tracking-toggles");
-  if (!container) return;
-  container.innerHTML = TRACKING_ITEMS.map((item) => {
-    const enabled = !item.disabled && !optedOut.includes(item.key);
-    const disabledAttr = item.disabled ? " disabled" : "";
-    return `
-      <label class="toggle-row${item.disabled ? " toggle-disabled" : ""}">
-        <span class="toggle-label">${escapeHtml(item.label)}</span>
-        <input type="checkbox" class="toggle-input" data-key="${escapeHtml(item.key)}" ${enabled ? "checked" : ""}${disabledAttr}>
-        <span class="toggle-switch"></span>
-      </label>`;
-  }).join("");
-  container
-    .querySelectorAll(".toggle-input:not([disabled])")
-    .forEach((input) => {
-      input.addEventListener("change", () => saveOptOuts());
-    });
-}
-
-async function saveOptOuts() {
-  if (!loggedInUser) return;
-  const optedOut = TRACKING_ITEMS.filter((item) => !item.disabled)
-    .filter((item) => {
-      const input = document.querySelector(
-        `#tracking-toggles .toggle-input[data-key="${item.key}"]`,
-      );
-      return input && !input.checked;
-    })
-    .map((item) => item.key);
-  try {
-    await FishieWeb.fetch(`${FISHIE_API}/user/${loggedInUser.id}/opted-out`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ items: optedOut }),
-    });
-  } catch {
-    /* silently fail */
+    const status = document.getElementById("privacy-server-pending");
+    if (status) status.textContent = "Could not load pending server deletions. Please try again.";
   }
 }
 
@@ -572,7 +302,11 @@ document.getElementById("search-form").addEventListener("submit", (e) => {
   e.preventDefault();
   setActiveQuery(input.value.trim());
   currentPage = 1;
+  requestVersion++;
+  requestController?.abort();
+  currentUserId = currentGuildId = null;
   if (activeQuery()) fetchData();
+  else { grid.innerHTML = ""; pagination.classList.add("hidden"); statusEl.textContent = "Enter a Discord ID or username."; updateDeleteAllLabel(); }
 });
 
 const USER_ENDPOINTS = {
@@ -616,49 +350,46 @@ const canDelete = () =>
       managedGuildIds.includes(currentGuildId)));
 
 async function fetchData() {
+  const version = ++requestVersion;
+  requestController?.abort();
+  requestController = new AbortController();
+  const signal = requestController.signal;
+  const tab = currentTab, subtab = currentSubtab, page = currentPage, query = activeQuery();
+  const url = new URL(location.href);
+  for (const [key, value] of Object.entries({tab, subtab, page, q: query})) url.searchParams.set(key, value);
+  history.replaceState(null, "", url);
   grid.innerHTML = "";
+  currentUserId = currentGuildId = null;
+  lastTotal = 0;
+  updateDeleteAllLabel();
   statusEl.textContent = "Loading…";
   pagination.classList.add("hidden");
   try {
-    let id = activeQuery();
-    if (currentTab === "user" && !/^\d+$/.test(activeQuery())) {
-      const r = await FishieWeb.fetch(
-        `${FISHIE_API}/resolve?q=${encodeURIComponent(activeQuery())}`,
-      );
-      if (!r.ok) {
-        const e = await r.json().catch(() => ({}));
-        throw new Error(e.detail || "Could not resolve user");
-      }
-      id = (await r.json()).user_id;
-    }
-    if (currentTab === "user") {
-      currentUserId = id;
-      const res = await FishieWeb.fetch(USER_ENDPOINTS[currentSubtab](id, currentPage));
-      if (!res.ok) {
-        const e = await res.json().catch(() => ({}));
-        throw new Error(e.detail || "Not found");
-      }
+    let id = query;
+    if (tab === "user" && !/^\d+$/.test(query)) {
+      const res = await FishieWeb.fetch(FISHIE_API + "/resolve?q=" + encodeURIComponent(query), {signal});
       const data = await res.json();
-      if (currentSubtab === "avatars") renderAvatars(data.avatars);
-      else renderTextItems(data.items);
-      renderPagination(data.page, data.pages);
-      statusEl.textContent = data.total ? `${data.total} found` : "No results.";
-    } else if (currentTab === "guild") {
-      currentGuildId = id;
-      const res = await FishieWeb.fetch(GUILD_ENDPOINTS[currentSubtab](id, currentPage));
-      if (!res.ok) {
-        const e = await res.json().catch(() => ({}));
-        throw new Error(e.detail || "Not found");
-      }
-      const data = await res.json();
-      if (currentSubtab === "icons") renderAvatars(data.items);
-      else renderTextItems(data.items);
-      renderPagination(data.page, data.pages);
-      statusEl.textContent = data.total ? `${data.total} found` : "No results.";
+      if (!res.ok) throw new Error(data.detail || "Could not resolve user");
+      id = String(data.user_id);
     }
+    if (version !== requestVersion) return;
+    if (!/^\d+$/.test(id)) throw new Error("Enter a valid Discord ID.");
+    const endpoint = (tab === "user" ? USER_ENDPOINTS : GUILD_ENDPOINTS)[subtab];
+    if (!endpoint) return;
+    const res = await FishieWeb.fetch(endpoint(id, page), {signal});
+    const data = await res.json();
+    if (version !== requestVersion) return;
+    if (!res.ok) throw new Error(data.detail || "Could not load history");
+    if (tab === "user") currentUserId = id;
+    else currentGuildId = id;
+    lastTotal = data.total || 0;
+    if (subtab === "avatars" || subtab === "icons") renderAvatars(data.avatars || data.items || []);
+    else renderTextItems(data.items || []);
+    renderPagination(data.page, data.pages);
+    statusEl.textContent = lastTotal ? lastTotal + " found" : "No results.";
     updateDeleteAllLabel();
-  } catch (err) {
-    statusEl.textContent = err.message;
+  } catch (error) {
+    if (version === requestVersion && error.name !== "AbortError") statusEl.textContent = error.message;
   }
 }
 
@@ -666,14 +397,18 @@ function renderAvatars(avatars) {
   grid.innerHTML = "";
   grid.className = "avatar-grid";
   for (const av of avatars) {
-    const div = document.createElement("div");
+    const div = document.createElement("button");
+    div.type = "button";
+    div.setAttribute("aria-label", "View image saved " + new Date(av.created_at).toLocaleDateString());
     div.className = "avatar-cell";
     const img = document.createElement("img");
     img.src = av.url || av.icon;
     img.alt = av.avatar_key || av.icon_key || "";
     img.loading = "lazy";
     img.onerror = () => {
-      img.src = "";
+      img.onerror = null;
+      img.removeAttribute("src");
+      img.alt = "Image unavailable";
     };
     div.appendChild(img);
     div.addEventListener("click", () => openModal(av));
@@ -701,15 +436,16 @@ function renderTextItems(items) {
     if (canDelete())
       row.querySelector(".delete-btn").addEventListener("click", (e) => {
         e.stopPropagation();
-        deleteItem(TABLE_MAP[currentSubtab], key);
+        deleteItem(TABLE_MAP[currentSubtab], key, item.value + " · " + new Date(item.created_at).toLocaleDateString());
       });
     list.appendChild(row);
   }
   grid.appendChild(list);
 }
 
-async function deleteItem(table, key) {
-  if (!confirm("Delete this entry?")) return;
+async function deleteItem(table, key, description = key) {
+  if (!canDelete()) return;
+  if (!confirm("Delete this " + tabLabel().toLowerCase() + " entry for " + activeQuery() + "? You have 31 days to restore it.\n" + description)) return;
   const targetId = currentTab === "user" ? currentUserId : currentGuildId;
   try {
     const res = await FishieWeb.fetch(
@@ -718,7 +454,7 @@ async function deleteItem(table, key) {
     );
     if (!res.ok) throw new Error("Delete failed");
     closeModal();
-    alert("Deleted.");
+    alert("Hidden now. You have 31 days to restore it from Settings.");
     fetchData();
   } catch {
     alert("Delete failed.");
@@ -726,25 +462,16 @@ async function deleteItem(table, key) {
 }
 
 async function deleteAll() {
-  if (
-    !confirm(
-      `Delete ALL your ${tabLabel().toLowerCase()}? This cannot be undone!`,
-    )
-  )
-    return;
-  if (!confirm("Are you sure? This data will be permanently deleted.")) return;
+  if (!canDelete() || !lastTotal) return;
   const targetId = currentTab === "user" ? currentUserId : currentGuildId;
+  const endpoint = currentTab === "guild" ? "/guild/" + targetId + "/data" : "/user/" + targetId;
+  const table = TABLE_MAP[currentSubtab];
+  if (!confirm("Delete all " + lastTotal + " " + tabLabel().toLowerCase() + " entries for " + targetId + "? Other categories will be kept. You can restore these entries for 31 days.")) return;
   try {
-    const res = await FishieWeb.fetch(
-      `${FISHIE_API}/user/${targetId}?table=${TABLE_MAP[currentSubtab]}`,
-      { method: "DELETE" },
-    );
-    if (!res.ok) throw new Error("Delete all failed");
-    alert(`${tabLabel()} deleted.`);
-    fetchData();
-  } catch {
-    alert("Delete failed.");
-  }
+    const res = await FishieWeb.fetch(FISHIE_API + endpoint + "?table=" + table, {method: "DELETE"});
+    if (!res.ok) throw new Error("Could not delete history. No changes were confirmed.");
+    await fetchData();
+  } catch (error) { statusEl.textContent = error.message; }
 }
 
 function escapeHtml(s) {
@@ -777,7 +504,9 @@ const modal = document.getElementById("modal");
 const modalImg = document.getElementById("modal-img");
 const modalKey = document.getElementById("modal-key");
 const modalDate = document.getElementById("modal-date");
+let modalTrigger;
 function openModal(av) {
+  modalTrigger = document.activeElement;
   modalImg.src = av.url || av.icon || "";
   modalKey.innerHTML = `${escapeHtml(av.avatar_key || av.icon_key || av.value)} ${canDelete() ? `<button class="modal-del" data-key="${escapeHtml(av.avatar_key || av.icon_key || av.id)}">Delete</button>` : ""}`;
   modalDate.textContent = new Date(av.created_at).toLocaleString("en-US", {
@@ -795,16 +524,24 @@ function openModal(av) {
     });
   }
   modal.classList.remove("hidden");
+  modal.querySelector(".modal-close").focus();
 }
 function closeModal() {
   modal.classList.add("hidden");
   modalImg.src = "";
+  modalTrigger?.focus();
 }
 document
   .querySelector(".modal-backdrop")
   ?.addEventListener("click", closeModal);
 document.querySelector(".modal-close")?.addEventListener("click", closeModal);
 document.addEventListener("keydown", (e) => {
+  if (e.key === "Tab" && !modal.classList.contains("hidden")) {
+    const buttons = [...modal.querySelectorAll("button")];
+    const first = buttons[0], last = buttons[buttons.length - 1];
+    if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+    else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+  }
   if (e.key === "Escape" && !modal.classList.contains("hidden")) closeModal();
 });
 
@@ -813,7 +550,7 @@ const qp = new URLSearchParams(window.location.search);
 const q = qp.get("q");
 const tabParam = qp.get("tab");
 if (
-  tabParam &&
+  ["user", "guild", "settings"].includes(tabParam) &&
   document.querySelector(`#discord-tabs [data-tab="${tabParam}"]`)
 ) {
   document
@@ -823,11 +560,12 @@ if (
     .querySelector(`#discord-tabs [data-tab="${tabParam}"]`)
     .classList.add("active");
   currentTab = tabParam;
+  currentSubtab = currentTab === "guild" ? "icons" : "avatars";
   if (currentTab === "user") userSubtabs.classList.remove("hidden");
   else if (currentTab === "guild") guildSubtabs.classList.remove("hidden");
 }
 const subtabParam = qp.get("subtab");
-if (subtabParam) {
+if (Object.hasOwn(currentTab === "guild" ? GUILD_ENDPOINTS : USER_ENDPOINTS, subtabParam)) {
   const subtabBar =
     currentTab === "user"
       ? userSubtabs
@@ -845,26 +583,16 @@ if (subtabParam) {
     }
   }
 }
-if (currentTab === "user") userSubtabs.classList.remove("hidden");
-else if (currentTab === "guild") guildSubtabs.classList.remove("hidden");
+userSubtabs.classList.toggle("hidden", currentTab !== "user");
+guildSubtabs.classList.toggle("hidden", currentTab !== "guild");
+currentPage = Math.max(1, parseInt(qp.get("page"), 10) || 1);
 const wantsSettings =
   currentTab === "settings" || localStorage.getItem("settings_pending");
 if (wantsSettings) {
-  document
-    .querySelectorAll("#discord-tabs .tab-btn")
-    .forEach((b) => b.classList.remove("active"));
-  const settingsTab = document.querySelector(
-    '#discord-tabs [data-tab="settings"]',
-  );
-  if (settingsTab) settingsTab.classList.add("active");
+  localStorage.removeItem("settings_pending");
   currentTab = "settings";
-  if (loggedInUser) {
-    input.value = String(loggedInUser.id);
-    localStorage.removeItem("settings_pending");
-    showSettingsPanel();
-  } else if (!localStorage.getItem("settings_pending")) {
-    showSettingsPanel();
-  }
+  tabs.forEach(button => button.classList.toggle("active", button.dataset.tab === "settings"));
+  showSettingsPanel();
 } else if (q) {
   setActiveQuery(q);
   input.value = q;

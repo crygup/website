@@ -621,3 +621,16 @@
   background: #1a1d20;
   color: #e2e8f0;
 }
+
+button.avatar-cell { padding: 0; border: 0; background: transparent; cursor: pointer; }
+button.avatar-cell:focus-visible { outline: 2px solid white; outline-offset: 3px; }
+.privacy-controls { max-width: 540px; margin: 1.5rem auto; text-align: left; }
+.privacy-controls p { margin: .8rem 0; }
+.privacy-controls select { display: block; width: 100%; margin: .5rem 0; appearance: auto; }
+.privacy-controls hr { margin: 1.2rem 0; border: 0; border-top: 1px solid #4a4b56; }
+.privacy-controls h3 { margin: 0 0 1rem; }
+.privacy-controls .small-btn { margin: 0; }
+.privacy-controls select { box-sizing: border-box; }
+.privacy-controls label { display: block; margin-top: 1rem; }
+.privacy-controls .hidden { display: none; }
+.privacy-controls p:empty { display: none; }
