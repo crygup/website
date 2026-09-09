@@ -13,7 +13,6 @@
     />
     <style>
       body {
-        font-family: system-ui, sans-serif;
         background: #212327;
         color: #e2e8f0;
         padding: 2rem;
@@ -41,24 +40,6 @@
         line-height: 1.5;
         margin-bottom: 1.5rem;
       }
-      .login-btn {
-        display: inline-block;
-        padding: 0.75rem 2rem;
-        background: #5865f2;
-        color: #fff;
-        border-radius: 0.3rem;
-        text-decoration: none;
-        font-weight: 600;
-        font-size: 0.95rem;
-        transition: background 0.15s;
-        cursor: pointer;
-        user-select: none;
-        -webkit-user-select: none;
-      }
-      .login-btn:hover {
-        background: #4752c4;
-      }
-
       .dashboard {
         display: none;
         max-width: 800px;
@@ -233,8 +214,27 @@
         color: #fff;
       }
       .settings-subtabs {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
         justify-content: center;
+        margin-bottom: 0.75rem;
       }
+
+      .picker-field { margin: 0.75rem 0; }
+      .search-picker { position: relative; min-width: 0; width: 100%; }
+      .search-picker summary { cursor: pointer; overflow-wrap: anywhere; }
+      .picker-menu {
+        padding: 0.5rem;
+        border: 1px solid #333;
+        border-radius: 0.25rem;
+        background: #1a1d20;
+      }
+      .picker-menu .text-input { width: 100%; display: block; margin-top: 0.25rem; }
+      .picker-menu select { height: 10rem; overflow-y: auto; }
+      .picker-menu option { padding: 0.4rem; }
+      .picker-menu option[hidden] { display: none; }
+      .picker-menu p { color: #94a3b8; font-size: 0.8rem; margin-top: 0.4rem; }
 
       .guild-dropdown {
         position: relative;
@@ -345,7 +345,13 @@
         color: #64748b;
       }
 
+      #guildNotificationsTab label { display: block; margin: 0.75rem 0; }
+      #guildNotificationsTab .desc { color: #94a3b8; font-size: 0.85rem; line-height: 1.5; margin: 0.5rem 0; }
+      #guildNotificationsTab .text-input { display: block; width: 100%; margin-top: 0.25rem; }
+      #guildSelect { width: 100%; margin: 0.4rem 0 1rem; }
       .toggle {
+        border: 0;
+        padding: 0;
         width: 36px;
         height: 20px;
         background: #2a2c2f;
@@ -355,6 +361,8 @@
         transition: background 0.15s;
         flex-shrink: 0;
       }
+      .toggle:focus-visible { outline: 2px solid #fff; outline-offset: 3px; }
+      .toggle:disabled { cursor: not-allowed; }
       .toggle.on {
         background: #5865f2;
       }
@@ -423,7 +431,7 @@
       }
     </style>
   </head>
-  <body>
+  <body data-page="dashboard">
     <h1>Fishie Dashboard</h1>
 
     <div class="login-card" id="loginView">
@@ -432,7 +440,7 @@
         Log in with Discord to manage your settings, view reminders, and
         configure guild options.
       </p>
-      <div class="login-btn" id="loginBtn">Login with Discord</div>
+      <button type="button" class="discord-login-btn" id="loginBtn">Login with Discord</button>
     </div>
 
     <div class="dashboard" id="dashboardView">
@@ -464,13 +472,8 @@
       </div>
 
       <div class="tab-panel" id="tabGuild">
-        <div class="guild-dropdown" id="guildDropdown">
-          <div class="guild-dropdown-header" id="guildDropdownHeader">
-            <span id="guildDropdownText">Select a server...</span>
-            <span class="guild-dropdown-arrow">▾</span>
-          </div>
-          <div class="guild-dropdown-list" id="guildDropdownList"></div>
-        </div>
+        <label for="guildSelect">Server</label>
+        <select id="guildSelect" class="text-input" disabled><option>Loading servers…</option></select>
         <div id="guildSettingsContent"></div>
       </div>
 
@@ -502,6 +505,7 @@
     </div>
 
     <script src="session.js"></script>
-  <script src="dashboard.js"></script>
+    <script src="script.js"></script>
+    <script src="dashboard.js"></script>
   </body>
 </html>

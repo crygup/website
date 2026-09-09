@@ -15,3 +15,8 @@ window.FishieWeb = Object.freeze({
 });
 localStorage.removeItem("discord_token");
 localStorage.removeItem("fishie_token");
+
+// Ignore a corrupt legacy profile cache; authentication still comes from cookies.
+try { JSON.parse(localStorage.getItem("discord_user") || "null"); }
+catch { localStorage.removeItem("discord_user"); }
+localStorage.removeItem("fishie_user");

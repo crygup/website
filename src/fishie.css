@@ -225,42 +225,6 @@
   padding: 0.15rem 0.4rem;
   border-radius: 0.2rem;
 }
-.cmd-copy {
-  font-size: 0;
-  padding: 0.25rem;
-  background: transparent;
-  border: none;
-  cursor: pointer;
-  border-radius: 0.2rem;
-  transition: background 0.15s;
-  flex-shrink: 0;
-}
-.cmd-copy:hover {
-  background: #2a2c2f;
-}
-.cmd-copy-icon {
-  width: 14px;
-  height: 14px;
-  opacity: 0.7;
-  display: block;
-  filter: brightness(0) invert(1);
-}
-.cmd-copy:hover .cmd-copy-icon,
-.cmd-copy.copied .cmd-copy-icon {
-  opacity: 1;
-}
-
-.cmd-type {
-  font-size: 0.65rem;
-  padding: 0.1rem 0.35rem;
-  border-radius: 0.15rem;
-  background: #2a2c2f;
-  color: #94a3b8;
-  font-weight: 600;
-  white-space: nowrap;
-  flex-shrink: 0;
-}
-
 .cmd-tabs {
   display: flex;
   gap: 0.4rem;
@@ -361,35 +325,22 @@
   line-clamp: 3;
   -webkit-box-orient: vertical;
 }
-.cmd-copy {
-  position: relative;
-}
-.cmd-copy.copied::after {
-  content: "Copied!";
-  position: absolute;
-  bottom: calc(100% + 4px);
-  left: 50%;
-  transform: translateX(-50%);
-  font-size: 0.65rem;
-  color: #94a3b8;
-  white-space: nowrap;
-  background: #1a1c1f;
-  padding: 0.1rem 0.3rem;
-  border-radius: 0.15rem;
-  animation: fadeOut 1.2s forwards;
-}
-@keyframes fadeOut {
-  0% {
-    opacity: 1;
-  }
-  70% {
-    opacity: 1;
-  }
-  100% {
-    opacity: 0;
-  }
-}
-select#cmd-type-filter:hover {
-  border-color: #475569;
-  filter: brightness(1.15);
-}
+/* Responsive directory; only the selected command page is rendered. */
+body[data-page="fishie"] main { width: min(1100px, 100%); max-width: 1100px; margin: auto; }
+body[data-page="fishie"] .tab-panel { max-width: none; }
+.fishie-commands { width: 100%; max-width: none; }
+.command-controls { display: flex; justify-content: center; gap: 1rem; flex-wrap: wrap; margin: 1rem 0; text-align: left; }
+.command-controls label { display: flex; flex-direction: column; gap: .4rem; width: min(100%, 360px); }
+.command-controls input { padding: .45rem .65rem; background: #17191c; color: #eee; border: 1px solid #59616d; border-radius: .3rem; width: 100%; box-sizing: border-box; }
+.cmd-grid { grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr)); }
+.cmd-card { min-width: 0; height: auto; padding: 1rem; text-align: left; }
+.cmd-name { max-width: none; white-space: normal; overflow: visible; text-overflow: clip; overflow-wrap: anywhere; font-size: 1rem; }
+.cmd-desc { display: block; overflow: visible; font-size: .9rem; -webkit-line-clamp: unset; line-clamp: unset; }
+.cmd-card details { font-size: .85rem; margin-top: .7rem; overflow-wrap: anywhere; }
+.cmd-card summary { cursor: pointer; }
+.cmd-card ul { padding-left: 1.2rem; }
+.cmd-card li { margin: .5rem 0; }
+#cmd-pages button { padding: .45rem .65rem; background: #353944; color: #fff; border: 0; border-radius: .3rem; cursor: pointer; }
+#cmd-pages { margin: 1rem 0; }
+#cmd-pages button:disabled { opacity: .45; cursor: default; }
+:focus-visible { outline: 2px solid #c0aff3; outline-offset: 3px; }

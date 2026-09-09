@@ -817,6 +817,8 @@ function escapeHtml(s) {
 }
 
 (function () {
+  // The dashboard handles its own OAuth callback and redirect URI.
+  if (document.body.dataset.page === "dashboard") return;
   const qp = new URLSearchParams(window.location.search);
   const lastfmToken = qp.get("token");
   const lastfmState = qp.get("lastfm_state");

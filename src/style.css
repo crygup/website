@@ -623,6 +623,8 @@ footer {
 }
 .discord-login-btn {
   display: inline-block;
+  border: none;
+  cursor: pointer;
   padding: 0.75rem 2rem;
   background: #5865f2;
   color: #fff;

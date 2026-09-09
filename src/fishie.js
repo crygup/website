@@ -1,41 +1,60 @@
 const FISHIE_API = "https://api.crygup.com/fishie";
 const CLIENT_ID = "1537535633038381190";
 const content = document.getElementById("tab-content");
-const tabs = document.querySelectorAll("#fishie-tabs .tab-btn[data-tab]");
-
-tabs.forEach(btn => {
-  btn.addEventListener("click", () => {
-    tabs.forEach(b => b.classList.remove("active"));
-    btn.classList.add("active");
-    loadTab(btn.dataset.tab);
-  });
-});
-
+const tabs = [...document.querySelectorAll("#fishie-tabs .tab-btn[data-tab]")];
+let tabVersion = 0;
+const cached = new Map();
+function setQuery(values) {
+  const url = new URL(location.href);
+  for (const [key, value] of Object.entries(values)) {
+    if (value) url.searchParams.set(key, value); else url.searchParams.delete(key);
+  }
+  history.replaceState(null, "", url);
+}
+async function cachedData(url, text = false) {
+  const previous = cached.get(url);
+  if (previous && Date.now() - previous.time < 60000) return previous.promise;
+  const promise = FishieWeb.fetch(url, {signal: AbortSignal.timeout(15000)}).then(async res => {
+    if (!res.ok) throw new Error("Could not load data. Please try again.");
+    return text ? res.text() : res.json();
+  }).catch(error => { cached.delete(url); throw error; });
+  cached.set(url, {time: Date.now(), promise});
+  return promise;
+}
+tabs.forEach(btn => btn.addEventListener("click", () => loadTab(btn.dataset.tab)));
 async function loadTab(tab) {
+  tabVersion++;
+  tabs.forEach(btn => {
+    const active = btn.dataset.tab === tab;
+    btn.classList.toggle("active", active);
+    btn.setAttribute("aria-selected", String(active));
+  });
+  setQuery({tab});
   if (tab === "about") renderAbout();
   else if (tab === "stats") await renderStats();
   else if (tab === "commands") await renderCommands();
   else if (tab === "privacy") await renderPrivacy();
   else if (tab === "terms") await renderTerms();
 }
-
 function renderAbout() {
   content.innerHTML = `
     <div class="fishie-card">
-      <p class="fishie-desc">Avatar tracking, leveling, mudae help, poketwo help & more.</p>
+      <p class="fishie-desc">Download media, play games, earn Coins, customize your profile, follow streams and anime releases, and manage your saved Discord history.</p>
       <div class="fishie-links">
+        <a class="fishie-btn" href="/dashboard">Open Dashboard</a>
         <a class="fishie-btn" href="https://discord.com/oauth2/authorize?client_id=${CLIENT_ID}&scope=bot+applications.commands&permissions=138513074240" target="_blank">Invite to Server</a>
-        <a class="fishie-btn" href="https://discord.com/oauth2/authorize?client_id=${CLIENT_ID}" target="_blank">Add to User Apps</a>
+        <a class="fishie-btn" href="https://discord.com/oauth2/authorize?client_id=${CLIENT_ID}&scope=applications.commands&integration_type=1" target="_blank">Add to User Apps</a>
         <a class="fishie-btn" href="https://discord.gg/rM9u4MRFBE" target="_blank">Join Discord</a>
       </div>
     </div>`;
 }
 
 async function renderStats() {
+  const version = tabVersion;
   content.innerHTML = '<p class="fishie-loading">Loading…</p>';
   try {
-    const res = await FishieWeb.fetch(`${FISHIE_API}/stats`);
-    const data = await res.json();
+    const data = await cachedData(FISHIE_API + "/stats");
+    if (version !== tabVersion) return;
     content.innerHTML = `
       <div class="fishie-card">
         <div class="fishie-stats">
@@ -56,180 +75,96 @@ async function renderStats() {
           ${logCard("Member Joins", data.today.member_joins, data.totals.member_joins)}
         </div>
       </div>`;
-  } catch { content.innerHTML = '<p class="fishie-loading">Failed to load stats.</p>'; }
+  } catch { if (version === tabVersion) content.innerHTML = '<p class="fishie-loading">Failed to load stats.</p>'; }
 }
 
 
+const commandState = {category: "", query: "", page: 1};
 async function renderCommands() {
-  content.innerHTML = '<p class="fishie-loading">Loading…</p>';
+  const version = tabVersion;
+  content.innerHTML = '<p role="status">Loading commands…</p>';
   try {
-    const res = await FishieWeb.fetch(`${FISHIE_API}/commands`);
-    const data = await res.json();
-    const allCmds = data.commands;
-    const cats = {};
-    for (const cmd of allCmds) {
-      const cat = cmd.category || "Other";
-      if (!cats[cat]) cats[cat] = [];
-      cats[cat].push(cmd);
+    const data = await cachedData(FISHIE_API + "/commands");
+    if (version !== tabVersion) return;
+    const commands = data.commands;
+    const categories = [...new Set(commands.map(c => c.category))].sort();
+    const params = new URLSearchParams(location.search);
+    commandState.query = params.get("q") || commandState.query;
+    commandState.category = params.get("category") || commandState.category;
+    if (!categories.includes(commandState.category)) commandState.category = categories[0];
+    content.innerHTML = '<div class="fishie-commands">' +
+      '<div class="command-controls"><label>Search commands<input type="search" id="cmd-search" placeholder="Search a command"></label></div>' +
+      '<div class="cmd-tabs" aria-label="Command categories"></div><p id="cmd-count" role="status"></p><div id="cmd-results" class="cmd-grid"></div><nav id="cmd-pages" aria-label="Command pages"></nav></div>';
+    const search = document.getElementById("cmd-search");
+    search.value = commandState.query;
+    function render() {
+      const state = commandState;
+      setQuery({q:state.query, type:"", category:state.category});
+      const query = state.query.trim().toLowerCase();
+      const filtered = commands.filter(c => query
+        ? [c.name, c.aliases, c.description, ...(c.slash_commands || [])].join(" ").toLowerCase().includes(query)
+        : c.category === state.category);
+      const pages = Math.max(1, Math.ceil(filtered.length / 40));
+      state.page = Math.min(state.page, pages);
+      content.querySelector(".cmd-tabs").innerHTML = categories.map(category =>
+        '<button class="cmd-tab' + (category === state.category && !query ? ' active' : '') +
+        '" data-category="' + escapeHtml(category) + '" aria-pressed="' + String(category === state.category && !query) + '">' +
+        escapeHtml(category) + ' (' + commands.filter(c => c.category === category).length + ')</button>').join("");
+      document.getElementById("cmd-count").textContent = filtered.length ? filtered.length + " commands" : "No matching commands.";
+      document.getElementById("cmd-results").innerHTML = filtered.slice((state.page-1)*40, state.page*40).map(renderCmdCard).join("");
+      document.getElementById("cmd-pages").innerHTML = pages > 1
+        ? '<button data-page="-1"' + (state.page === 1 ? ' disabled' : '') + '>Previous</button> ' + state.page + ' / ' + pages +
+          ' <button data-page="1"' + (state.page === pages ? ' disabled' : '') + '>Next</button>' : "";
     }
-    const catNames = Object.keys(cats).sort((a, b) => cats[b].length - cats[a].length);
-    
-    let html = '<div class="fishie-commands">';
-    html += `<div style="display:flex;gap:0.4rem;align-items:center;justify-content:center;margin:0 auto 1rem;max-width:400px;width:100%">
-      <input type="search" id="cmd-search" placeholder="Search commands..." autocomplete="off" style="flex:1;padding:0.45rem 0.7rem;background:#1a1c1f;border:none;border-radius:0.3rem;color:#ddd;font-size:0.85rem;outline:none">
-      <div style="position:relative">
-        <img src="images/filter.svg" alt="Filter" id="cmd-filter-btn" style="width:30px;height:30px;cursor:pointer;opacity:0.6;filter:brightness(0) invert(1);transition:opacity 0.15s;padding:0.4rem" onmouseover="this.style.opacity=1" onmouseout="this.style.opacity=0.6">
-        <div id="cmd-filter-dropdown" style="display:none;position:absolute;top:100%;right:0;background:#1a1c1f;padding:0.4rem;z-index:100;min-width:140px">
-          <label style="display:flex;align-items:center;gap:0.3rem;padding:0.25rem 0;cursor:pointer;font-size:0.78rem;color:#94a3b8"><input type="checkbox" value="slash" class="cmd-check"> Slash only</label>
-          <label style="display:flex;align-items:center;gap:0.3rem;padding:0.25rem 0;cursor:pointer;font-size:0.78rem;color:#94a3b8"><input type="checkbox" value="text" class="cmd-check"> Text only</label>
-        </div>
-      </div>
-    </div>`;
-    html += `<div class="cmd-tabs">`;
-    for (const cat of catNames) {
-      html += `<button class="cmd-tab${cat === catNames[0] ? ' active' : ''}" data-cat="${escapeHtml(cat)}">${escapeHtml(cat)} (${cats[cat].length})</button>`;
-    }
-    html += '</div>';
-    for (const cat of catNames) {
-      cats[cat].sort((a, b) => a.name.localeCompare(b.name));
-      html += `<div class="cmd-panel${cat === catNames[0] ? ' active' : ''}" data-cat="${escapeHtml(cat)}"><div class="cmd-grid">`;
-      for (const c of cats[cat]) {
-        html += renderCmdCard(c);
-      }
-      html += '</div></div>';
-    }
-    html += '</div>';
-    content.innerHTML = html;
-    
-    content.querySelectorAll(".cmd-tab").forEach(btn => {
-      btn.addEventListener("click", () => {
-        content.querySelectorAll(".cmd-tab").forEach(b => b.classList.remove("active"));
-        btn.classList.add("active");
-        content.querySelectorAll(".cmd-panel").forEach(p => p.classList.remove("active"));
-        const panel = content.querySelector(`.cmd-panel[data-cat="${btn.dataset.cat}"]`);
-        if (panel) panel.classList.add("active");
-      });
-    });
-    
-    const filterBtn = document.getElementById("cmd-filter-btn");
-    const filterDropdown = document.getElementById("cmd-filter-dropdown");
-    filterBtn.onclick = (e) => {
-      e.preventDefault();
-      filterDropdown.style.display = filterDropdown.style.display === "none" ? "block" : "none";
+    search.oninput = () => { commandState.query = search.value; commandState.page = 1; render(); };
+    content.querySelector(".cmd-tabs").onclick = event => {
+      const button = event.target.closest("[data-category]");
+      if (!button) return;
+      commandState.category = button.dataset.category;
+      commandState.query = ""; search.value = ""; commandState.page = 1; render();
     };
-    document.addEventListener("click", (e) => {
-      if (!filterBtn.contains(e.target) && !filterDropdown.contains(e.target)) {
-        filterDropdown.style.display = "none";
-      }
-      const copyBtn = e.target.closest(".cmd-copy");
-      if (copyBtn) {
-        const text = copyBtn.dataset.copy;
-        if (text) {
-          navigator.clipboard.writeText(text).then(() => {
-            copyBtn.classList.add("copied");
-            setTimeout(() => copyBtn.classList.remove("copied"), 1200);
-          }).catch(() => {});
-        }
-      }
-    });
-    
-    const searchInput = document.getElementById("cmd-search");
-    filterDropdown.addEventListener("change", () => filterCmds());
-    searchInput.addEventListener("input", () => filterCmds());
-    
-    function getActiveFilters() {
-      const active = new Set();
-      filterDropdown.querySelectorAll(".cmd-check:checked").forEach(cb => active.add(cb.value));
-      return active;
-    }
-    
-    function filterCmds() {
-      const q = searchInput.value.toLowerCase().trim();
-      const activeFilters = getActiveFilters();
-      const hasType = activeFilters.has("slash") || activeFilters.has("text");      const container = content.querySelector(".cmd-tabs").parentNode;
-      const oldResults = container.querySelector(".cmd-search-results");
-      const panels = content.querySelectorAll(".cmd-panel");
-      const tabs = content.querySelectorAll(".cmd-tab");
-      if (!q) {
-        panels.forEach(p => { p.style.display = ""; });
-        tabs.forEach(t => { t.style.display = ""; });
-        panels.forEach(p => p.classList.remove("active"));
-        tabs.forEach(t => t.classList.remove("active"));
-        tabs[0].classList.add("active");
-        panels[0].classList.add("active");
-        if (oldResults) oldResults.remove();
-        content.querySelectorAll(".cmd-card").forEach(c => {
-          const isHybrid = c.dataset.aliases && c.dataset.aliases.trim().length > 0;
-          if (activeFilters.size === 0) { c.style.display = ""; return; }
-          if (hasType) {
-            const tMatch = (activeFilters.has("slash") && !isHybrid) || (activeFilters.has("text") && isHybrid);
-            if (!tMatch) { c.style.display = "none"; return; }
-          }
-          c.style.display = "";
-        });
-        content.querySelectorAll(".cmd-tab").forEach(tab => {
-          const cat = tab.dataset.cat;
-          const cmds = cats[cat] || [];
-          const count = cmds.filter(c => {
-            if (hasType) {
-              const h = c.aliases && c.aliases.trim().length > 0;
-
-              if (activeFilters.has("slash") && h) return false;
-              if (activeFilters.has("text") && !h) return false;
-            }
-
-            return true;
-          }).length;
-          tab.textContent = `${cat} (${count})`;
-        });
-      } else {
-        tabs.forEach(t => t.style.display = "none");
-        panels.forEach(p => { p.style.display = "none"; p.classList.remove("active"); });
-        if (oldResults) oldResults.remove();
-        let matchHtml = '<div class="cmd-search-results"><div class="cmd-grid">';
-        for (const cmd of allCmds) {
-          const name = cmd.name.toLowerCase();
-          const aliases = (cmd.aliases || "").toLowerCase();
-          const isHybrid = cmd.aliases && cmd.aliases.trim().length > 0;
-          let tMatch2 = !hasType;
-          if (hasType) tMatch2 = (activeFilters.has("slash") && !isHybrid) || (activeFilters.has("text") && isHybrid);
-          if ((name.includes(q) || aliases.includes(q)) && tMatch2) {
-            matchHtml += renderCmdCard(cmd);
-          }
-        }
-        matchHtml += '</div></div>';
-        container.insertAdjacentHTML("beforeend", matchHtml);
-      }
-    }
-  } catch { content.innerHTML = '<p class="fishie-loading">Failed to load commands.</p>'; }
-}
-
-function renderCmdCard(c) {
-  const isHybrid = c.aliases && c.aliases.trim().length > 0;
-  const copyText = isHybrid ? "fish " + escapeHtml(c.name) : "/" + escapeHtml(c.name);
-  const hasParams = c.params && c.params.length;
-  let paramText = "";
-  if (hasParams) {
-    paramText = '<span class="cmd-arg-title">Arguments</span>';
-    paramText += c.params.filter(p => p.name).map(p => {
-      const bracket = p.required === "required" ? "&lt;" : "[";
-      const close = p.required === "required" ? "&gt;" : "]";
-      let text = bracket + escapeHtml(p.name) + close;
-      if (p.default || p.default_value) text += " (default: " + escapeHtml(String(p.default || p.default_value)) + ")";
-      return '<span class="cmd-arg">' + text + '</span>';
-    }).join(" ");
+    document.getElementById("cmd-pages").onclick = event => {
+      const button = event.target.closest("[data-page]");
+      if (button && !button.disabled) { commandState.page += Number(button.dataset.page); render(); }
+    };
+    render();
+  } catch {
+    if (version === tabVersion) content.innerHTML = '<p role="status">Could not load commands. Select Commands to retry.</p>';
   }
+}
+function renderCmdCard(c) {
   const esc = escapeHtml;
-  return '<div class="cmd-card" data-cmd="' + esc(c.name) + '" data-aliases="' + esc(c.aliases || "") + '">'
-    + '<div class="cmd-head">'
-    + '<span class="cmd-name" title="' + esc(c.name) + '">' + esc(c.name) + '</span>'
-    + '<button class="cmd-copy" data-copy="' + copyText + '" title="Copy"><img src="images/copy-icon.svg" alt="" class="cmd-copy-icon"></button>'
-    + '</div>'
-    + '<div class="cmd-body">'
-    + '<div class="cmd-desc">' + (esc(c.description) || "No description yet...") + '</div>'
-    + (hasParams ? '<div class="cmd-params">' + paramText + '</div>' : "")
-    + '</div>'
-    + '</div>';
+  function argumentsHtml(params) {
+    return params.map(p => '<li><code>' + (p.syntax ? esc(p.syntax) :
+      (p.required === "required" ? '&lt;' : '[') + esc(p.name) +
+      (p.required === "required" ? '&gt;' : ']')) + '</code>' +
+      (p.default != null ? ' · default: ' + esc(p.default) : '') +
+      (p.description ? '<br>' + esc(p.description) : '') + '</li>').join("");
+  }
+  const textParams = c.params || [], slashParams = c.slash_params || [];
+  // Missing metadata isn't a different argument; preserve the fuller description/default.
+  const sameParams = textParams.length === slashParams.length && textParams.every((p, i) => {
+    const other = slashParams[i];
+    return p.name === other.name && p.required === other.required && p.syntax === other.syntax &&
+      ["description", "default"].every(key => p[key] == null || p[key] === "" ||
+        other[key] == null || other[key] === "" || String(p[key]).trim() === String(other[key]).trim());
+  });
+  const mergedParams = sameParams ? textParams.map((p, i) => ({...p,
+    description: p.description || slashParams[i].description,
+    default: p.default == null || p.default === "" ? slashParams[i].default : p.default
+  })) : textParams;
+  const textArgs = argumentsHtml(mergedParams);
+  const slashArgs = sameParams ? textArgs : argumentsHtml(slashParams);
+  const argumentsText = textArgs && slashArgs && textArgs !== slashArgs
+    ? '<h4>Text arguments</h4><ul>' + textArgs + '</ul><h4>Slash arguments</h4><ul>' + slashArgs + '</ul>'
+    : textArgs || slashArgs ? '<h4>Arguments</h4><ul>' + (textArgs || slashArgs) + '</ul>' : '';
+  return '<article class="cmd-card"><h3 class="cmd-name">' +
+    (c.slash_commands?.length ? '<span title="Available as a slash command" aria-label="Available as a slash command">[ / ]</span> ' : '') + esc(c.name) + '</h3>' +
+    '<p class="cmd-desc">' + esc(c.description || "No description available.") + '</p>' +
+    (c.permissions?.length ? '<p>Requires: ' + c.permissions.map(esc).join(', ') + '</p>' : '') +
+    (argumentsText || c.usage || c.aliases ? '<details><summary>Usage and arguments</summary>' +
+      (c.usage && !textParams.some(p => p.syntax === c.usage) ? '<p><code>' + esc(c.usage) + '</code></p>' : '') +
+      (c.aliases ? '<p>Aliases: ' + esc(c.aliases) + '</p>' : '') + argumentsText + '</details>' : '') + '</article>';
 }
 
 function fmt(n) { return n ? n.toLocaleString() : "0"; }
@@ -293,49 +228,43 @@ const PRIVACY_URL = "https://raw.githubusercontent.com/crygup/fish/refs/heads/re
 const TERMS_URL   = "https://raw.githubusercontent.com/crygup/fish/refs/heads/rewrite/Terms%20of%20Service.md";
 
 async function renderPrivacy() {
+  const version = tabVersion;
   content.innerHTML = '<p class="fishie-loading">Loading…</p>';
   try {
-    const res = await FishieWeb.fetch(PRIVACY_URL);
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const md = await res.text();
+    const md = await cachedData(PRIVACY_URL, true);
+    if (version !== tabVersion) return;
     content.innerHTML = `<div class="policy-content">${renderMarkdown(md)}</div>`;
   } catch {
+    if (version !== tabVersion) return;
     content.innerHTML = '<p class="fishie-loading">Failed to load privacy policy.</p>';
   }
 }
 
 async function renderTerms() {
+  const version = tabVersion;
   content.innerHTML = '<p class="fishie-loading">Loading…</p>';
   try {
-    const res = await FishieWeb.fetch(TERMS_URL);
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const md = await res.text();
+    const md = await cachedData(TERMS_URL, true);
+    if (version !== tabVersion) return;
     content.innerHTML = `<div class="policy-content">${renderMarkdown(md)}</div>`;
   } catch {
+    if (version !== tabVersion) return;
     content.innerHTML = '<p class="fishie-loading">Failed to load terms of service.</p>';
   }
 }
 
-const qp = new URLSearchParams(window.location.search);
-const initialTab = qp.get("tab");
-if (initialTab && document.querySelector(`#fishie-tabs [data-tab="${initialTab}"]`)) {
-  document.querySelectorAll("#fishie-tabs .tab-btn").forEach(b => b.classList.remove("active"));
-  document.querySelector(`#fishie-tabs [data-tab="${initialTab}"]`).classList.add("active");
-  loadTab(initialTab);
-} else {
-  loadTab("about");
-}
-
-let tooltip = null;
-document.addEventListener("mouseover", e => {
-  const el = e.target.closest(".cmd-hover");
-  if (!el || !el.dataset.tip) return;
-  if (!tooltip) { tooltip = document.createElement("div"); tooltip.className = "fishie-tooltip"; document.body.appendChild(tooltip); }
-  tooltip.textContent = el.dataset.tip;
-  tooltip.style.display = "block";
-  tooltip.style.left = Math.min(e.clientX + 12, window.innerWidth - 260) + "px";
-  tooltip.style.top = (e.clientY + 12) + "px";
-});
-document.addEventListener("mouseout", e => {
-  if (e.target.closest(".cmd-hover")) { if (tooltip) tooltip.style.display = "none"; }
+const initial = new URLSearchParams(location.search).get("tab");
+loadTab(tabs.some(button => button.dataset.tab === initial) ? initial : "about");
+document.getElementById("fishie-tabs").setAttribute("role", "tablist");
+tabs.forEach(button => {
+  button.setAttribute("role", "tab");
+  button.setAttribute("aria-controls", "fishie-panel");
+  button.addEventListener("keydown", event => {
+    if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
+    event.preventDefault();
+    const i = tabs.indexOf(button);
+    const next = event.key === "Home" ? 0 : event.key === "End" ? tabs.length-1 :
+      (i + (event.key === "ArrowRight" ? 1 : -1) + tabs.length) % tabs.length;
+    tabs[next].focus(); tabs[next].click();
+  });
 });

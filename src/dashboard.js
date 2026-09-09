@@ -29,7 +29,7 @@ if (code && state) {
       const data = await res.json();
       if (!res.ok) throw new Error(data.detail || "OAuth exchange failed");
       if (data.user) {
-        localStorage.setItem("fishie_user", JSON.stringify(data.user));
+        localStorage.setItem("discord_user", JSON.stringify(data.user));
         initDashboard();
       }
     } catch (e) {
@@ -54,7 +54,7 @@ if (code && state) {
         showLogin();
         return;
       }
-      localStorage.setItem("fishie_user", JSON.stringify(data.user));
+      localStorage.setItem("discord_user", JSON.stringify(data.user));
       initDashboard();
     })
     .catch((error) => {
@@ -65,7 +65,7 @@ if (code && state) {
 
 async function logout() {
   await FishieWeb.fetch(API + "/oauth/logout", { method: "POST" });
-  localStorage.removeItem("fishie_user");
+  localStorage.removeItem("discord_user");
   location.reload();
 }
 
@@ -92,6 +92,7 @@ if (_login)
   };
 
 function showLogin() {
+  localStorage.removeItem("discord_user");
   document.getElementById("loginView").style.display = "block";
   document.getElementById("dashboardView").classList.remove("active");
 }
@@ -121,9 +122,9 @@ async function initDashboard() {
   document.getElementById("loginView").style.display = "none";
   document.getElementById("dashboardView").classList.add("active");
 
-  var user = JSON.parse(localStorage.getItem("fishie_user") || "{}");
+  var user = JSON.parse(localStorage.getItem("discord_user") || "{}");
 
-  var avatar = user.id
+  var avatar = user.id && user.avatar
     ? "https://cdn.discordapp.com/avatars/" +
       user.id +
       "/" +
@@ -132,14 +133,14 @@ async function initDashboard() {
     : "";
   var headerHtml = avatar
     ? '<img src="' +
-      avatar +
+      esc(avatar) +
       '" alt="" style="width:48px;height:48px;border-radius:50%">'
     : "";
   headerHtml +=
     '<div class="user-info"><h2>' +
     esc(user.global_name || user.username || "Unknown") +
     "</h2>";
-  headerHtml += '<div class="sub">ID: ' + user.id + "</div>";
+  headerHtml += '<div class="sub">ID: ' + esc(user.id) + "</div>";
   headerHtml += '<div class="sub" id="userSince"></div>';
   headerHtml += "</div>";
   document.getElementById("userHeader").innerHTML =
@@ -148,6 +149,7 @@ async function initDashboard() {
     logout();
   };
 
+  const settingsReady = Promise.all([loadUserSettings(user.id), loadGuilds(user.id)]);
   try {
     var fcRes = await FishieWeb.fetch(API + "/user/" + user.id + "/first-command");
     var fcData = await fcRes.json();
@@ -158,8 +160,7 @@ async function initDashboard() {
     }
   } catch (_) {}
 
-  await loadUserSettings(user.id);
-  await loadGuilds(user.id);
+  await settingsReady;
 
   if (params.get("lastfm") === "connected") {
     var linkedUsername =
@@ -196,24 +197,7 @@ async function loadUserSettings(userId) {
     var accData = await accRes.json();
     var xpData = await xpRes.json();
     var optedOut = new Set(optData.items || []);
-    var items = [
-      { k: "avatar", l: "Avatar" },
-      { k: "username", l: "Username" },
-      { k: "display", l: "Display name" },
-      { k: "nickname", l: "Nickname" },
-      { k: "discrim", l: "Discriminator", disabled: true },
-      { k: "stag", l: "Server tags" },
-      { k: "status", l: "Status" },
-      { k: "joins", l: "Server joins" },
-      { k: "xp", l: "XP and message count" },
-      { k: "commands", l: "Command usage" },
-      { k: "activity", l: "Game and activity" },
-      { k: "pokemon", l: "Pokémon solves" },
-      { k: "corn", l: "Corn reactions" },
-      { k: "reactions", l: "Reaction history" },
-      { k: "games", l: "Game statistics" },
-      { k: "currency", l: "Currency history" },
-    ];
+    var items = (await trackingCategories()).user;
 
     var html =
       '<div class="settings-subtabs" style="display:flex;gap:0.4rem;margin-bottom:0.75rem;flex-wrap:wrap">' +
@@ -230,6 +214,11 @@ async function loadUserSettings(userId) {
       '" onclick="var t=this;t.classList.toggle(\'on\');togUserPrivacy(\'' +
       userId +
       '\',\'history_public\',t.classList.contains(\'on\'))"></div></div>' +
+      '<div class="setting-toggle"><div class="label">Public game statistics</div><div class="toggle ' +
+      (privacyData.game_history_public === true ? "on" : "") +
+      '" onclick="var t=this;t.classList.toggle(\'on\');togUserPrivacy(\'' +
+      userId +
+      '\',\'game_history_public\',t.classList.contains(\'on\'))"></div></div>' +
       '<div style="color:#64748b;font-size:0.8rem;margin-top:0.6rem">These settings can be changed at any time and do not delete existing data.</div>' +
       '</div></div><div class="card"><div class="settings-group"><h4>Individual tracking</h4>';
     for (var i = 0; i < items.length; i++) {
@@ -239,7 +228,8 @@ async function loadUserSettings(userId) {
         '<div class="setting-toggle" style="' +
         (disabled ? "opacity:0.45;cursor:not-allowed" : "") +
         '"><div class="label">' +
-        items[i].l +
+        esc(items[i].l) +
+        (items[i].hint ? '<div class="desc">' + esc(items[i].hint) + "</div>" : "") +
         (disabled
           ? ' <span style="font-size:0.72rem;color:#64748b">(unavailable)</span>'
           : "") +
@@ -474,7 +464,7 @@ function removeUserHighlight(index) {
 }
 
 async function saveUserHighlights(guildId) {
-  var res = await FishieWeb.fetch(API + "/user/" + (JSON.parse(localStorage.getItem("fishie_user") || "{}").id || "") + "/highlights", {
+  var res = await FishieWeb.fetch(API + "/user/" + (JSON.parse(localStorage.getItem("discord_user") || "{}").id || "") + "/highlights", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ guild_id: guildId, words: _userHighlightWords[guildId] || [] }),
@@ -488,48 +478,12 @@ async function saveUserHighlights(guildId) {
   alert("Highlights saved.");
 }
 
-async function togUserOpt(userId, item, enable) {
-  try {
-    var res = await FishieWeb.fetch(API + "/user/" + userId + "/opted-out", {
-    });
-    var data = await res.json();
-    var items = data.items || [];
-    if (enable)
-      items = items.filter(function (i) {
-        return i !== item;
-      });
-    else {
-      if (!items.includes(item)) items.push(item);
-    }
-    await FishieWeb.fetch(API + "/user/" + userId + "/opted-out", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ items: items }),
-    });
-  } catch (_) {}
+function togUserOpt(userId, item, enable) {
+  return saveSetting("/user/" + userId + "/opted-out", {changes: {[item]: enable}}, () => loadUserSettings(userId));
 }
 
-async function togUserPrivacy(userId, setting, enabled) {
-  try {
-    var res = await FishieWeb.fetch(API + "/user/" + userId + "/privacy-settings");
-    if (!res.ok) throw new Error("Could not load privacy settings");
-    var data = await res.json();
-    data[setting] = enabled;
-    var saveRes = await FishieWeb.fetch(API + "/user/" + userId + "/privacy-settings", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        tracking_enabled: data.tracking_enabled !== false,
-        history_public: data.history_public !== false,
-      }),
-    });
-    if (!saveRes.ok) throw new Error("Could not save privacy settings");
-  } catch (error) {
-    console.error("Privacy settings update failed:", error);
-    await loadUserSettings(userId);
-  }
+function togUserPrivacy(userId, setting, enabled) {
+  return saveSetting("/user/" + userId + "/privacy-settings", {[setting]: enabled}, () => loadUserSettings(userId));
 }
 
 async function saveAllAccounts(userId) {
@@ -539,13 +493,7 @@ async function saveAllAccounts(userId) {
     var el = document.getElementById("acct-" + svcs[si]);
     if (el) payload[svcs[si]] = el.value.trim();
   }
-  await FishieWeb.fetch(API + "/user/" + userId + "/accounts", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ accounts: payload }),
-  });
+  await saveSetting("/user/" + userId + "/accounts", {accounts: payload}, () => loadUserSettings(userId));
 }
 
 async function connectLastfm() {
@@ -630,85 +578,36 @@ async function disconnectAnilist(userId) {
 }
 
 async function loadGuilds(userId) {
+  const select = document.getElementById("guildSelect");
   try {
-    var res = await FishieWeb.fetch(API + "/user/" + userId + "/guilds", {
-    });
-    var data = await res.json();
-    var list = document.getElementById("guildDropdownList");
-    var text = document.getElementById("guildDropdownText");
-    var guilds = data.guilds || [];
-    list.innerHTML =
-      '<div class="guild-dropdown-item" data-id="">' +
-      '<div class="item-info"><div class="item-name" style="color:#64748b">Select a server...</div></div></div>';
-    for (var gi = 0; gi < guilds.length; gi++) {
-      var g = guilds[gi];
-      var iconUrl = g.icon ? g.icon : null;
-      var img = iconUrl
-        ? '<img src="' + iconUrl + '" alt="" loading="lazy">'
-        : "";
-      list.innerHTML +=
-        '<div class="guild-dropdown-item" data-id="' +
-        g.id +
-        '">' +
-        img +
-        '<div class="item-info">' +
-        '<div class="item-name">' +
-        esc(g.name) +
-        "</div>" +
-        '<div class="item-sub">ID: ' +
-        g.id +
-        "</div>" +
-        "</div></div>";
-    }
-    if (list.dataset.selectedId) {
-      var prev = list.querySelector(
-        '[data-id="' + list.dataset.selectedId + '"]',
-      );
-      if (prev) text.textContent = prev.querySelector(".item-name").textContent;
-    }
-  } catch (_) {
-    document.getElementById("guildDropdownList").innerHTML =
-      '<div style="color:#64748b;padding:0.5rem;font-size:0.85rem">Failed to load servers</div>';
+    const res = await FishieWeb.fetch(API + "/user/" + userId + "/guilds");
+    if (!res.ok) throw new Error("Could not load servers");
+    const data = await res.json();
+    select.innerHTML = '<option value="">Select a server…</option>' +
+      (data.guilds || []).map(guild => '<option value="' + esc(guild.id) + '">' + esc(guild.name) + '</option>').join("");
+    select.disabled = false;
+  } catch (error) {
+    select.innerHTML = '<option value="">Could not load servers</option>';
+    select.disabled = true;
+    settingsStatus(error.message, true);
   }
 }
-
-function selectGuild(guildId) {
-  if (!guildId) {
+document.getElementById("guildSelect").onchange = event => {
+  const guildId = event.target.value;
+  if (guildId) loadGuildSettings(guildId);
+  else {
+    guildSettingsVersion++;
     document.getElementById("guildSettingsContent").innerHTML = "";
-    return;
   }
-  loadGuildSettings(guildId);
-}
+};
 
-document.addEventListener("click", function (e) {
-  var dd = document.getElementById("guildDropdown");
-  var header = document.getElementById("guildDropdownHeader");
-  var list = document.getElementById("guildDropdownList");
-  if (!dd) return;
-  if (header && header.contains(e.target)) {
-    dd.classList.toggle("open");
-  } else if (!dd.contains(e.target)) {
-    dd.classList.remove("open");
-  }
-  var item = e.target.closest(".guild-dropdown-item");
-  if (item && list && list.contains(item)) {
-    var id = item.dataset.id;
-    var text = document.getElementById("guildDropdownText");
-    var name = item.querySelector(".item-name").textContent;
-    text.textContent = name;
-    list.dataset.selectedId = id;
-    dd.classList.remove("open");
-    selectGuild(id);
-  }
-});
-
-var _guildChannels = {};
-
+let guildSettingsVersion = 0;
 async function loadGuildSettings(guildId) {
+  const version = ++guildSettingsVersion;
   var div = document.getElementById("guildSettingsContent");
   div.innerHTML = '<p style="color:#64748b">Loading...</p>';
   try {
-    var user = JSON.parse(localStorage.getItem("fishie_user") || "{}");
+    var user = JSON.parse(localStorage.getItem("discord_user") || "{}");
     var [gRes, setRes, optRes, preRes, cmdRes] = await Promise.all([
       FishieWeb.fetch(API + "/user/" + user.id + "/guilds", {
       }),
@@ -718,6 +617,7 @@ async function loadGuildSettings(guildId) {
       FishieWeb.fetch(API + "/guild/" + guildId + "/prefixes"),
       FishieWeb.fetch(API + "/guild/" + guildId + "/command-disables"),
     ]);
+    if (![gRes, setRes, optRes, preRes].every(res => res.ok)) throw new Error("Could not load guild settings");
     var gData = await gRes.json();
     var guild = null;
     for (var gi = 0; gi < (gData.guilds || []).length; gi++) {
@@ -746,12 +646,9 @@ async function loadGuildSettings(guildId) {
       '<button id="guildTabGeneral" class="guild-tab active" onclick="showGuildSettingsTab(\'' +
       guildId +
       '\',\'general\')">General</button>' +
-      '<button id="guildTabTwitch" class="guild-tab" onclick="showGuildSettingsTab(\'' +
+      '<button id="guildTabNotifications" class="guild-tab" onclick="showGuildSettingsTab(\'' +
       guildId +
-      '\',\'twitch\')">Twitch follows</button>' +
-      '<button id="guildTabYoutube" class="guild-tab" onclick="showGuildSettingsTab(\'' +
-      guildId +
-      '\',\'youtube\')">YouTube follows</button>' +
+      '\',\'notifications\')">Notifications</button>' +
       '<button id="guildTabLogger" class="guild-tab" onclick="showGuildSettingsTab(\'' +
       guildId +
       '\',\'logger\')">Logger channels</button></div>' +
@@ -858,7 +755,7 @@ async function loadGuildSettings(guildId) {
           '"></option>';
       }
       html +=
-        '</datalist><select class="text-input" id="gCommandChannel" style="flex:1;min-width:12rem"><option value="0">Entire server</option>';
+        '</datalist><select data-search-label="Command channel" class="text-input" id="gCommandChannel" style="flex:1;min-width:12rem"><option value="0">Entire server</option>';
     var commandChannels = commandData.channels || [];
     for (var cci = 0; cci < commandChannels.length; cci++) {
       html +=
@@ -918,19 +815,7 @@ async function loadGuildSettings(guildId) {
       '" onclick="var t=this;t.classList.toggle(\'on\');togGuildPrivacy(\'' +
       guildId +
       '\',\'history_public\',t.classList.contains(\'on\'))"></div></div>';
-    var tItems = [
-      { k: "icon", l: "Server icon history" },
-      { k: "name", l: "Server name history" },
-      { k: "joins", l: "Member join history" },
-      { k: "status", l: "Member status history" },
-      { k: "commands", l: "Server command logs" },
-      { k: "emoji", l: "Emoji statistics" },
-      { k: "downloads", l: "Download statistics" },
-      { k: "corn", l: "Corn reactions" },
-      { k: "reactions", l: "Reaction history" },
-      { k: "tags", l: "Server tags" },
-      { k: "mudae", l: "Mudae wishes and timers" },
-    ];
+    var tItems = (await trackingCategories()).guild;
     for (var ti = 0; ti < tItems.length; ti++) {
       var on = !optedOut.has(tItems[ti].k);
       html +=
@@ -950,9 +835,15 @@ async function loadGuildSettings(guildId) {
     html += "</div>";
 
     html +=
-      '</div><div id="guildTwitchTab" style="display:none"></div><div id="guildYoutubeTab" style="display:none"></div><div id="guildLoggerTab" style="display:none"></div>';
+      '</div><div id="guildNotificationsTab" style="display:none"><div class="settings-subtabs">' +
+      '<button class="guild-tab active" data-notification="twitch">Twitch</button>' +
+      '<button class="guild-tab" data-notification="anime">Anime</button>' +
+      '</div>' +
+      '<div id="guildTwitchTab"></div><div id="guildAnimeTab" style="display:none"></div></div><div id="guildLoggerTab" style="display:none"></div>';
 
+    if (version !== guildSettingsVersion) return;
     div.innerHTML = html;
+    makeSearchablePickers(div);
     var prefixList = div.querySelector("#prefixList");
     if (prefixList) {
       prefixList.querySelectorAll(".remove").forEach(function (removeButton) {
@@ -961,10 +852,19 @@ async function loadGuildSettings(guildId) {
         });
       });
     }
+    div.querySelectorAll("[data-notification]").forEach(button => {
+      button.onclick = () => {
+        for (const kind of ["twitch", "anime"]) {
+          document.getElementById("guild" + kind[0].toUpperCase() + kind.slice(1) + "Tab").style.display = kind === button.dataset.notification ? "block" : "none";
+          div.querySelector('[data-notification="' + kind + '"]').classList.toggle("active", kind === button.dataset.notification);
+        }
+      };
+    });
     loadGuildTwitchTab(guildId);
-    loadGuildYoutubeTab(guildId);
+    loadGuildNotifications(guildId, "anime");
     loadGuildLoggerTab(guildId);
   } catch (e) {
+    if (version !== guildSettingsVersion) return;
     console.error("Guild settings error:", e);
     div.innerHTML =
       '<p style="color:#64748b">Failed to load guild settings.</p>';
@@ -972,7 +872,7 @@ async function loadGuildSettings(guildId) {
 }
 
 function showGuildSettingsTab(guildId, tab) {
-  ["general", "twitch", "youtube", "logger"].forEach(function (name) {
+  ["general", "notifications", "logger"].forEach(function (name) {
     var panel = document.getElementById("guild" + name[0].toUpperCase() + name.slice(1) + "Tab");
     if (panel) panel.style.display = name === tab ? "block" : "none";
     var button = document.getElementById("guildTab" + name[0].toUpperCase() + name.slice(1));
@@ -980,174 +880,165 @@ function showGuildSettingsTab(guildId, tab) {
   });
 }
 
-async function loadGuildTwitchTab(guildId) {
-  var panel = document.getElementById("guildTwitchTab");
-  if (!panel) return;
-  try {
-    var res = await FishieWeb.fetch(API + "/guild/" + guildId + "/twitch-follows");
-    var data = await res.json();
-    if (!res.ok) throw new Error(data.detail || "Could not load Twitch follows");
-    var channels = data.channels || [];
-    var html = '<div class="card"><div class="settings-group"><h4>Twitch follows</h4>';
-    html += '<div class="desc">Follow up to three channels and customize where and what announcements post.</div>';
-    html += '<div style="display:flex;gap:0.4rem;flex-wrap:wrap;margin-top:0.6rem"><input id="twNewName" class="text-input" placeholder="Twitch channel name" style="flex:1;min-width:10rem"><select id="twNewChannel" class="text-input" style="flex:1;min-width:10rem">';
-    html += channels.map(function (channel) { return '<option value="' + esc(channel.id) + '">#' + esc(channel.name) + '</option>'; }).join("");
-    html += '</select><button class="btn-primary" onclick="saveTwitchFollow(\'' + guildId + '\',null)">Follow</button></div>';
-    html += '<textarea id="twNewMessage" class="text-input" maxlength="2000" placeholder="Optional announcement text" style="width:100%;margin-top:0.4rem;min-height:4rem"></textarea></div></div>';
-    var follows = data.follows || [];
-    if (!follows.length) html += '<div class="card"><span style="color:#64748b;font-size:0.8rem">No Twitch channels are followed.</span></div>';
-    follows.forEach(function (follow, index) {
-      var base = "twFollow" + index;
-      var followChannels = channels.slice();
-      if (follow.announce_channel_id != null && !followChannels.some(function (channel) {
-        return String(channel.id) === String(follow.announce_channel_id);
-      })) {
-        followChannels.push({
-          id: String(follow.announce_channel_id),
-          name: follow.announce_channel_name || "Configured channel",
-        });
+function loadGuildTwitchTab(guildId) { return loadGuildNotifications(guildId, "twitch"); }
+
+async function notificationRequest(path, options = {}) {
+  const res = await FishieWeb.fetch(API + path, {signal: AbortSignal.timeout(40000), ...options});
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.detail || "Could not update notifications");
+  return data;
+}
+
+function makeSearchablePickers(root) {
+  root.querySelectorAll("select[data-search-label]").forEach(select => {
+    if (select.closest(".search-picker")) return;
+    const label = select.dataset.searchLabel;
+    // A disclosure contains multiple controls, so don't nest them in one label.
+    if (select.parentElement.tagName === "LABEL") {
+      const wrapper = document.createElement("div");
+      wrapper.className = "picker-field";
+      const oldLabel = select.parentElement;
+      wrapper.append(...oldLabel.childNodes);
+      oldLabel.replaceWith(wrapper);
+    }
+    const picker = document.createElement("details");
+    picker.className = "search-picker";
+    const summary = document.createElement("summary");
+    summary.className = "text-input";
+    const menu = document.createElement("div");
+    menu.className = "picker-menu";
+    const search = document.createElement("input");
+    search.type = "search";
+    search.className = "text-input";
+    search.placeholder = "Type to filter…";
+    search.setAttribute("aria-label", "Filter " + label.toLowerCase());
+    search.autocomplete = "off";
+    const empty = document.createElement("p");
+    empty.setAttribute("role", "status");
+    empty.textContent = "No matches.";
+    empty.hidden = true;
+    select.before(picker);
+    picker.append(summary, menu);
+    menu.append(search, select, empty);
+    select.size = 6;
+    select.setAttribute("aria-label", label);
+    const updateSummary = () => {
+      summary.textContent = select.selectedOptions[0]?.textContent || "Choose " + label.toLowerCase();
+      summary.setAttribute("aria-label", label + ": " + summary.textContent);
+    };
+    const filter = () => {
+      const query = search.value.trim().toLocaleLowerCase().replace(/^[@#]/, "");
+      for (const option of select.options) {
+        option.hidden = !((option.textContent + " " + option.value).toLocaleLowerCase().includes(query));
       }
-      html += '<div class="card"><div class="settings-group"><h4>' + esc(follow.channel_name) + '</h4>';
-      html += '<label class="label">Announcement channel</label><select class="text-input" id="' + base + 'Channel">' + followChannels.map(function (channel) { return '<option value="' + esc(channel.id) + '"' + (String(channel.id) === String(follow.announce_channel_id) ? ' selected' : '') + '>#' + esc(channel.name) + '</option>'; }).join("") + '</select>';
-      html += '<textarea class="text-input" id="' + base + 'Message" maxlength="2000" placeholder="Optional announcement text" style="width:100%;margin-top:0.4rem;min-height:4rem">' + esc(follow.message_template || "") + '</textarea>';
-      html += '<div style="display:flex;gap:0.4rem;margin-top:0.4rem"><button class="btn-primary" onclick="saveTwitchFollow(\'' + guildId + '\',\'' + esc(follow.channel_name) + '\',\'' + base + '\')">Save</button><button class="logout-btn" onclick="removeTwitchFollow(\'' + guildId + '\',\'' + esc(follow.channel_name) + '\')">Unfollow</button></div></div></div>';
+      empty.hidden = [...select.options].some(option => !option.hidden);
+    };
+    const close = () => { picker.open = false; summary.focus(); };
+    select.addEventListener("change", () => { updateSummary(); close(); });
+    picker.addEventListener("toggle", () => {
+      if (!picker.open) return;
+      document.querySelectorAll(".search-picker[open]").forEach(other => { if (other !== picker) other.open = false; });
+      search.value = "";
+      filter();
+      search.focus();
     });
-    panel.innerHTML = html;
-    // Set the existing destination explicitly after rendering.  This keeps the
-    // saved channel selected even when the browser does not honor a generated
-    // `selected` attribute while replacing the panel HTML.
-    follows.forEach(function (follow, index) {
-      var select = document.getElementById("twFollow" + index + "Channel");
-      if (select && follow.announce_channel_id != null) {
-        select.value = String(follow.announce_channel_id);
-      }
+    search.addEventListener("input", filter);
+    search.addEventListener("keydown", event => {
+      if (event.key === "ArrowDown") { event.preventDefault(); select.focus(); }
     });
-  } catch (error) {
-    console.error("Twitch settings error:", error);
-    panel.innerHTML = '<div class="card"><span style="color:#f87171">Failed to load Twitch follows.</span></div>';
-  }
-}
-
-async function saveTwitchFollow(guildId, channelName, base) {
-  var name = channelName || (document.getElementById("twNewName") || {}).value;
-  var channel = document.getElementById(base ? base + "Channel" : "twNewChannel");
-  var message = document.getElementById(base ? base + "Message" : "twNewMessage");
-  if (!name || !channel) return;
-  // Discord snowflake IDs exceed JavaScript's safe integer range. Keep the
-  // selected value as a string so it reaches the API without rounding.
-  var res = await FishieWeb.fetch(API + "/guild/" + guildId + "/twitch-follows", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ channel_name: name, announce_channel_id: channel.value, message_template: message ? message.value : null }) });
-  if (!res.ok) {
-    var detail = await res.text();
-    console.error("Twitch follow save failed", res.status, detail);
-    alert("Could not save the Twitch follow: " + detail);
-    return;
-  }
-  loadGuildTwitchTab(guildId);
-}
-
-async function removeTwitchFollow(guildId, channelName) {
-  if (!confirm("Unfollow " + channelName + "?")) return;
-  var res = await FishieWeb.fetch(API + "/guild/" + guildId + "/twitch-follows/" + encodeURIComponent(channelName), { method: "DELETE" });
-  if (!res.ok) { alert("Could not unfollow that Twitch channel."); return; }
-  loadGuildTwitchTab(guildId);
-}
-
-function youtubeEventCheckboxes(base, selected) {
-  var enabled = new Set(selected || ["video", "live", "short", "community"]);
-  return ["video", "live", "short", "community"].map(function (event) {
-    var label = event === "short" ? "Shorts" : event[0].toUpperCase() + event.slice(1);
-    return '<label style="display:flex;align-items:center;gap:0.3rem;color:#cbd5e1;font-size:0.8rem"><input type="checkbox" id="' + base + "Event" + event + '"' + (enabled.has(event) ? " checked" : "") + ">" + label + "</label>";
-  }).join("");
-}
-
-function selectedYoutubeEvents(base) {
-  return ["video", "live", "short", "community"].filter(function (event) {
-    var input = document.getElementById(base + "Event" + event);
-    return input && input.checked;
+    picker.addEventListener("keydown", event => {
+      if (event.key === "Escape") { event.preventDefault(); close(); }
+      else if (event.key === "Enter" && event.target === select) { event.preventDefault(); updateSummary(); close(); }
+    });
+    updateSummary();
   });
 }
+document.addEventListener("click", event => {
+  document.querySelectorAll(".search-picker[open]").forEach(picker => {
+    if (!picker.contains(event.target)) picker.open = false;
+  });
+});
 
-async function loadGuildYoutubeTab(guildId) {
-  var panel = document.getElementById("guildYoutubeTab");
+function mentionSelect(id, roles, follow = {}) {
+  const value = follow.mention_everyone ? "everyone" : String(follow.mention_role_id || "");
+  const options = [{id: "", name: "No mention"}, {id: "everyone", name: "@everyone"}, ...roles];
+  if (value && !options.some(role => String(role.id) === value)) options.push({id: value, name: "Deleted role (choose a replacement)"});
+  return '<label>Mention role <select data-search-label="Mention role" class="text-input" id="' + id + '">' +
+    options.map(role => '<option value="' + esc(role.id) + '"' + (String(role.id) === value ? " selected" : "") + '>' + esc(role.name) + '</option>').join("") + '</select></label>';
+}
+
+async function loadGuildNotifications(guildId, kind) {
+  const panel = document.getElementById("guild" + kind[0].toUpperCase() + kind.slice(1) + "Tab");
   if (!panel) return;
   try {
-    var res = await FishieWeb.fetch(API + "/guild/" + guildId + "/youtube-follows");
-    var data = await res.json();
-    if (!res.ok) throw new Error(data.detail || "Could not load YouTube follows");
-    var channels = data.channels || [];
-    var html = '<div class="card"><div class="settings-group"><h4>YouTube follows</h4>';
-    html += '<div class="desc">Follow up to three channels. Uploads use near real-time notifications. Community posts use a lightweight periodic check.</div>';
-    html += '<div style="display:flex;gap:0.4rem;flex-wrap:wrap;margin-top:0.6rem"><input id="ytNewName" class="text-input" placeholder="@handle or YouTube channel URL" style="flex:1;min-width:12rem"><select id="ytNewChannel" class="text-input" style="flex:1;min-width:10rem">';
-    html += channels.map(function (channel) { return '<option value="' + esc(channel.id) + '">#' + esc(channel.name) + '</option>'; }).join("");
-    html += '</select><button class="btn-primary" onclick="saveYoutubeFollow(\'' + guildId + '\',null)">Follow</button></div>';
-    html += '<div style="display:flex;gap:0.8rem;flex-wrap:wrap;margin-top:0.55rem">' + youtubeEventCheckboxes("ytNew", data.event_types) + '</div>';
-    html += '<textarea id="ytNewMessage" class="text-input" maxlength="2000" placeholder="Optional announcement text" style="width:100%;margin-top:0.4rem;min-height:4rem"></textarea></div></div>';
-    var follows = data.follows || [];
-    if (!follows.length) html += '<div class="card"><span style="color:#64748b;font-size:0.8rem">No YouTube channels are followed.</span></div>';
-    follows.forEach(function (follow, index) {
-      var base = "ytFollow" + index;
-      var followChannels = channels.slice();
-      if (follow.announce_channel_id != null && !followChannels.some(function (channel) {
-        return String(channel.id) === String(follow.announce_channel_id);
-      })) {
-        followChannels.push({ id: String(follow.announce_channel_id), name: follow.announce_channel_name || "Configured channel" });
-      }
-      html += '<div class="card"><div class="settings-group"><h4>' + esc(follow.channel_name) + '</h4>';
-      if (follow.channel_handle) html += '<div class="desc">' + esc(follow.channel_handle) + '</div>';
-      html += '<label class="label">Announcement channel</label><select class="text-input" id="' + base + 'Channel">' + followChannels.map(function (channel) { return '<option value="' + esc(channel.id) + '"' + (String(channel.id) === String(follow.announce_channel_id) ? ' selected' : '') + '>#' + esc(channel.name) + '</option>'; }).join("") + '</select>';
-      html += '<div style="display:flex;gap:0.8rem;flex-wrap:wrap;margin-top:0.55rem">' + youtubeEventCheckboxes(base, follow.event_types) + '</div>';
-      html += '<textarea class="text-input" id="' + base + 'Message" maxlength="2000" placeholder="Optional announcement text" style="width:100%;margin-top:0.4rem;min-height:4rem">' + esc(follow.message_template || "") + '</textarea>';
-      html += '<div style="display:flex;gap:0.4rem;margin-top:0.4rem"><button class="btn-primary" onclick="saveYoutubeFollow(\'' + guildId + '\',\'' + esc(follow.youtube_channel_id) + '\',\'' + base + '\')">Save</button><button class="logout-btn" onclick="removeYoutubeFollow(\'' + guildId + '\',\'' + esc(follow.youtube_channel_id) + '\')">Unfollow</button></div></div></div>';
+    const data = await notificationRequest("/guild/" + guildId + "/" + kind + "-follows");
+    const follows = data.follows || [], channels = data.channels || [], roles = data.roles || [];
+    const channelSelect = (id, selected) => {
+      const choices = channels.slice();
+      if (selected && !choices.some(channel => String(channel.id) === String(selected))) choices.push({id: selected, name: "Unavailable channel (choose a replacement)"});
+      return '<label>Announcement channel <select data-search-label="Announcement channel" class="text-input" id="' + id + '">' +
+        choices.map(channel => '<option value="' + esc(channel.id) + '"' + (String(channel.id) === String(selected) ? " selected" : "") + '>#' + esc(channel.name) + '</option>').join("") + '</select></label>';
+    };
+    const label = kind === "anime" ? "Anime" : "Twitch";
+    let html = '<div class="card"><h4>' + label + ' notifications</h4><p class="desc">Follow up to ' + (kind === "anime" ? "20 upcoming anime" : "10 Twitch channels") + ' per server. New follows do not mention anyone unless selected.</p>' +
+      '<label>' + label + ' name or link <input id="' + kind + 'NewName" class="text-input" maxlength="200"></label>' +
+      channelSelect(kind + "NewChannel", null) + mentionSelect(kind + "NewMention", roles) +
+      '<button class="btn-primary" data-add>Follow</button><p role="status" data-status></p></div>';
+    follows.forEach((follow, index) => {
+      const base = kind + "Follow" + index;
+      const date = follow.next_airing_at || follow.release_at;
+      html += '<div class="card"><h4>' + esc(follow.id) + ' · ' + esc(follow.title || follow.channel_name) + '</h4>' +
+        (date ? '<p class="desc">' + (follow.next_episode ? "Episode " + esc(follow.next_episode) + " · " : "Releases ") + esc(new Date(date).toLocaleString()) + '</p>' : "") +
+        channelSelect(base + "Channel", follow.announce_channel_id) + mentionSelect(base + "Mention", roles, follow) +
+        '<div style="display:flex;gap:0.4rem;margin-top:0.5rem"><button class="btn-primary" data-save="' + index + '">Save</button><button class="logout-btn" data-remove="' + index + '">Unfollow</button></div></div>';
     });
+    if (!follows.length) html += '<p class="desc">No ' + label + ' follows yet.</p>';
+    if (!panel.isConnected) return;
     panel.innerHTML = html;
-    follows.forEach(function (follow, index) {
-      var select = document.getElementById("ytFollow" + index + "Channel");
-      if (select) select.value = String(follow.announce_channel_id);
+    makeSearchablePickers(panel);
+    const destination = base => {
+      const mention = panel.querySelector("#" + base + "Mention").value;
+      return {
+        announce_channel_id: panel.querySelector("#" + base + "Channel").value,
+        mention_role_id: mention && mention !== "everyone" ? mention : null,
+        mention_everyone: mention === "everyone"
+      };
+    };
+    const run = async (button, action) => {
+      button.disabled = true;
+      const status = panel.querySelector("[data-status]");
+      status.textContent = "Saving…";
+      try { const result = await action(); if (result !== false) await loadGuildNotifications(guildId, kind); else status.textContent = ""; }
+      catch (error) { status.textContent = error.message; }
+      finally { button.disabled = false; }
+    };
+    const post = payload => notificationRequest("/guild/" + guildId + "/" + kind + "-follows", {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(payload)});
+    panel.querySelector("[data-add]").onclick = event => run(event.currentTarget, async () => {
+      const value = panel.querySelector("#" + kind + "NewName").value.trim();
+      if (!value) throw new Error("Enter a " + label + " name or link.");
+      const payload = destination(kind + "New");
+      if (!payload.announce_channel_id) throw new Error("Choose an announcement channel.");
+      if (kind === "anime") {
+        const candidate = await notificationRequest("/guild/" + guildId + "/anime-search?q=" + encodeURIComponent(value));
+        if (!confirm("Follow " + candidate.title + "?\n" + (candidate.episode ? "Episode " + candidate.episode + " airing " : "Releases ") + new Date(candidate.airing_at).toLocaleString())) return false;
+        payload.anilist_id = candidate.id;
+      } else {
+        payload.channel_name = value;
+      }
+      await post(payload);
     });
+    panel.querySelectorAll("[data-save]").forEach(button => button.onclick = () => run(button, () => {
+      const follow = follows[Number(button.dataset.save)];
+      return post({...destination(kind + "Follow" + button.dataset.save), ...(kind === "anime" ? {id: follow.id} : {channel_name: follow.channel_name})});
+    }));
+    panel.querySelectorAll("[data-remove]").forEach(button => button.onclick = () => run(button, async () => {
+      const follow = follows[Number(button.dataset.remove)];
+      if (!confirm("Unfollow " + (follow.title || follow.channel_name) + "?")) return false;
+      return notificationRequest("/guild/" + guildId + "/" + kind + "-follows/" + encodeURIComponent(kind === "anime" ? follow.id : follow.channel_name), {method: "DELETE"});
+    }));
   } catch (error) {
-    console.error("YouTube settings error:", error);
-    panel.innerHTML = '<div class="card"><span style="color:#f87171">Failed to load YouTube follows.</span></div>';
+    panel.innerHTML = '<p role="status">' + esc(error.message) + '</p>';
   }
-}
-
-async function saveYoutubeFollow(guildId, channelId, base) {
-  var query = channelId || (document.getElementById("ytNewName") || {}).value;
-  var prefix = base || "ytNew";
-  var channel = document.getElementById(prefix + "Channel");
-  var message = document.getElementById(prefix + "Message");
-  var eventTypes = selectedYoutubeEvents(prefix);
-  if (!query || !channel) return;
-  if (!eventTypes.length) {
-    alert("Choose at least one YouTube notification type.");
-    return;
-  }
-  var res = await FishieWeb.fetch(API + "/guild/" + guildId + "/youtube-follows", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      channel: query,
-      youtube_channel_id: channelId || null,
-      announce_channel_id: channel.value,
-      message_template: message ? message.value : null,
-      event_types: eventTypes,
-    }),
-  });
-  if (!res.ok) {
-    var data = await res.json().catch(function () { return {}; });
-    alert("Could not save the YouTube follow: " + (data.detail || "Unknown error"));
-    return;
-  }
-  loadGuildYoutubeTab(guildId);
-}
-
-async function removeYoutubeFollow(guildId, channelId) {
-  if (!confirm("Unfollow this YouTube channel?")) return;
-  var res = await FishieWeb.fetch(API + "/guild/" + guildId + "/youtube-follows/" + encodeURIComponent(channelId), { method: "DELETE" });
-  if (!res.ok) {
-    alert("Could not unfollow that YouTube channel.");
-    return;
-  }
-  loadGuildYoutubeTab(guildId);
 }
 
 async function loadGuildLoggerTab(guildId) {
@@ -1174,10 +1065,12 @@ async function loadGuildLoggerTab(guildId) {
     var html = '<div class="card"><div class="settings-group"><h4>Logger channels</h4><div class="desc">Each event uses its own Fishie webhook. Select a channel or clear an event.</div>';
     Object.keys(data.events || {}).forEach(function (event) {
       var item = configured[event];
-      html += '<div style="display:flex;align-items:flex-end;gap:0.6rem;flex-wrap:wrap;padding:0.65rem 0;border-top:1px solid #2a2c2f"><div style="flex:1;min-width:14rem"><div class="label">' + esc(data.events[event]) + '</div><select class="text-input" id="logger-' + esc(event) + '"><option value="">Disabled</option>' + loggerChannels.map(function (channel) { return '<option value="' + esc(channel.id) + '"' + (item && String(item.channel_id) === String(channel.id) ? ' selected' : '') + '>#' + esc(channel.name) + '</option>'; }).join("") + '</select></div><button class="btn-primary" style="flex:0 0 auto;white-space:nowrap" onclick="saveLoggerEvent(\'' + guildId + '\',\'' + event + '\')">Save</button></div>';
+      html += '<div style="display:flex;align-items:flex-end;gap:0.6rem;flex-wrap:wrap;padding:0.65rem 0;border-top:1px solid #2a2c2f"><div style="flex:1;min-width:14rem"><div class="label">' + esc(data.events[event]) + '</div><select data-search-label="Logger channel" class="text-input" id="logger-' + esc(event) + '"><option value="">Disabled</option>' + loggerChannels.map(function (channel) { return '<option value="' + esc(channel.id) + '"' + (item && String(item.channel_id) === String(channel.id) ? ' selected' : '') + '>#' + esc(channel.name) + '</option>'; }).join("") + '</select></div><button class="btn-primary" style="flex:0 0 auto;white-space:nowrap" onclick="saveLoggerEvent(\'' + guildId + '\',\'' + event + '\')">Save</button></div>';
     });
     html += '</div></div>';
+    if (!panel.isConnected) return;
     panel.innerHTML = html;
+    makeSearchablePickers(panel);
   } catch (error) {
     console.error("Logger settings error:", error);
     panel.innerHTML = '<div class="card"><span style="color:#f87171">Failed to load logger settings.</span></div>';
@@ -1204,25 +1097,13 @@ async function saveGChan(guildId, key) {
   var val = el ? el.value.trim() : "";
   var payload = {};
   payload[key] = val || null;
-  await FishieWeb.fetch(API + "/guild/" + guildId + "/settings", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(payload),
-  });
+  await saveSetting("/guild/" + guildId + "/settings", payload, () => loadGuildSettings(guildId));
 }
 
 async function togGSet(guildId, key, enable) {
   var payload = {};
   payload[key] = enable;
-  await FishieWeb.fetch(API + "/guild/" + guildId + "/settings", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(payload),
-  });
+  await saveSetting("/guild/" + guildId + "/settings", payload, () => loadGuildSettings(guildId));
 }
 
 async function setGuildCommand(guildId, disabled) {
@@ -1270,7 +1151,7 @@ async function addPrefix(guildId) {
   var inp = document.getElementById("newPrefix");
   var prefix = inp.value.trim();
   if (!prefix || prefix.length > 10) return;
-  var user = JSON.parse(localStorage.getItem("fishie_user") || "{}");
+  var user = JSON.parse(localStorage.getItem("discord_user") || "{}");
   try {
     var res = await FishieWeb.fetch(API + "/guild/" + guildId + "/prefixes", {
       method: "POST",
@@ -1304,46 +1185,78 @@ async function remPrefix(guildId, prefix) {
   loadGuildSettings(guildId);
 }
 
-async function togGOpt(guildId, item, enable) {
-  try {
-    var res = await FishieWeb.fetch(API + "/guild/" + guildId + "/opted-out");
-    var data = await res.json();
-    var items = data.items || [];
-    if (enable)
-      items = items.filter(function (i) {
-        return i !== item;
-      });
-    else {
-      if (!items.includes(item)) items.push(item);
-    }
-    await FishieWeb.fetch(API + "/guild/" + guildId + "/opted-out", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        items: items,
-        tracking_enabled: data.tracking_enabled !== false,
-        history_public: data.history_public !== false,
-      }),
-    });
-  } catch (_) {}
+function togGOpt(guildId, item, enable) {
+  return saveSetting("/guild/" + guildId + "/opted-out", {changes: {[item]: enable}}, () => loadGuildSettings(guildId));
 }
 
-async function togGuildPrivacy(guildId, key, value) {
-  try {
-    var res = await FishieWeb.fetch(API + "/guild/" + guildId + "/opted-out");
-    var data = await res.json();
-    var payload = {
-      items: data.items || [],
-      tracking_enabled: data.tracking_enabled !== false,
-      history_public: data.history_public === true,
-    };
-    payload[key] = value;
-    await FishieWeb.fetch(API + "/guild/" + guildId + "/opted-out", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
-  } catch (_) {}
+function togGuildPrivacy(guildId, key, value) {
+  return saveSetting("/guild/" + guildId + "/opted-out", {[key]: value}, () => loadGuildSettings(guildId));
 }
+
+let categoryRequest;
+function trackingCategories() {
+  if (!categoryRequest) categoryRequest = FishieWeb.fetch(API + "/tracking-categories").then(async res => {
+    if (!res.ok) throw new Error("Could not load tracking categories");
+    const data = await res.json();
+    for (const scope of ["user", "guild"]) data[scope] = data[scope].map(item => ({...item, k: item.key, l: item.label}));
+    return data;
+  }).catch(error => { categoryRequest = null; throw error; });
+  return categoryRequest;
+}
+
+let settingSave = Promise.resolve();
+let settingsPending = 0;
+document.addEventListener("click", event => {
+  if (settingsPending && event.target.closest(".toggle")) { event.preventDefault(); event.stopImmediatePropagation(); }
+}, true);
+function saveSetting(path, payload, reload) {
+  // Serialize saves; send only the changed field, never a stale settings snapshot.
+  settingsPending++;
+  settingSave = settingSave.then(async () => {
+    settingsStatus("Saving…");
+    try {
+      const res = await FishieWeb.fetch(API + path, {
+        signal: AbortSignal.timeout(15000),
+        method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(payload)
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.detail || "Could not save this setting");
+      }
+      settingsStatus("Saved.");
+    } catch (error) {
+      await reload();
+      settingsStatus(error.message + ". Your saved settings have been restored.", true);
+    } finally { settingsPending--; }
+  });
+  return settingSave;
+}
+
+function settingsStatus(message, failed = false) {
+  let status = document.getElementById("settingsStatus");
+  if (!status) {
+    status = document.createElement("p");
+    status.id = "settingsStatus";
+    status.setAttribute("role", "status");
+    document.getElementById("dashboardView").prepend(status);
+  }
+  status.textContent = message;
+  status.style.color = failed ? "#f87171" : "#94a3b8";
+}
+
+// Existing toggle styles are retained; native buttons provide keyboard activation.
+new MutationObserver(() => {
+  document.querySelectorAll("div.toggle").forEach(toggle => {
+    const button = document.createElement("button");
+    for (const attr of toggle.attributes) button.setAttribute(attr.name, attr.value);
+    button.type = "button";
+    button.setAttribute("role", "switch");
+    button.setAttribute("aria-label", toggle.parentElement.querySelector(".label")?.textContent || "Toggle setting");
+    button.disabled = !button.hasAttribute("onclick");
+    toggle.replaceWith(button);
+  });
+  document.querySelectorAll("button.toggle").forEach(button => {
+    const value = String(button.classList.contains("on"));
+    if (button.getAttribute("aria-checked") !== value) button.setAttribute("aria-checked", value);
+  });
+}).observe(document.getElementById("dashboardView"), {childList: true, subtree: true, attributes: true, attributeFilter: ["class"]});
