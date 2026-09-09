@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import asyncio
 import ipaddress
+import json
+import zipfile
 import mimetypes
 import os
 import re
@@ -17,6 +19,7 @@ from contextlib import asynccontextmanager, suppress
 from dataclasses import dataclass
 from pathlib import Path
 from time import monotonic
+from datetime import datetime, timedelta, timezone
 from typing import Literal
 from urllib.parse import quote, urlsplit
 
@@ -79,6 +82,19 @@ ALLOWED_HOSTS = frozenset(
         "klipy.com",
         "www.klipy.com",
         "static.klipy.com",
+        "bsky.app",
+        "www.bsky.app",
+        "facebook.com",
+        "www.facebook.com",
+        "m.facebook.com",
+        "web.facebook.com",
+        "fb.watch",
+        "newgrounds.com",
+        "www.newgrounds.com",
+        "pixiv.net",
+        "www.pixiv.net",
+        "old.reddit.com",
+        "redd.it",
     }
 )
 
@@ -143,6 +159,8 @@ class DownloadJob:
     file_path: Path | None = None
     filename: str | None = None
     size: int | None = None
+    expires_at: str | None = None
+    task: asyncio.Task[None] | None = None
 
 
 jobs: dict[str, DownloadJob] = {}
@@ -253,29 +271,46 @@ def _remaining(deadline: float) -> float:
     return remaining
 
 
-async def _run_process(args: list[str], deadline: float) -> tuple[int, bytes, bytes]:
+async def _run_process(args: list[str], deadline: float, job: DownloadJob | None = None) -> tuple[int, bytes, bytes]:
+    timeout = _remaining(deadline)
     proc = await asyncio.create_subprocess_exec(
-        *args,
-        stdout=asyncio.subprocess.PIPE,
-        stderr=asyncio.subprocess.PIPE,
+        *args, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE,
         start_new_session=True,
     )
-    task = asyncio.create_task(proc.communicate())
+    async def read(stream, progress=False):
+        captured = bytearray()
+        async for line in stream:
+            if progress and line.startswith(b"fishie-progress:"):
+                job.phase = line.decode(errors="replace").strip().split(":", 1)[1]
+            else:
+                if len(captured) + len(line) > 4_000_000:
+                    raise DownloadFailure("The downloader produced too much diagnostic output.")
+                captured.extend(line)
+        return bytes(captured)
+
+    assert proc.stdout is not None and proc.stderr is not None
+    readers = [asyncio.create_task(read(proc.stdout, job is not None)),
+               asyncio.create_task(read(proc.stderr))]
     try:
-        stdout, stderr = await asyncio.wait_for(
-            asyncio.shield(task), timeout=_remaining(deadline)
-        )
-    except (asyncio.TimeoutError, asyncio.CancelledError) as exc:
-        with suppress(ProcessLookupError):
-            os.killpg(proc.pid, signal.SIGKILL)
-        await task
-        if isinstance(exc, asyncio.CancelledError):
-            raise
+        async with asyncio.timeout(timeout):
+            stdout, stderr = await asyncio.gather(*readers)
+            await proc.wait()
+        return proc.returncode or 0, stdout, stderr
+    except TimeoutError as exc:
         raise DownloadFailure(
             f"This download took longer than {DOWNLOAD_TIMEOUT_MINUTES} minutes "
             "and was stopped. Try a shorter video."
         ) from exc
-    return proc.returncode or 0, stdout, stderr
+    finally:
+        # Reap the whole group even if reading output or checking limits fails.
+        with suppress(ProcessLookupError):
+            os.killpg(proc.pid, signal.SIGKILL)
+        for task in readers:
+            task.cancel()
+        await asyncio.gather(*readers, return_exceptions=True)
+        # Drain pipe buffers after killing the group so paused transports
+        # cannot keep Process.wait() pending after the child has exited.
+        await proc.communicate()
 
 
 def _klipy_media(payload: object, media_format: str) -> str | None:
@@ -354,8 +389,138 @@ def _prepare_cookie_file(host: str, directory: Path) -> Path | None:
     return cookie_file
 
 
+class PublicResolver(aiohttp.resolver.DefaultResolver):
+    async def resolve(self, host, port=0, family=socket.AF_INET):
+        addresses = await super().resolve(host, port, family)
+        if not addresses or any(not _is_public_address(item["host"]) for item in addresses):
+            raise DownloadFailure("Private and local network addresses are not allowed.")
+        return addresses
+
+
+async def _download_pixiv(job: DownloadJob, deadline: float) -> Path:
+    match = re.search(r"(?:/artworks/|illust_id=)(\d+)", job.source_url)
+    if not match:
+        raise DownloadFailure("Use a Pixiv artwork link, not a profile or collection.")
+    artwork = match[1]
+    fetched = 0
+    headers = {"Referer": f"https://www.pixiv.net/artworks/{artwork}", "User-Agent": "Mozilla/5.0"}
+    connector = aiohttp.TCPConnector(resolver=PublicResolver())
+    async with aiohttp.ClientSession(connector=connector, headers=headers) as session:
+        async def fetch(url: str, target: Path | None = None):
+            nonlocal fetched
+            parsed = urlsplit(url)
+            host = parsed.hostname or ""
+            if (parsed.scheme != "https" or parsed.username or parsed.password
+                    or parsed.port not in (None, 443)
+                    or not (host == "www.pixiv.net" or host == "i.pximg.net")):
+                raise DownloadFailure("Pixiv returned an unsupported media address.")
+            async with session.get(url, allow_redirects=False, timeout=aiohttp.ClientTimeout(total=min(60, _remaining(deadline)))) as response:
+                if response.status != 200:
+                    raise DownloadFailure("Pixiv could not provide this artwork. It may require login or be unavailable.")
+                payload = bytearray()
+                handle = target.open("wb") if target else None
+                try:
+                    async for chunk in response.content.iter_chunked(65536):
+                        fetched += len(chunk)
+                        if fetched > MAX_FILE_BYTES:
+                            raise DownloadFailure("This artwork exceeds the combined 500 MB limit.")
+                        if handle:
+                            handle.write(chunk)
+                        else:
+                            payload.extend(chunk)
+                            if len(payload) > 4_000_000:
+                                raise DownloadFailure("Pixiv metadata is too large.")
+                finally:
+                    if handle:
+                        handle.close()
+                if target:
+                    return None
+                data = json.loads(payload)
+                if data.get("error"):
+                    raise DownloadFailure("This artwork is unavailable or requires a Pixiv login.")
+                return data["body"]
+
+        info = await fetch(f"https://www.pixiv.net/ajax/illust/{artwork}?lang=en")
+        if job.media_format == "mp3":
+            raise DownloadFailure("Pixiv artwork has no audio. Choose an image/video format instead.")
+        if info.get("illustType") != 2:
+            pages = await fetch(f"https://www.pixiv.net/ajax/illust/{artwork}/pages?lang=en")
+            if not pages or len(pages) > 100:
+                raise DownloadFailure("Pixiv artwork downloads are limited to 100 images per post.")
+            paths = []
+            for index, page in enumerate(pages, 1):
+                job.phase = f"Downloading artwork {index} of {len(pages)}"
+                url = page["urls"]["original"]
+                suffix = Path(urlsplit(url).path).suffix.lower()
+                if suffix not in {".jpg", ".jpeg", ".png", ".gif", ".webp"}:
+                    raise DownloadFailure("Pixiv returned an unsupported image format.")
+                path = job.directory / f"pixiv-{artwork}-{index:03}{suffix}"
+                await fetch(url, path)
+                paths.append(path)
+            if len(paths) == 1:
+                return paths[0]
+            job.phase = "Bundling artwork"
+            output = job.directory / f"pixiv-{artwork}.zip"
+            def bundle():
+                with zipfile.ZipFile(output, "w", compression=zipfile.ZIP_STORED) as archive:
+                    for path in paths:
+                        archive.write(path, path.name)
+            await asyncio.to_thread(bundle)
+            if output.stat().st_size > MAX_FILE_BYTES:
+                raise DownloadFailure("The finished bundle exceeds 500 MB.")
+            return output
+
+        metadata = await fetch(f"https://www.pixiv.net/ajax/illust/{artwork}/ugoira_meta?lang=en")
+        frames = metadata.get("frames", [])
+        if not frames or len(frames) > 1000:
+            raise DownloadFailure("This Pixiv animation has too many frames (maximum 1,000).")
+        delays = [float(frame["delay"]) / 1000 for frame in frames]
+        if any(not 0 < delay <= 60 for delay in delays) or sum(delays) > (30 if job.media_format == "gif" else 600):
+            raise DownloadFailure("This animation exceeds the duration limit (30 seconds for GIFs).")
+        zipped = job.directory / "frames.zip"
+        await fetch(metadata.get("originalSrc") or metadata["src"], zipped)
+        # Never extract paths supplied by an archive. Copy only named image
+        # entries to our own filenames, with a decompressed-size budget.
+        lines = []
+        with zipfile.ZipFile(zipped) as archive:
+            entries = [archive.getinfo(frame["file"]) for frame in frames]
+            if sum(entry.file_size for entry in entries) > MAX_FILE_BYTES:
+                raise DownloadFailure("The animation's decoded archive exceeds 500 MB.")
+            for index, (entry, delay) in enumerate(zip(entries, delays)):
+                _remaining(deadline)
+                if entry.file_size > 25_000_000:
+                    raise DownloadFailure("An animation frame exceeds the 25 MB limit.")
+                suffix = Path(entry.filename).suffix.lower()
+                if suffix not in {".jpg", ".jpeg", ".png"}:
+                    raise DownloadFailure("Unsupported animation frame format.")
+                name = f"frame-{index:04}{suffix}"
+                with archive.open(entry) as source, (job.directory / name).open("wb") as target:
+                    shutil.copyfileobj(source, target)
+                lines.extend([f"file '{name}'", "option framerate 1000", f"duration {delay:.6f}"])
+                await asyncio.sleep(0)
+        lines.append(f"file '{name}'")
+        lines.append("option framerate 1000")
+        manifest = job.directory / "frames.txt"
+        manifest.write_text("\n".join(lines) + "\n")
+        output = job.directory / f"pixiv-{artwork}.{job.media_format}"
+        job.phase = "Converting Pixiv animation"
+        # safe=0 permits the framerate option; all manifest filenames above are
+        # generated locally, never supplied by the remote archive.
+        args = ["ffmpeg", "-v", "error", "-y", "-f", "concat", "-safe", "0", "-i", str(manifest), "-fps_mode", "vfr"]
+        if job.media_format == "gif":
+            args += ["-t", str(sum(delays)), "-vf", "scale=480:-1:flags=lanczos,split[a][b];[a]palettegen[p];[b][p]paletteuse", "-loop", "0", "-final_delay", str(max(1, round(delays[-1] * 100)))]
+        else:
+            args += ["-vf", "scale=trunc(iw/2)*2:trunc(ih/2)*2", "-c:v", "libvpx-vp9" if job.media_format == "webm" else "libx264", "-pix_fmt", "yuv420p"]
+        code, _, _ = await _run_process(args + [str(output)], deadline)
+        if code or not output.is_file() or not 0 < output.stat().st_size <= MAX_FILE_BYTES:
+            raise DownloadFailure("Could not convert this Pixiv animation within the file limits.")
+        return output
+
+
 async def _download_media(job: DownloadJob) -> Path:
     deadline = asyncio.get_running_loop().time() + DOWNLOAD_TIMEOUT
+    if (urlsplit(job.source_url).hostname or "").lower() in {"pixiv.net", "www.pixiv.net"}:
+        return await _download_pixiv(job, deadline)
     source_url = await _resolve_klipy(job.source_url, job.media_format)
     parsed = urlsplit(source_url)
     host = (parsed.hostname or "").lower()
@@ -369,10 +534,8 @@ async def _download_media(job: DownloadJob) -> Path:
         selector = "bestvideo[height<=1080]+bestaudio/best[height<=1080]/best"
 
     # yt-dlp performs its own requests, including requests to redirected
-    # media hosts.  Run it through a tiny resolver guard so every DNS lookup
-    # rejects private, loopback, link-local, multicast, and reserved peers.
-    # This closes the DNS-rebinding gap between the initial URL validation and
-    # the extractor's later redirects without relying on a shell or a proxy.
+    # media hosts. This guards Python DNS lookups; the dedicated downloader
+    # bridge firewall also covers native curl and FFmpeg network requests.
     safe_runner = """
 import ipaddress
 import socket
@@ -424,7 +587,12 @@ main()
         "--output",
         output_template,
         "--no-playlist",
-        "--no-progress",
+        "--progress",
+        "--newline",
+        "--progress-template",
+        "download:fishie-progress:Downloading media %(progress._percent_str)s",
+        "--progress-template",
+        "postprocess:fishie-progress:Converting media",
         "--no-warnings",
         "--restrict-filenames",
         "--max-filesize",
@@ -469,7 +637,7 @@ main()
         )
 
     args.append(source_url)
-    returncode, stdout, stderr = await _run_process(args, deadline)
+    returncode, stdout, stderr = await _run_process(args, deadline, job)
     stderr_text = stderr.decode(errors="replace")
     if returncode != 0:
         logger.warning(
@@ -504,7 +672,9 @@ main()
         output = candidates[0] if len(candidates) == 1 else None
     if output is None or not output.is_file():
         raise DownloadFailure("The download finished without producing a media file.")
-    if not output.resolve().is_relative_to(job.directory.resolve()):
+    if (not output.resolve().is_relative_to(job.directory.resolve())
+            or output.name.startswith(".")
+            or output.suffix.lower() not in {".mp4", ".webm", ".mkv", ".mov", ".mp3", ".m4a", ".opus", ".ogg", ".wav", ".gif"}):
         raise DownloadFailure("The downloader returned an unsafe output path.")
 
     if job.media_format == "gif" and output.suffix.lower() != ".gif":
@@ -594,6 +764,8 @@ async def _run_job(job: DownloadJob) -> None:
         job.error = str(exc)
         shutil.rmtree(job.directory, ignore_errors=True)
     except asyncio.CancelledError:
+        job.status = "cancelled"
+        job.phase = "Download cancelled"
         shutil.rmtree(job.directory, ignore_errors=True)
         raise
     except Exception:
@@ -603,7 +775,9 @@ async def _run_job(job: DownloadJob) -> None:
         job.error = "An unexpected error stopped the download. Please try again."
         shutil.rmtree(job.directory, ignore_errors=True)
     finally:
+        (job.directory / ".yt-dlp-cookies.txt").unlink(missing_ok=True)
         if not shutting_down:
+            job.expires_at = (datetime.now(timezone.utc) + timedelta(seconds=JOB_TTL)).isoformat()
             _track_task(asyncio.create_task(_expire_job(job.id)))
 
 
@@ -638,7 +812,7 @@ app.add_middleware(
 
 @app.middleware("http")
 async def protect_and_log(request: Request, call_next):
-    if request.method == "POST":
+    if request.method in {"POST", "DELETE"}:
         origin = request.headers.get("Origin")
         if origin and origin not in SAFE_ORIGINS:
             return Response(status_code=403)
@@ -690,17 +864,24 @@ async def _owned_job(request: Request, job_id: str) -> DownloadJob:
 async def create_job(payload: DownloadRequest, request: Request):
     client = _client_ip(request)
     now = monotonic()
+    async with jobs_lock:
+        for key in list(rate_limits):
+            if not rate_limits[key] or rate_limits[key][-1] <= now - RATE_LIMIT_WINDOW:
+                del rate_limits[key]
+        if client not in rate_limits and len(rate_limits) >= 10000:
+            raise HTTPException(503, "The downloader is busy. Try again shortly.")
+        history = rate_limits[client]
+        while history and history[0] <= now - RATE_LIMIT_WINDOW:
+            history.popleft()
+        if len(history) >= RATE_LIMIT_JOBS:
+            raise HTTPException(429, "Please wait before starting another download.")
+        history.append(now)
     try:
         source_url = await _validate_url(payload.url)
     except DownloadFailure as exc:
         raise HTTPException(400, str(exc)) from exc
 
     async with jobs_lock:
-        history = rate_limits[client]
-        while history and history[0] <= now - RATE_LIMIT_WINDOW:
-            history.popleft()
-        if len(history) >= RATE_LIMIT_JOBS:
-            raise HTTPException(429, "Please wait before starting another download.")
         active_for_client = sum(
             job.owner == client and job.status in {"queued", "running"}
             for job in jobs.values()
@@ -715,7 +896,6 @@ async def create_job(payload: DownloadRequest, request: Request):
                 503, "The downloader is at capacity. Please try again shortly."
             )
 
-        history.append(now)
         job_id = secrets.token_urlsafe(24)
         job_dir = DOWNLOAD_ROOT / job_id
         job_dir.mkdir(mode=0o700)
@@ -730,7 +910,8 @@ async def create_job(payload: DownloadRequest, request: Request):
         )
         jobs[job_id] = job
 
-    _track_task(asyncio.create_task(_run_job(job), name=f"download-{job.id[:8]}"))
+    job.task = asyncio.create_task(_run_job(job), name=f"download-{job.id[:8]}")
+    _track_task(job.task)
     logger.info(
         "download_created job=%s host=%s format=%s client=%s",
         job.id[:8],
@@ -748,6 +929,7 @@ async def get_job(job_id: str, request: Request):
         "id": job.id,
         "status": job.status,
         "phase": job.phase,
+        "expires_at": job.expires_at,
     }
     if job.error:
         response["error"] = job.error
@@ -781,5 +963,25 @@ async def download_file(job_id: str, request: Request):
     )
 
 
+@app.delete("/jobs/{job_id}")
+async def cancel_job(job_id: str, request: Request):
+    job = await _owned_job(request, job_id)
+    if job.task and not job.task.done():
+        job.task.cancel()
+        await asyncio.gather(job.task, return_exceptions=True)
+    job.status = "cancelled"
+    job.phase = "Download cancelled"
+    shutil.rmtree(job.directory, ignore_errors=True)
+    if job.expires_at is None:
+        job.expires_at = (datetime.now(timezone.utc) + timedelta(seconds=JOB_TTL)).isoformat()
+        _track_task(asyncio.create_task(_expire_job(job.id)))
+    return {"status": "cancelled"}
+
+
+@app.get("/capabilities")
+async def capabilities():
+    return {"hosts": sorted(ALLOWED_HOSTS), "file_ttl": JOB_TTL}
+
+
 if __name__ == "__main__":
-    uvicorn.run(app, host=API_HOST, port=API_PORT)
+    uvicorn.run(app, host=API_HOST, port=API_PORT, access_log=False)

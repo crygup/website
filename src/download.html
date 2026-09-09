@@ -35,22 +35,25 @@
               />
               <button
                 id="download-submit"
-                class="hidden"
                 type="submit"
                 aria-label="Start download"
                 title="Start download"
               >
-                <img src="images/arrow-left3svg.svg?s=1" alt="" aria-hidden="true" />
+                <img src="images/arrow-left3svg.svg" alt="" aria-hidden="true" />
               </button>
             </div>
           </div>
 
-          <select id="download-format" class="format-select" name="format" aria-label="File format">
-            <option value="mp4">mp4</option>
-            <option value="webm">webm</option>
-            <option value="mp3">mp3</option>
-            <option value="gif">gif</option>
-          </select>
+          <div class="download-options">
+            <select id="download-format" class="format-select" name="format" aria-label="File format">
+              <option value="mp4">mp4</option>
+              <option value="webm">webm</option>
+              <option value="mp3">mp3</option>
+              <option value="gif">gif</option>
+            </select>
+            <button type="button" id="download-cancel" class="hidden">Cancel download</button>
+          </div>
+          <span id="download-validation" role="status"></span>
         </form>
 
         <div id="download-status" class="download-status hidden" aria-live="polite">
@@ -64,20 +67,24 @@
             class="download-ready hidden"
             href="#"
             download
-            aria-label="Download file"
-            title="Download file"
+            aria-label="Save file"
+            title="Save file"
           >
             <svg viewBox="0 0 24 24" aria-hidden="true">
               <path d="M12 3v12m0 0 5-5m-5 5-5-5M5 20h14" />
             </svg>
+            <span>Save file</span>
           </a>
         </div>
 
         <p class="download-note">
           Recorded public media only. Downloads stop after ten minutes and files
-          are limited to 500 MB. GIFs are limited to 30 seconds. Temporary files are
-          removed automatically.
+          are limited to 500 MB. GIFs are limited to 30 seconds. Files expire ten minutes after completion.
         </p>
+        <details class="download-note"><summary>Supported websites</summary>
+          YouTube, Twitch clips and recordings, Instagram, TikTok, SoundCloud,
+          X/Twitter, Facebook, Bluesky, Pinterest, Reddit, Newgrounds, Tenor, Klipy and Pixiv.
+        </details>
       </section>
     </main>
 
