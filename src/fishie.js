@@ -79,7 +79,7 @@ async function renderStats() {
 }
 
 
-const commandState = {category: "", query: "", page: 1};
+const commandState = {category: "", query: ""};
 async function renderCommands() {
   const version = tabVersion;
   content.innerHTML = '<p role="status">Loading commands…</p>';
@@ -94,7 +94,7 @@ async function renderCommands() {
     if (!categories.includes(commandState.category)) commandState.category = categories[0];
     content.innerHTML = '<div class="fishie-commands">' +
       '<div class="command-controls"><label>Search commands<input type="search" id="cmd-search" placeholder="Search a command"></label></div>' +
-      '<div class="cmd-tabs" aria-label="Command categories"></div><p id="cmd-count" role="status"></p><div id="cmd-results" class="cmd-grid"></div><nav id="cmd-pages" aria-label="Command pages"></nav></div>';
+      '<div class="cmd-tabs" aria-label="Command categories"></div><p id="cmd-count" role="status"></p><div id="cmd-results" class="cmd-grid"></div></div>';
     const search = document.getElementById("cmd-search");
     search.value = commandState.query;
     function render() {
@@ -104,28 +104,19 @@ async function renderCommands() {
       const filtered = commands.filter(c => query
         ? [c.name, c.aliases, c.description, ...(c.slash_commands || [])].join(" ").toLowerCase().includes(query)
         : c.category === state.category);
-      const pages = Math.max(1, Math.ceil(filtered.length / 40));
-      state.page = Math.min(state.page, pages);
       content.querySelector(".cmd-tabs").innerHTML = categories.map(category =>
         '<button class="cmd-tab' + (category === state.category && !query ? ' active' : '') +
         '" data-category="' + escapeHtml(category) + '" aria-pressed="' + String(category === state.category && !query) + '">' +
         escapeHtml(category) + ' (' + commands.filter(c => c.category === category).length + ')</button>').join("");
       document.getElementById("cmd-count").textContent = filtered.length ? filtered.length + " commands" : "No matching commands.";
-      document.getElementById("cmd-results").innerHTML = filtered.slice((state.page-1)*40, state.page*40).map(renderCmdCard).join("");
-      document.getElementById("cmd-pages").innerHTML = pages > 1
-        ? '<button data-page="-1"' + (state.page === 1 ? ' disabled' : '') + '>Previous</button> ' + state.page + ' / ' + pages +
-          ' <button data-page="1"' + (state.page === pages ? ' disabled' : '') + '>Next</button>' : "";
+      document.getElementById("cmd-results").innerHTML = filtered.map(renderCmdCard).join("");
     }
-    search.oninput = () => { commandState.query = search.value; commandState.page = 1; render(); };
+    search.oninput = () => { commandState.query = search.value; render(); };
     content.querySelector(".cmd-tabs").onclick = event => {
       const button = event.target.closest("[data-category]");
       if (!button) return;
       commandState.category = button.dataset.category;
-      commandState.query = ""; search.value = ""; commandState.page = 1; render();
-    };
-    document.getElementById("cmd-pages").onclick = event => {
-      const button = event.target.closest("[data-page]");
-      if (button && !button.disabled) { commandState.page += Number(button.dataset.page); render(); }
+      commandState.query = ""; search.value = ""; render();
     };
     render();
   } catch {

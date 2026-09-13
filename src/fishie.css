@@ -325,7 +325,7 @@
   line-clamp: 3;
   -webkit-box-orient: vertical;
 }
-/* Responsive directory; only the selected command page is rendered. */
+/* Responsive command directory. */
 body[data-page="fishie"] main { width: min(1100px, 100%); max-width: 1100px; margin: auto; }
 body[data-page="fishie"] .tab-panel { max-width: none; }
 .fishie-commands { width: 100%; max-width: none; }
@@ -340,7 +340,4 @@ body[data-page="fishie"] .tab-panel { max-width: none; }
 .cmd-card summary { cursor: pointer; }
 .cmd-card ul { padding-left: 1.2rem; }
 .cmd-card li { margin: .5rem 0; }
-#cmd-pages button { padding: .45rem .65rem; background: #353944; color: #fff; border: 0; border-radius: .3rem; cursor: pointer; }
-#cmd-pages { margin: 1rem 0; }
-#cmd-pages button:disabled { opacity: .45; cursor: default; }
 :focus-visible { outline: 2px solid #c0aff3; outline-offset: 3px; }
