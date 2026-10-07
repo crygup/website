@@ -52,13 +52,6 @@ echo "Starting the static site on 127.0.0.1:8081"
 compose up --detach --no-deps static
 wait_for_health static 12
 
-echo "Starting the download API on 127.0.0.1:8002"
-if ! compose up --detach --no-deps download-api || ! wait_for_health download-api 18; then
-    compose stop download-api || true
-    echo "Download API deployment failed. Nginx was left on its previous configuration."
-    exit 1
-fi
-
 echo "Starting the temporary media API on 127.0.0.1:8003"
 if ! compose up --detach --no-deps media-api || ! wait_for_health media-api 18; then
     compose stop media-api || true
@@ -66,10 +59,32 @@ if ! compose up --detach --no-deps media-api || ! wait_for_health media-api 18; 
     exit 1
 fi
 
+echo "Starting the private Roblox API proxy on 127.0.0.1:8004"
+if ! compose up --detach --no-deps rapi-api || ! wait_for_health rapi-api 18; then
+    compose stop rapi-api || true
+    echo "Roblox API proxy deployment failed. Set a 32+ character RAPI_KEY in .env and try again."
+    exit 1
+fi
+
+echo "Starting the RObase PostgreSQL database"
+if ! compose up --detach robase-db || ! wait_for_health robase-db 18; then
+    echo "RObase database deployment failed. Set RODB_DB_PASSWORD in .env and try again."
+    exit 1
+fi
+
+echo "Starting the RObase API on 127.0.0.1:8005"
+if ! compose up --detach --no-deps rodb-api || ! wait_for_health rodb-api 18; then
+    compose stop rodb-api || true
+    echo "RObase API deployment failed. Set a 32+ character RODB_KEY in .env and try again."
+    exit 1
+fi
+
 echo "Starting the avatar API on 127.0.0.1:8000"
 if ! compose up --detach --no-deps avatar-api || ! wait_for_health avatar-api 30; then
     compose stop avatar-api || true
     compose stop media-api || true
+    compose stop rapi-api || true
+    compose stop rodb-api || true
     echo "Avatar API deployment failed. Inspect the container logs before retrying."
     exit 1
 fi
@@ -85,6 +100,8 @@ if ! sudo nginx -t || ! sudo systemctl reload nginx; then
     sudo nginx -t
     sudo systemctl reload nginx
     compose stop media-api || true
+    compose stop rapi-api || true
+    compose stop rodb-api || true
     echo "Nginx rejected the new configuration. The previous configuration was restored."
     exit 1
 fi

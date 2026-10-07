@@ -93,63 +93,6 @@ services:
         max-size: 20m
         max-file: "5"
 
-  download-api:
-    build:
-      context: .
-      dockerfile: Dockerfile
-      target: download-api
-    user: "${WEBSITE_UID:?set WEBSITE_UID}:${WEBSITE_GID:?set WEBSITE_GID}"
-    environment:
-      WEBSITE_DOWNLOAD_HOST: 0.0.0.0
-      WEBSITE_DOWNLOAD_PORT: "8002"
-      WEBSITE_DOWNLOAD_PATH: /app/downloads
-      WEBSITE_DOWNLOAD_COOKIE_PATH: /app/cookies
-      WEBSITE_LOG_PATH: /app/logs/download.log
-      HOME: /tmp
-      XDG_CACHE_HOME: /tmp/.cache
-      TZ: Europe/Berlin
-    volumes:
-      - ./src/server/cookies:/app/cookies:ro
-      - ./src/logs:/app/logs
-      - /etc/localtime:/etc/localtime:ro
-      - /etc/timezone:/etc/timezone:ro
-    ports:
-      - "127.0.0.1:8002:8002"
-    networks:
-      - download-isolated
-    healthcheck:
-      test:
-        - CMD
-        - python
-        - -c
-        - >-
-          import urllib.request;
-          urllib.request.urlopen('http://127.0.0.1:8002/health/ready', timeout=3)
-      interval: 15s
-      timeout: 5s
-      retries: 4
-      start_period: 15s
-    init: true
-    read_only: true
-    tmpfs:
-      - /tmp:rw,nosuid,nodev,noexec,size=128m
-      - /app/downloads:rw,nosuid,nodev,noexec,size=2g,uid=${WEBSITE_UID:?set WEBSITE_UID},gid=${WEBSITE_GID:?set WEBSITE_GID},mode=0700
-    cap_drop:
-      - ALL
-    security_opt:
-      - no-new-privileges:true
-    pids_limit: 128
-    mem_limit: 3g
-    cpus: 2.0
-    stop_grace_period: 15s
-    # Managed by fishie-download.service, which requires the firewall.
-    restart: "no"
-    logging:
-      driver: local
-      options:
-        max-size: 20m
-        max-file: "5"
-
   media-api:
     build:
       context: .
@@ -205,8 +148,149 @@ services:
         max-size: 20m
         max-file: "5"
 
+  rapi-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: rapi-api
+    user: "${WEBSITE_UID:?set WEBSITE_UID}:${WEBSITE_GID:?set WEBSITE_GID}"
+    environment:
+      WEBSITE_RAPI_HOST: 0.0.0.0
+      WEBSITE_RAPI_PORT: "8004"
+      WEBSITE_RAPI_KEY: ${RAPI_KEY:?set RAPI_KEY}
+      WEBSITE_LOG_PATH: /app/logs/rapi.log
+      HOME: /tmp
+      TZ: Europe/Berlin
+    volumes:
+      - ./src/logs:/app/logs
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/timezone:/etc/timezone:ro
+    ports:
+      - "127.0.0.1:8004:8004"
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - >-
+          import urllib.request;
+          urllib.request.urlopen('http://127.0.0.1:8004/health/ready', timeout=3)
+      interval: 15s
+      timeout: 5s
+      retries: 4
+      start_period: 10s
+    init: true
+    read_only: true
+    tmpfs:
+      - /tmp:rw,nosuid,nodev,size=64m
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    pids_limit: 64
+    mem_limit: 256m
+    cpus: 0.5
+    restart: unless-stopped
+    logging:
+      driver: local
+      options:
+        max-size: 20m
+        max-file: "5"
+
+  robase-db:
+    image: postgres:18.4-alpine
+    environment:
+      POSTGRES_DB: robase
+      POSTGRES_USER: robase
+      POSTGRES_PASSWORD: ${RODB_DB_PASSWORD:?set RODB_DB_PASSWORD}
+    volumes:
+      - robase-data:/var/lib/postgresql
+    networks:
+      - robase-internal
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - pg_isready -U "$$POSTGRES_USER" -d "$$POSTGRES_DB"
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    init: true
+    security_opt:
+      - no-new-privileges:true
+    pids_limit: 128
+    mem_limit: 512m
+    cpus: 1.0
+    restart: unless-stopped
+    logging:
+      driver: local
+      options:
+        max-size: 20m
+        max-file: "5"
+
+  rodb-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: rodb-api
+    user: "${WEBSITE_UID:?set WEBSITE_UID}:${WEBSITE_GID:?set WEBSITE_GID}"
+    environment:
+      WEBSITE_RODB_HOST: 0.0.0.0
+      WEBSITE_RODB_PORT: "8005"
+      WEBSITE_RODB_KEY: ${RODB_KEY:?set RODB_KEY}
+      WEBSITE_RODB_DB_HOST: robase-db
+      WEBSITE_RODB_DB_PORT: "5432"
+      WEBSITE_RODB_DB_NAME: robase
+      WEBSITE_RODB_DB_USER: robase
+      WEBSITE_RODB_DB_PASSWORD: ${RODB_DB_PASSWORD:?set RODB_DB_PASSWORD}
+      WEBSITE_LOG_PATH: /app/logs/rodb.log
+      HOME: /tmp
+      TZ: Europe/Berlin
+    volumes:
+      - ./src/logs:/app/logs
+      - /etc/localtime:/etc/localtime:ro
+      - /etc/timezone:/etc/timezone:ro
+    ports:
+      - "127.0.0.1:8005:8005"
+    networks:
+      - default
+      - robase-internal
+    depends_on:
+      robase-db:
+        condition: service_healthy
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - >-
+          import urllib.request;
+          urllib.request.urlopen('http://127.0.0.1:8005/health/ready', timeout=3)
+      interval: 15s
+      timeout: 5s
+      retries: 4
+      start_period: 15s
+    init: true
+    read_only: true
+    tmpfs:
+      - /tmp:rw,nosuid,nodev,size=64m
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    pids_limit: 64
+    mem_limit: 256m
+    cpus: 0.5
+    restart: unless-stopped
+    logging:
+      driver: local
+      options:
+        max-size: 20m
+        max-file: "5"
+
 networks:
-  download-isolated:
-    driver: bridge
-    driver_opts:
-      com.docker.network.bridge.name: fish-download
+  robase-internal:
+    internal: true
+
+volumes:
+  robase-data:

@@ -34,23 +34,6 @@ USER website
 EXPOSE 8000
 CMD ["python", "avatar_api.py"]
 
-FROM base AS download-api
-
-RUN apt-get update \
-    && apt-get install --yes --no-install-recommends ffmpeg \
-    && rm -rf /var/lib/apt/lists/*
-
-COPY src/server/download_requirements.txt /app/requirements.txt
-RUN python -m pip install --no-cache-dir --requirement /app/requirements.txt
-
-COPY --chown=website:website src/server/download_api.py src/server/logging_utils.py /app/
-RUN mkdir -p /app/downloads /app/logs \
-    && chmod -R a=rX /app
-
-USER website
-EXPOSE 8002
-CMD ["python", "download_api.py"]
-
 FROM base AS media-api
 
 COPY src/server/media_requirements.txt /app/requirements.txt
@@ -63,3 +46,29 @@ RUN mkdir -p /app/media /app/logs \
 USER website
 EXPOSE 8003
 CMD ["python", "media_api.py"]
+
+FROM base AS rapi-api
+
+COPY src/server/rapi_requirements.txt /app/requirements.txt
+RUN python -m pip install --no-cache-dir --requirement /app/requirements.txt
+
+COPY --chown=website:website src/server/rapi_api.py src/server/logging_utils.py /app/
+RUN mkdir -p /app/logs \
+    && chmod -R a=rX /app
+
+USER website
+EXPOSE 8004
+CMD ["python", "rapi_api.py"]
+
+FROM base AS rodb-api
+
+COPY src/server/rodb_requirements.txt /app/requirements.txt
+RUN python -m pip install --no-cache-dir --requirement /app/requirements.txt
+
+COPY --chown=website:website src/server/rodb_api.py src/server/logging_utils.py /app/
+RUN mkdir -p /app/logs \
+    && chmod -R a=rX /app
+
+USER website
+EXPOSE 8005
+CMD ["python", "rodb_api.py"]
