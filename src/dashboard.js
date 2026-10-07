@@ -35,6 +35,7 @@ if (code && state) {
     } catch (e) {
       console.error("OAuth failed:", e);
       showLogin();
+      FishieWeb.notice("Login failed. Please try Login with Discord again.");
     }
   })();
 } else {
@@ -59,7 +60,18 @@ if (code && state) {
     })
     .catch((error) => {
       console.error("Could not restore Fishie session:", error);
-      showLogin();
+      // A temporary API failure is not a logout. Keep the cached profile and
+      // let the user retry without starting a fresh Discord authorization.
+      document.getElementById("loginView").style.display = "none";
+      const notice = document.createElement("p");
+      notice.setAttribute("role", "alert");
+      notice.textContent = "Sign-in is temporarily unavailable. Please try again. ";
+      const retry = document.createElement("button");
+      retry.type = "button";
+      retry.textContent = "Retry";
+      retry.onclick = () => location.reload();
+      notice.append(retry);
+      document.getElementById("dashboardView").before(notice);
     });
 }
 
@@ -88,6 +100,7 @@ if (_login)
       window.location.assign(data.url);
     } catch (error) {
       console.error("Could not start Discord login:", error);
+      FishieWeb.notice("Could not log in. Select Login with Discord to retry.");
     }
   };
 
@@ -167,43 +180,59 @@ async function initDashboard() {
       sessionStorage.getItem("lastfm_linked_username") || "your account";
     sessionStorage.removeItem("lastfm_linked_username");
     window.history.replaceState({}, document.title, "/dashboard");
-    alert("Connected Last.fm account " + linkedUsername + " to Fishie.");
+    FishieWeb.notice("Connected Last.fm account " + linkedUsername + " to Fishie.");
   }
 }
 
+let userSettingsVersion = 0;
 async function loadUserSettings(userId) {
-  var div = document.getElementById("userSettingsContent");
-  try {
-    var [optRes, privacyRes, remRes, accRes, xpRes] = await Promise.all([
-      FishieWeb.fetch(API + "/user/" + userId + "/opted-out", {
-      }),
-      FishieWeb.fetch(API + "/user/" + userId + "/privacy-settings", {
-      }),
-      FishieWeb.fetch(API + "/user/" + userId + "/reminders", {
-      }),
-      FishieWeb.fetch(API + "/user/" + userId + "/accounts", {
-      }),
-      FishieWeb.fetch(API + "/user/" + userId + "/xp", {
-      }),
-    ]);
-    if (![optRes, privacyRes, remRes, accRes, xpRes].every(function (res) {
-      return res.ok;
-    })) {
-      throw new Error("Could not load user settings");
+  const version = ++userSettingsVersion;
+  const div = document.getElementById("userSettingsContent");
+  div.innerHTML = '<div class="settings-subtabs"><button id="userTabGeneral" class="guild-tab active">General</button><button id="userTabHighlights" class="guild-tab">Highlights</button></div><div id="userGeneralSettings"></div>';
+  div.querySelector("#userTabGeneral").onclick = () => showUserSettingsTab(userId, "general");
+  div.querySelector("#userTabHighlights").onclick = () => openUserHighlights(userId);
+  const sections = [
+    ["privacy", "Privacy", "privacy-settings"],
+    ["tracking", "Individual tracking", "opted-out"],
+    ["xp", "XP", "xp"],
+    ["reminders", "Reminders", "reminders"],
+    ["accounts", "Connected Accounts", "accounts"]
+  ];
+  await Promise.all(sections.map(async ([key, title, endpoint]) => {
+    const panel = document.createElement("section");
+    panel.className = "card";
+    div.querySelector("#userGeneralSettings").append(panel);
+    async function load() {
+      panel.textContent = "Loading " + title.toLowerCase() + "…";
+      try {
+        const response = await FishieWeb.fetch(API + "/user/" + userId + "/" + endpoint, {signal: AbortSignal.timeout(15000)});
+        if (!response.ok) throw new Error("Could not load " + title.toLowerCase());
+        const data = await response.json();
+        if (key === "tracking") data.categories = (await trackingCategories()).user;
+        if (version !== userSettingsVersion || !panel.isConnected) return;
+        panel.innerHTML = renderUserSettingsCard(key, userId, data);
+      } catch (error) {
+        if (version !== userSettingsVersion || !panel.isConnected) return;
+        panel.replaceChildren();
+        const message = document.createElement("p");
+        message.setAttribute("role", "status");
+        message.textContent = "Could not load " + title.toLowerCase() + ".";
+        const retry = document.createElement("button");
+        retry.className = "btn-primary";
+        retry.textContent = "Retry";
+        retry.onclick = load;
+        panel.append(message, retry);
+      }
     }
-    var optData = await optRes.json();
-    var privacyData = await privacyRes.json();
-    var remData = await remRes.json();
-    var accData = await accRes.json();
-    var xpData = await xpRes.json();
-    var optedOut = new Set(optData.items || []);
-    var items = (await trackingCategories()).user;
+    await load();
+  }));
+}
 
-    var html =
-      '<div class="settings-subtabs" style="display:flex;gap:0.4rem;margin-bottom:0.75rem;flex-wrap:wrap">' +
-      '<button id="userTabGeneral" class="guild-tab active" onclick="showUserSettingsTab(\'' + userId + '\',\'general\')">General</button>' +
-      '<button id="userTabHighlights" class="guild-tab" onclick="openUserHighlights(\'' + userId + '\')">Highlights</button>' +
-      '</div><div id="userGeneralSettings"><div class="card"><div class="settings-group"><h4>Privacy</h4>' +
+function renderUserSettingsCard(key, userId, data) {
+  let html = "";
+  if (key === "privacy") {
+    const privacyData = data;
+    html = '<div class="settings-group"><h4>Privacy</h4>' +
       '<div class="setting-toggle"><div class="label">Track new activity</div><div class="toggle ' +
       (privacyData.tracking_enabled !== false ? "on" : "") +
       '" onclick="var t=this;t.classList.toggle(\'on\');togUserPrivacy(\'' +
@@ -219,8 +248,10 @@ async function loadUserSettings(userId) {
       '" onclick="var t=this;t.classList.toggle(\'on\');togUserPrivacy(\'' +
       userId +
       '\',\'game_history_public\',t.classList.contains(\'on\'))"></div></div>' +
-      '<div style="color:#64748b;font-size:0.8rem;margin-top:0.6rem">These settings can be changed at any time and do not delete existing data.</div>' +
-      '</div></div><div class="card"><div class="settings-group"><h4>Individual tracking</h4>';
+      '<div style="color:#64748b;font-size:0.8rem;margin-top:0.6rem">These settings can be changed at any time and do not delete existing data.</div>'  + '</div>';
+  } else if (key === "tracking") {
+    const items = data.categories, optedOut = new Set(data.items || []);
+    html = '<div class="settings-group"><h4>Individual tracking</h4>';
     for (var i = 0; i < items.length; i++) {
       var disabled = Boolean(items[i].disabled);
       var on = !disabled && !optedOut.has(items[i].k);
@@ -249,18 +280,23 @@ async function loadUserSettings(userId) {
             items[i].k +
             "',t.classList.contains('on'))\"></div></div>");
     }
-    html += "</div></div>";
 
+    html += "</div>";
+  } else if (key === "xp") {
+    const xpData = data;
     html +=
-      '<div class="card"><div class="settings-group"><h4>XP</h4>' +
+      '<div class="settings-group"><h4>XP</h4>' +
       '<div style="display:flex;gap:1.5rem"><div><div class="label">Messages</div><div class="value">' +
       (xpData.messages || 0).toLocaleString() +
       "</div></div>" +
       '<div><div class="label">XP</div><div class="value">' +
       (xpData.xp || 0).toLocaleString() +
-      "</div></div></div></div></div>";
+      "</div></div></div></div>";
 
-    html += '<div class="card"><div class="settings-group"><h4>Reminders</h4>';
+
+  } else if (key === "reminders") {
+    const remData = data;
+    html += '<div class="settings-group"><h4>Reminders</h4>';
     var rems = remData.reminders || [];
     if (!rems.length) {
       html +=
@@ -286,10 +322,13 @@ async function loadUserSettings(userId) {
           "</span></div>";
       }
     }
-    html += "</div></div>";
+    html += "</div>";
 
+
+  } else if (key === "accounts") {
+    const accData = data;
     html +=
-      '<div class="card"><div class="settings-group"><h4>Connected Accounts</h4>';
+      '<div class="settings-group"><h4>Connected Accounts</h4>';
     var accts = accData.accounts || {};
     var lastfm = accts.lastfm || "";
     var steam = accts.steam || "";
@@ -364,15 +403,10 @@ async function loadUserSettings(userId) {
       userId +
       "'" +
       ')">Save Accounts</button>';
-    html += "</div></div>";
     html += "</div>";
 
-    div.innerHTML = html;
-    loadUserHighlights(userId);
-  } catch (e) {
-    console.error("User settings error:", e);
-    div.innerHTML = '<p style="color:#64748b">Failed to load settings.</p>';
   }
+  return html;
 }
 
 var _userHighlightGuilds = [];
@@ -472,10 +506,10 @@ async function saveUserHighlights(guildId) {
   if (!res.ok) {
     var detail = await res.text();
     console.error("Highlight save failed", res.status, detail);
-    alert("Could not save highlights: " + detail);
+    FishieWeb.notice("Could not save highlights: " + detail);
     return;
   }
-  alert("Highlights saved.");
+  FishieWeb.notice("Highlights saved.");
 }
 
 function togUserOpt(userId, item, enable) {
@@ -505,7 +539,7 @@ async function connectLastfm() {
       throw new Error(data.detail || "Could not start Last.fm connection");
     window.location.href = data.url;
   } catch (e) {
-    alert(e.message || "Could not start Last.fm connection.");
+    FishieWeb.notice(e.message || "Could not start Last.fm connection.");
   }
 }
 
@@ -518,7 +552,7 @@ async function connectSteam() {
       throw new Error(data.detail || "Could not start Steam connection");
     window.location.href = data.url;
   } catch (e) {
-    alert(e.message || "Could not start Steam connection.");
+    FishieWeb.notice(e.message || "Could not start Steam connection.");
   }
 }
 
@@ -531,7 +565,7 @@ async function connectAnilist() {
       throw new Error(data.detail || "Could not start AniList connection");
     window.location.href = data.url;
   } catch (e) {
-    alert(e.message || "Could not start AniList connection.");
+    FishieWeb.notice(e.message || "Could not start AniList connection.");
   }
 }
 
@@ -545,7 +579,7 @@ async function disconnectLastfm(userId) {
     if (!res.ok) throw new Error(data.detail || "Could not disconnect Last.fm");
     await loadUserSettings(userId);
   } catch (e) {
-    alert(e.message || "Could not disconnect Last.fm.");
+    FishieWeb.notice(e.message || "Could not disconnect Last.fm.");
   }
 }
 
@@ -559,7 +593,7 @@ async function disconnectSteam(userId) {
     if (!res.ok) throw new Error(data.detail || "Could not disconnect Steam");
     await loadUserSettings(userId);
   } catch (e) {
-    alert(e.message || "Could not disconnect Steam.");
+    FishieWeb.notice(e.message || "Could not disconnect Steam.");
   }
 }
 
@@ -573,7 +607,7 @@ async function disconnectAnilist(userId) {
     if (!res.ok) throw new Error(data.detail || "Could not disconnect AniList");
     await loadUserSettings(userId);
   } catch (e) {
-    alert(e.message || "Could not disconnect AniList.");
+    FishieWeb.notice(e.message || "Could not disconnect AniList.");
   }
 }
 
@@ -670,7 +704,7 @@ async function loadGuildSettings(guildId) {
       "</div></div>";
     html += "</div>";
     html +=
-      '<div class="setting-toggle"><div><div class="label">Auto-Download Channel</div><div class="desc">Messages with attachments are auto-forwarded here</div></div><div class="channel-input-group"><input type="text" class="text-input" id="gAutoDl" value="' +
+      '<div class="setting-toggle"><div><div class="label">Auto-Download Channel</div><div class="desc">Automatically download supported media links posted in this channel</div></div><div class="channel-input-group"><input type="text" class="text-input" id="gAutoDl" value="' +
       (autoDownload || "") +
       '" placeholder="Channel ID"><button class="btn-primary" onclick="saveGChan(' +
       "'" +
@@ -970,6 +1004,7 @@ function mentionSelect(id, roles, follow = {}) {
 async function loadGuildNotifications(guildId, kind) {
   const panel = document.getElementById("guild" + kind[0].toUpperCase() + kind.slice(1) + "Tab");
   if (!panel) return;
+  const requestVersion = panel.notificationRequestVersion = (panel.notificationRequestVersion || 0) + 1;
   try {
     const data = await notificationRequest("/guild/" + guildId + "/" + kind + "-follows");
     const follows = data.follows || [], channels = data.channels || [], roles = data.roles || [];
@@ -980,22 +1015,38 @@ async function loadGuildNotifications(guildId, kind) {
         choices.map(channel => '<option value="' + esc(channel.id) + '"' + (String(channel.id) === String(selected) ? " selected" : "") + '>#' + esc(channel.name) + '</option>').join("") + '</select></label>';
     };
     const label = kind === "anime" ? "Anime" : "Twitch";
-    let html = '<div class="card"><h4>' + label + ' notifications</h4><p class="desc">Follow up to ' + (kind === "anime" ? "20 upcoming anime" : "10 Twitch channels") + ' per server. New follows do not mention anyone unless selected.</p>' +
+    let html = '<p class="desc">' + label + ' notifications · ' + follows.length + ' / ' + (kind === "anime" ? '20' : '10') + '</p><details class="card"><summary>Follow ' + label + '</summary><p class="desc">New follows do not mention anyone unless selected.</p>' +
       '<label>' + label + ' name or link <input id="' + kind + 'NewName" class="text-input" maxlength="200"></label>' +
       channelSelect(kind + "NewChannel", null) + mentionSelect(kind + "NewMention", roles) +
-      '<button class="btn-primary" data-add>Follow</button><p role="status" data-status></p></div>';
+      '<button class="btn-primary" data-add>Follow</button><p role="status" data-status></p></details>';
     follows.forEach((follow, index) => {
-      const base = kind + "Follow" + index;
+      const base = kind + "Follow" + follow.id;
       const date = follow.next_airing_at || follow.release_at;
       html += '<div class="card"><h4>' + esc(follow.id) + ' · ' + esc(follow.title || follow.channel_name) + '</h4>' +
-        (date ? '<p class="desc">' + (follow.next_episode ? "Episode " + esc(follow.next_episode) + " · " : "Releases ") + esc(new Date(date).toLocaleString()) + '</p>' : "") +
+        (kind === "anime" ? '<p class="desc">' + (date ? (follow.next_airing_at ? 'Episode ' + esc(follow.next_episode || '?') + ' · ' + esc(new Date(date).toLocaleString(undefined, {timeZoneName:"short"})) : 'Estimated release date · ' + esc(new Date(date).toLocaleDateString(undefined, {timeZone:"UTC"}))) : 'Next episode not announced') + '</p>' : '') +
         channelSelect(base + "Channel", follow.announce_channel_id) + mentionSelect(base + "Mention", roles, follow) +
-        '<div style="display:flex;gap:0.4rem;margin-top:0.5rem"><button class="btn-primary" data-save="' + index + '">Save</button><button class="logout-btn" data-remove="' + index + '">Unfollow</button></div></div>';
+        '<div style="display:flex;gap:0.4rem;margin-top:0.5rem"><button class="btn-primary" data-save="' + index + '">Save</button><button class="logout-btn" data-remove="' + index + '">Unfollow</button></div><p role="status" data-status></p></div>';
     });
     if (!follows.length) html += '<p class="desc">No ' + label + ' follows yet.</p>';
-    if (!panel.isConnected) return;
+    if (!panel.isConnected || panel.notificationRequestVersion !== requestVersion) return;
+    const drafts = panel.dataset.guild === String(guildId) ? [...panel.querySelectorAll(".card[data-dirty] select[id], .card[data-dirty] input[id]")].map(input => [input.id, input.value]) : [];
+    panel.dataset.guild = String(guildId);
     panel.innerHTML = html;
+    for (const [id, value] of drafts) {
+      const input = panel.querySelector("#" + id);
+      if (input && (input.tagName !== "SELECT" || [...input.options].some(option => option.value === value))) { input.value = value; input.closest(".card").dataset.dirty = "true"; }
+    }
     makeSearchablePickers(panel);
+    panel.querySelectorAll(".card").forEach(card => {
+      if (card.dataset.dirty) { card.querySelector("[data-status]").textContent = "Unsaved changes"; if (card.tagName === "DETAILS") card.open = true; }
+      const changed = event => {
+        if (!event.target.matches("select[id], input[id]")) return;
+        card.dataset.dirty = "true";
+        card.querySelector("[data-status]").textContent = "Unsaved changes";
+      };
+      card.addEventListener("change", changed);
+      card.addEventListener("input", changed);
+    });
     const destination = base => {
       const mention = panel.querySelector("#" + base + "Mention").value;
       return {
@@ -1004,13 +1055,22 @@ async function loadGuildNotifications(guildId, kind) {
         mention_everyone: mention === "everyone"
       };
     };
-    const run = async (button, action) => {
-      button.disabled = true;
-      const status = panel.querySelector("[data-status]");
+    const run = async (button, action, reload = true) => {
+      const card = button.closest(".card");
+      const controls = [...card.querySelectorAll("button, select, input")];
+      controls.forEach(control => control.disabled = true);
+      const status = card.querySelector("[data-status]");
       status.textContent = "Saving…";
-      try { const result = await action(); if (result !== false) await loadGuildNotifications(guildId, kind); else status.textContent = ""; }
+      try {
+        const result = await action();
+        if (result !== false) {
+          delete card.dataset.dirty;
+          if (reload) await loadGuildNotifications(guildId, kind);
+          else status.textContent = "Saved.";
+        } else status.textContent = card.dataset.dirty ? "Unsaved changes" : "";
+      }
       catch (error) { status.textContent = error.message; }
-      finally { button.disabled = false; }
+      finally { controls.forEach(control => control.disabled = false); }
     };
     const post = payload => notificationRequest("/guild/" + guildId + "/" + kind + "-follows", {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(payload)});
     panel.querySelector("[data-add]").onclick = event => run(event.currentTarget, async () => {
@@ -1029,15 +1089,15 @@ async function loadGuildNotifications(guildId, kind) {
     });
     panel.querySelectorAll("[data-save]").forEach(button => button.onclick = () => run(button, () => {
       const follow = follows[Number(button.dataset.save)];
-      return post({...destination(kind + "Follow" + button.dataset.save), ...(kind === "anime" ? {id: follow.id} : {channel_name: follow.channel_name})});
-    }));
+      return post({...destination(kind + "Follow" + follow.id), ...(kind === "anime" ? {id: follow.id} : {channel_name: follow.channel_name})});
+    }, false));
     panel.querySelectorAll("[data-remove]").forEach(button => button.onclick = () => run(button, async () => {
       const follow = follows[Number(button.dataset.remove)];
       if (!confirm("Unfollow " + (follow.title || follow.channel_name) + "?")) return false;
       return notificationRequest("/guild/" + guildId + "/" + kind + "-follows/" + encodeURIComponent(kind === "anime" ? follow.id : follow.channel_name), {method: "DELETE"});
     }));
   } catch (error) {
-    panel.innerHTML = '<p role="status">' + esc(error.message) + '</p>';
+    if (panel.notificationRequestVersion === requestVersion) panel.innerHTML = '<p role="status">' + esc(error.message) + '</p>';
   }
 }
 
@@ -1084,7 +1144,7 @@ async function saveLoggerEvent(guildId, event) {
   var options = { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ event: event, channel_id: input.value }) };
   if (!input.value) { options.method = "DELETE"; url += "/" + encodeURIComponent(event); delete options.body; }
   var res = await FishieWeb.fetch(url, options);
-  if (!res.ok) { alert("Could not update that logger event."); return; }
+  if (!res.ok) { FishieWeb.notice("Could not update that logger event."); return; }
   loadGuildLoggerTab(guildId);
 }
 
@@ -1124,7 +1184,7 @@ async function setGuildCommand(guildId, disabled) {
     await loadGuildSettings(guildId);
   } catch (e) {
     console.error("Command setting error:", e);
-    alert("Could not update that command setting.");
+    FishieWeb.notice("Could not update that command setting.");
   }
 }
 
@@ -1143,7 +1203,7 @@ async function enableGuildCommand(guildId, command, channelId) {
     await loadGuildSettings(guildId);
   } catch (e) {
     console.error("Command setting error:", e);
-    alert("Could not enable that command.");
+    FishieWeb.notice("Could not enable that command.");
   }
 }
 
@@ -1163,14 +1223,14 @@ async function addPrefix(guildId) {
     if (!res.ok) {
       var err = await res.text();
       console.error("Prefix add failed:", res.status, err);
-      alert("Failed to add prefix: " + err);
+      FishieWeb.notice("Failed to add prefix: " + err);
       return;
     }
     inp.value = "";
     loadGuildSettings(guildId);
   } catch (e) {
     console.error("Prefix add error:", e);
-    alert("Network error adding prefix.");
+    FishieWeb.notice("Network error adding prefix.");
   }
 }
 

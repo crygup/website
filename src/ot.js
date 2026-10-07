@@ -20,10 +20,12 @@
     button.type = "button";
     button.className = "oq-cell";
     button.addEventListener("click", () => {
+      history.before();
       const next = colors.indexOf(revealed[position]) + 1;
       if (next === colors.length) delete revealed[position];
       else revealed[position] = colors[next];
       solve();
+      history.save();
     });
     grid.appendChild(button);
     buttons.push(button);
@@ -68,7 +70,6 @@
     else if (analysis.safe.length) text += ` · ${analysis.safe.length} guaranteed safe cells`;
     else if (!analysis.ranked.length) text += " · Only blue spheres remain";
     else text += " · Highlighted cells have the lowest estimated blue risk";
-    if (analysis?.layouts && !analysis.complete) text += " · Estimated search; safety is not guaranteed";
     status.textContent = text;
   }
 
@@ -101,14 +102,29 @@
   }
 
   document.getElementById("ot-reset").addEventListener("click", () => {
+    history.before();
     revealed = {};
     solve();
+    history.save();
   });
-  palette.addEventListener("change", solve);
+  let savedPalette = palette.value;
+  palette.addEventListener("change", () => {
+    const next = palette.value;
+    palette.value = savedPalette;
+    history.before();
+    palette.value = savedPalette = next;
+    solve();
+    history.save();
+  });
   toggle.addEventListener("click", () => {
     useEmoji = !useEmoji;
     toggle.textContent = useEmoji ? "Show Letters" : "Show Emojis";
     render();
   });
+  const history = FishieWeb.solverHistory("ot", () => ({revealed, palette: palette.value}), saved => {
+    revealed = {...saved.revealed};
+    palette.value = savedPalette = saved.palette;
+    solve();
+  }, saved => FishieWeb.validGrid(saved.revealed, colors) && [...palette.options].some(option => option.value === saved.palette));
   solve();
 })();

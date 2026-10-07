@@ -454,10 +454,10 @@ async function deleteItem(table, key, description = key) {
     );
     if (!res.ok) throw new Error("Delete failed");
     closeModal();
-    alert("Hidden now. You have 31 days to restore it from Settings.");
+    FishieWeb.notice("Hidden now. You have 31 days to restore it from Settings.");
     fetchData();
   } catch {
-    alert("Delete failed.");
+    FishieWeb.notice("Delete failed.");
   }
 }
 

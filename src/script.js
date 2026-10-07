@@ -3,6 +3,7 @@ const FISHIE_API_BASE = "https://api.crygup.com/fishie";
 const FISHIE_HOME_REDIRECT = "https://crygup.com";
 
 window.startFishieOAuth = async function (redirectUri = FISHIE_HOME_REDIRECT) {
+  sessionStorage.setItem("discord_return_to", location.pathname + location.search + location.hash);
   const response = await FishieWeb.fetch(
     `${FISHIE_API_BASE}/oauth/start?redirect_uri=${encodeURIComponent(redirectUri)}`,
   );
@@ -36,6 +37,10 @@ window.startFishieOAuth = async function (redirectUri = FISHIE_HOME_REDIRECT) {
 
   const sidebar = document.createElement("nav");
   sidebar.className = "sidebar";
+  sidebar.id = "site-menu";
+  sidebar.inert = true;
+  btn.setAttribute("aria-controls", sidebar.id);
+  btn.setAttribute("aria-expanded", "false");
 
   let html = "";
 
@@ -70,18 +75,8 @@ window.startFishieOAuth = async function (redirectUri = FISHIE_HOME_REDIRECT) {
   html += buildLoginSection();
 
   for (const item of links) {
-    if (item.subs) {
-      const expanded = page === item.match ? " expanded" : "";
-      html += `<button class="sidebar-expand${expanded}">${item.label}<span class="sidebar-arrow"></span></button>`;
-      html += `<div class="sidebar-subs${expanded}">`;
-      for (const sub of item.subs) {
-        html += `<a href="${sub.href}" class="sidebar-sub">${sub.label}</a>`;
-      }
-      html += `</div>`;
-    } else {
-      const active = page === item.match ? " active" : "";
-      html += `<a href="${item.href}" class="${active}">${item.label}</a>`;
-    }
+    const active = page === item.match ? " active" : "";
+    html += `<a href="${item.href}" class="${active}">${item.label}</a>`;
   }
   sidebar.innerHTML = html;
   document.body.prepend(sidebar);
@@ -109,6 +104,9 @@ window.startFishieOAuth = async function (redirectUri = FISHIE_HOME_REDIRECT) {
           await window.startFishieOAuth(FISHIE_HOME_REDIRECT);
         } catch (error) {
           console.error("Could not start Discord login:", error);
+          let notice = sidebar.querySelector("[role=alert]");
+          if (!notice) { notice = document.createElement("p"); notice.setAttribute("role", "alert"); link.after(notice); }
+          notice.textContent = "Could not log in. Select Login with Discord to retry.";
         }
       });
     }
@@ -132,8 +130,14 @@ window.startFishieOAuth = async function (redirectUri = FISHIE_HOME_REDIRECT) {
     rebuildLogin();
     sidebar.classList.add("open");
     overlay.classList.add("open");
+    sidebar.inert = false;
+    btn.setAttribute("aria-expanded", "true");
+    sidebar.querySelector("a, button")?.focus();
   }
   function close() {
+    if (sidebar.contains(document.activeElement)) btn.focus();
+    sidebar.inert = true;
+    btn.setAttribute("aria-expanded", "false");
     sidebar.classList.remove("open");
     overlay.classList.remove("open");
   }
@@ -143,19 +147,17 @@ window.startFishieOAuth = async function (redirectUri = FISHIE_HOME_REDIRECT) {
   );
   overlay.addEventListener("click", close);
   sidebar.addEventListener("click", (e) => {
-    if (e.target.tagName === "A") close();
+    if (e.target.tagName === "A" && !e.target.classList.contains("sidebar-login")) close();
   });
 
-  const expandBtn = sidebar.querySelector(".sidebar-expand");
-  const subsDiv = sidebar.querySelector(".sidebar-subs");
-  if (expandBtn && subsDiv) {
-    expandBtn.addEventListener("click", () => {
-      expandBtn.classList.toggle("expanded");
-      subsDiv.classList.toggle("expanded");
-    });
-  }
   document.addEventListener("keydown", (e) => {
     if (e.key === "Escape") close();
+    if (e.key === "Tab" && sidebar.classList.contains("open")) {
+      const items = [btn, ...sidebar.querySelectorAll("a[href], button:not([disabled])")];
+      const index = items.indexOf(document.activeElement);
+      e.preventDefault();
+      items[(index + (e.shiftKey ? -1 : 1) + items.length) % items.length].focus();
+    }
   });
 })();
 
@@ -253,17 +255,6 @@ if (document.getElementById("bio-panel")) {
       const panel = document.getElementById(`${btn.dataset.tab}-panel`);
       panel.classList.remove("hidden");
     });
-  });
-}
-
-const mudaeDropdown = document.getElementById("mudae-dropdown");
-if (mudaeDropdown) {
-  mudaeDropdown.addEventListener("click", (e) => {
-    e.stopPropagation();
-    mudaeDropdown.classList.toggle("dropdown-open");
-  });
-  document.addEventListener("click", () => {
-    mudaeDropdown.classList.remove("dropdown-open");
   });
 }
 
@@ -475,7 +466,7 @@ if (dp) {
   });
 }
 const taglineEl = document.getElementById("tagline");
-if (taglineEl) taglineEl.textContent = profile.tagline;
+if (taglineEl && !document.body.dataset.page) taglineEl.textContent = profile.tagline;
 const yearEl = document.getElementById("year");
 if (yearEl) yearEl.textContent = String(new Date().getFullYear());
 const bio = document.getElementById("bio");
@@ -797,21 +788,28 @@ function renderVideoCard(v) {
 }
 
 function renderError() {
-  videoContainer.innerHTML =
-    '<p style="color:#94a3b8;text-align:center;padding:2rem;">Could not load videos. Check your API key and channel handle.</p>';
+  videosLoaded = false;
+  videoContainer.innerHTML = '<p role="status">Could not load videos.</p><button type="button">Retry</button>';
+  videoContainer.querySelector("button").onclick = loadVideos;
 }
 
-if (videoContainer) {
+let videosLoaded = false;
+function loadVideos() {
+  if (!videoContainer || videosLoaded) return;
+  videosLoaded = true;
+  videoContainer.textContent = "Loading videos…";
   fetchLatestVideos()
     .then((videos) => {
       if (videos.length === 0) {
         renderError();
         return;
       }
+      videoContainer.replaceChildren();
       videos.forEach(renderVideoCard);
     })
-    .catch(() => renderError());
+    .catch(() => { videosLoaded = false; renderError(); });
 }
+document.querySelector('[data-tab="videos"]')?.addEventListener("click", loadVideos);
 
 function escapeHtml(s) {
   return String(s)
@@ -855,11 +853,11 @@ function escapeHtml(s) {
             data.personaname || data.steamid,
           );
         }
-        alert(
+        FishieWeb.notice(
           `Connected Steam account ${data.personaname || data.steamid} to Fishie.`,
         );
       })
-      .catch((error) => alert(error.message || "Steam connection failed."));
+      .catch((error) => FishieWeb.notice(error.message || "Steam connection failed."));
     return;
   }
 
@@ -877,9 +875,9 @@ function escapeHtml(s) {
         if (data.source === "website") {
           sessionStorage.setItem("spotify_linked_name", data.display_name);
         }
-        alert(`Connected Spotify account ${data.display_name} to Fishie.`);
+        FishieWeb.notice(`Connected Spotify account ${data.display_name} to Fishie.`);
       })
-      .catch((error) => alert(error.message || "Spotify connection failed."));
+      .catch((error) => FishieWeb.notice(error.message || "Spotify connection failed."));
     return;
   }
 
@@ -897,9 +895,9 @@ function escapeHtml(s) {
         if (data.source === "website") {
           sessionStorage.setItem("anilist_linked_username", data.username);
         }
-        alert(`Connected AniList account ${data.username} to Fishie.`);
+        FishieWeb.notice(`Connected AniList account ${data.username} to Fishie.`);
       })
-      .catch((error) => alert(error.message || "AniList connection failed."));
+      .catch((error) => FishieWeb.notice(error.message || "AniList connection failed."));
     return;
   }
 
@@ -917,9 +915,9 @@ function escapeHtml(s) {
         if (data.source === "website") {
           sessionStorage.setItem("lastfm_linked_username", data.username);
         }
-        alert(`Connected Last.fm account ${data.username} to Fishie.`);
+        FishieWeb.notice(`Connected Last.fm account ${data.username} to Fishie.`);
       })
-      .catch((error) => alert(error.message || "Last.fm connection failed."));
+      .catch((error) => FishieWeb.notice(error.message || "Last.fm connection failed."));
     return;
   }
 
@@ -949,10 +947,18 @@ function escapeHtml(s) {
       window.dispatchEvent(new CustomEvent("discord-login"));
       if (localStorage.getItem("settings_pending")) {
         window.location.href = "/discord";
+      } else {
+        const saved = sessionStorage.getItem("discord_return_to");
+        sessionStorage.removeItem("discord_return_to");
+        if (saved && saved.startsWith("/") && !saved.startsWith("//")) {
+          const target = new URL(saved, location.origin);
+          if (target.origin === location.origin && target.href !== location.href) location.replace(target.href);
+        }
       }
     })
     .catch((error) => {
       console.error("Discord login failed:", error);
+      FishieWeb.notice("Login failed. Please open the menu and try again.");
       window.__fishieOAuthPending = false;
     });
 })();

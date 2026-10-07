@@ -67,8 +67,10 @@
   let cachedAnalysis = null;
 
   function resetGrid() {
+    history.before();
     for (const position of Object.keys(revealed)) delete revealed[position];
     renderGrid();
+    history.save();
   }
 
   window.renderOQGrid = renderGrid;
@@ -309,6 +311,7 @@
       }
 
       button.addEventListener("click", () => {
+        history.before();
         if (waitingForRed && !(position in revealed)) {
           revealed[position] = "red";
         } else if (position in revealed) {
@@ -322,6 +325,8 @@
           revealed[position] = certainColor(analysis, position) || "blue";
         }
         renderGrid();
+        history.save();
+        grid.children[position]?.focus({preventScroll: true});
       });
       grid.appendChild(button);
     }
@@ -377,5 +382,10 @@
     renderGrid();
   });
 
+  const history = FishieWeb.solverHistory("oq", () => revealed, saved => {
+    for (const key of Object.keys(revealed)) delete revealed[key];
+    Object.assign(revealed, saved);
+    renderGrid();
+  }, saved => FishieWeb.validGrid(saved, COLORS));
   renderGrid();
 })();

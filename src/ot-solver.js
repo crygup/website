@@ -108,8 +108,10 @@ function analyzeOT(revealed, numberColors) {
     if (complete && blueCounts[position] === layouts) danger.push(position);
   }
   const candidates = safe.length ? [...safe] : Object.keys(probabilities).map(Number).filter(p => !danger.includes(p));
-  candidates.sort((a, b) => probabilities[a] - probabilities[b] || a - b);
-  return {safe, danger, ranked: candidates.slice(0, 4), probabilities, complete, layouts};
+  if (!candidates.length) return {safe, danger, ranked: [], probabilities, complete, layouts};
+  const lowestBlueCount = Math.min(...candidates.map(position => blueCounts[position]));
+  const ranked = candidates.filter(position => blueCounts[position] === lowestBlueCount).sort((a, b) => a - b);
+  return {safe, danger, ranked, probabilities, complete, layouts};
 }
 
 if (typeof module !== "undefined") module.exports = {analyzeOT};

@@ -1,8 +1,10 @@
 (function () {
   window.renderOCGrid = renderGrid;
   window.ocReset = function () {
+    history.before();
     for (const k of Object.keys(revealed)) delete revealed[k];
     renderGrid();
+    history.save();
   };
   const GRID_SIZE = 5;
   const CENTER = 12;
@@ -158,6 +160,7 @@
     for (let i = 0; i < GRID_SIZE * GRID_SIZE; i++) {
       const btn = document.createElement("button");
       btn.className = "oc-cell";
+      btn.setAttribute("aria-label", `Row ${Math.floor(i / GRID_SIZE) + 1}, column ${i % GRID_SIZE + 1}: ${i === CENTER ? "unavailable" : revealed[i] || "unrevealed"}`);
       if (i === best) btn.classList.add("best");
       if (i === CENTER) {
         btn.disabled = true;
@@ -182,6 +185,7 @@
   }
 
   function cycleCell(pos) {
+    history.before();
     const current = revealed[pos];
     if (!current) {
       revealed[pos] = COLOR_CYCLE[0];
@@ -194,6 +198,8 @@
       }
     }
     renderGrid();
+    history.save();
+    grid.children[pos]?.focus({preventScroll: true});
   }
 
   function updateStatus() {
@@ -223,10 +229,7 @@
     statusEl.textContent = text;
   }
 
-  document.getElementById("oc-reset").addEventListener("click", () => {
-    for (const k of Object.keys(revealed)) delete revealed[k];
-    renderGrid();
-  });
+  document.getElementById("oc-reset").addEventListener("click", window.ocReset);
 
   document.getElementById("oc-emoji-toggle").addEventListener("click", () => {
     useEmoji = !useEmoji;
@@ -235,5 +238,10 @@
     renderGrid();
   });
 
+  const history = FishieWeb.solverHistory("oc", () => revealed, saved => {
+    for (const key of Object.keys(revealed)) delete revealed[key];
+    Object.assign(revealed, saved);
+    renderGrid();
+  }, saved => FishieWeb.validGrid(saved, COLOR_CYCLE) && !(CENTER in saved));
   renderGrid();
 })();

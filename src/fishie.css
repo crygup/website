@@ -1,6 +1,14 @@
 #fishie-tabs {
   padding-top: 2.5rem;
 }
+.cmd-category-picker { display: none; }
+.cmd-name a { color: inherit; text-decoration: none; }
+.cmd-name a:hover { text-decoration: underline; }
+@media (max-width: 600px) {
+  .fishie-commands .cmd-tabs { display: none; }
+  .cmd-category-picker { display: block; margin: 0 auto 1rem; max-width: 27rem; }
+  .cmd-category-picker select { display: block; width: 100%; margin-top: .4rem; padding: .65rem; background: #243133; color: #f8fafc; border: 0; border-radius: .25rem; font: inherit; }
+}
 .fishie-card {
   text-align: center;
   padding: 1rem;
@@ -225,39 +233,8 @@
   padding: 0.15rem 0.4rem;
   border-radius: 0.2rem;
 }
-.cmd-tabs {
-  display: flex;
-  gap: 0.4rem;
-  flex-wrap: wrap;
-  margin-bottom: 1rem;
-  justify-content: center;
-}
-.cmd-tab {
-  padding: 0.35rem 0.75rem;
-  background: #1a1c1f;
-  border: 1px solid #2a2c2f;
-  border-radius: 0.25rem;
-  color: #94a3b8;
-  cursor: pointer;
-  font-size: 0.8rem;
-  font-family: inherit;
-  transition: background 0.15s;
-}
-.cmd-tab.active {
-  background: #2a2c2f;
-  color: #e2e8f0;
-  border-color: #475569;
-}
-.cmd-tab:hover {
-  background: #2a2c2f;
-}
 .cmd-panel.hidden {
   display: none;
-}
-.cmd-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-  gap: 0.5rem;
 }
 
 .cmd-tabs {
@@ -300,7 +277,7 @@
 }
 .cmd-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
   gap: 0.75rem;
 }
 .cmd-arg-title {
@@ -332,7 +309,6 @@ body[data-page="fishie"] .tab-panel { max-width: none; }
 .command-controls { display: flex; justify-content: center; gap: 1rem; flex-wrap: wrap; margin: 1rem 0; text-align: left; }
 .command-controls label { display: flex; flex-direction: column; gap: .4rem; width: min(100%, 360px); }
 .command-controls input { padding: .45rem .65rem; background: #17191c; color: #eee; border: 1px solid #59616d; border-radius: .3rem; width: 100%; box-sizing: border-box; }
-.cmd-grid { grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr)); }
 .cmd-card { min-width: 0; height: auto; padding: 1rem; text-align: left; }
 .cmd-name { max-width: none; white-space: normal; overflow: visible; text-overflow: clip; overflow-wrap: anywhere; font-size: 1rem; }
 .cmd-desc { display: block; overflow: visible; font-size: .9rem; -webkit-line-clamp: unset; line-clamp: unset; }
