@@ -1,10 +1,13 @@
 import http.server
+import json
 import os
 import posixpath
 import sys
 from urllib.parse import quote, unquote
 
 from server.logging_utils import get_logger
+from server.steam_activity import activity
+from server.anilist_activity import activity as anime_activity
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
 ROOT_REAL = os.path.realpath(ROOT)
@@ -144,9 +147,24 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         full = self._safe_full_path(raw_path)
         return full if full is not None else os.devnull
 
+    def activity_response(self, provider, head=False):
+        status, data = provider()
+        body = json.dumps(data).encode('utf-8')
+        self.send_response(status)
+        self.send_header('Content-Type', 'application/json; charset=utf-8')
+        self.send_header('Content-Length', str(len(body)))
+        self.send_header('Cache-Control', 'no-store')
+        self.end_headers()
+        if not head:
+            self.wfile.write(body)
+
     def do_GET(self):
         raw_path = self.path.split("?", 1)[0]
         decoded = self._decode_path(raw_path)
+        if decoded == "/anilist-activity":
+            return self.activity_response(anime_activity, head=self.command == "HEAD")
+        if decoded == "/steam-activity":
+            return self.activity_response(activity)
         if decoded == "/healthz":
             self.send_response(204)
             self.end_headers()
@@ -159,6 +177,10 @@ class Handler(http.server.SimpleHTTPRequestHandler):
     def do_HEAD(self):
         raw_path = self.path.split("?", 1)[0]
         decoded = self._decode_path(raw_path)
+        if decoded == "/anilist-activity":
+            return self.activity_response(anime_activity, head=self.command == "HEAD")
+        if decoded == "/steam-activity":
+            return self.activity_response(activity, head=True)
         if decoded == "/healthz":
             self.send_response(204)
             self.end_headers()

@@ -8,6 +8,7 @@ services:
       target: static
     user: "${WEBSITE_UID:?set WEBSITE_UID}:${WEBSITE_GID:?set WEBSITE_GID}"
     environment:
+      STEAM_API_KEY: ${STEAM_API_KEY:-}
       WEBSITE_LOG_PATH: /app/logs/static.log
       HOME: /tmp
       TZ: Europe/Berlin

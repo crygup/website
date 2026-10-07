@@ -242,19 +242,18 @@ main {
   overflow: visible;
 }
 
-#now-playing {
+:is(#now-playing, #steam-playing, #anime-playing) {
   display: flex;
   align-items: center;
   gap: 1rem;
-  padding-bottom: 1rem;
+  padding-bottom: 0;
   margin-bottom: 1rem;
-  border-bottom: 1px solid #4a4b56;
 }
-#now-playing.hidden {
+:is(#now-playing, #steam-playing, #anime-playing).hidden {
   display: none;
 }
 
-#now-playing .np-cover {
+:is(#now-playing, #steam-playing, #anime-playing) .np-cover {
   width: 64px;
   height: 64px;
   border-radius: 0.2rem;
@@ -262,44 +261,41 @@ main {
   object-fit: cover;
 }
 
-#now-playing .np-cover.placeholder {
+:is(#now-playing, #steam-playing, #anime-playing) .np-cover.placeholder {
   background: #243133;
 }
 
-#now-playing .np-info {
+:is(#now-playing, #steam-playing, #anime-playing) .np-info {
   display: flex;
   flex-direction: column;
   gap: 0.2rem;
   min-width: 0;
 }
 
-#now-playing .np-label {
+:is(#now-playing, #steam-playing, #anime-playing) .np-label {
   font-size: 0.75rem;
   color: #64748b;
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
 
-#now-playing .np-track {
+:is(#now-playing, #steam-playing, #anime-playing) .np-track {
   font-size: 0.95rem;
   color: #e2e8f0;
   font-weight: 600;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
-#now-playing .np-artist {
+:is(#now-playing, #steam-playing, #anime-playing) .np-artist {
   font-size: 0.85rem;
   color: #94a3b8;
 }
 
-#now-playing .np-plays {
+:is(#now-playing, #steam-playing, #anime-playing) .np-plays {
   font-size: 0.75rem;
   color: #64748b;
 }
 
-#now-playing .np-loved {
+:is(#now-playing, #steam-playing, #anime-playing) .np-loved {
   color: #e74c3c;
   font-size: 0.85rem;
 }
@@ -736,5 +732,45 @@ footer {
   .modal-content img {
     max-width: 95vw;
     max-height: 70vh;
+  }
+}
+
+@media (min-width: 1200px) {
+  .bio-card {
+    position: relative;
+  }
+
+  #activity-sidebar {
+    position: absolute;
+    top: 0;
+    left: calc(100% + 2rem);
+    width: min(320px, calc((100vw - 640px) / 2 - 2rem));
+    border-bottom: 0;
+    padding-bottom: 0;
+    margin-bottom: 0;
+  }
+}
+
+#activity-sidebar a { text-decoration: none; }
+#activity-sidebar a:hover { text-decoration: underline; }
+@media (min-width: 1200px) {
+  #activity-sidebar > section { border-bottom: 0; }
+}
+
+#activity-sidebar .np-info > * {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+@media (max-width: 1199px) {
+  #activity-sidebar:has(> section:not(.hidden)) {
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid #4a4b56;
+  }
+  #activity-sidebar > section:last-child {
+    margin-bottom: 0;
+    padding-bottom: 0;
   }
 }

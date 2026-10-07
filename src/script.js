@@ -18,11 +18,10 @@ window.startFishieOAuth = async function (redirectUri = FISHIE_HOME_REDIRECT) {
 
   const links = [
     { label: "Home", href: "/", match: "" },
-    { label: "Discord", href: "/discord", match: "discord" },
-    { label: "Fishie", href: "/fishie", match: "fishie" },
-    { label: "Download", href: "/download", match: "download" },
-    { label: "Messages", href: "/messages", match: "messages" },
-    { label: "Mudae", href: "/mudae", match: "mudae" },
+    { label: "Fishie Bot", href: "/fishie", match: "fishie" },
+    { label: "Discord Tools", href: "/discord", match: "discord" },
+    { label: "Mudae Tools", href: "/mudae", match: "mudae" },
+    { label: "Message Me", href: "/messages", match: "messages" },
   ];
 
   const btn = document.createElement("button");
@@ -168,22 +167,23 @@ const LASTFM_USER = "crygup";
 const profile = {
   name: "crygup",
   tagline: "did you know rawr means i love you in dinosaur",
-  bio: `<strong>hey!</strong> my name's zil, but you can call me z, crygup, cry, or whatever you want. i don't really mind.
+  bio: `<strong>hey!</strong> my name's zil, but you can call me gup, z, crygup, cry or whatever you want. i don't really mind.
 
-i'm a part-time video editor for a few different overwatch streamers. you can check out some of my work in the <a href="#" data-tab="videos">videos</a> tab.
+i enjoy editing videos in my free time for different streamers, check out my videos in the <a href="#videos-panel" data-tab="videos">videos tab</a>.
 
-i'm also a part-time software developer working on a bunch of different projects, though my main focus right now is my discord bot. you can learn more about it in the <a href="#" data-tab="projects">projects</a> tab.
+i'm also a part-time software developer working on a bunch of different side projects, though my main focus right now is my discord bot <a href="#project-fishie" data-tab="projects" data-project="fishie">Fishie</a> and my anime streaming app <a href="#project-nen" data-tab="projects" data-project="nen">Nen</a>. you can learn more about it in the <a href="#projects-panel" data-tab="projects">projects tab</a>.
 
-i've been editing videos for about 8 years now, though i only recently got back into it as a hobby. programming's been a similar story but i've been doing it for about 10+ years, but with ai taking over it's been pretty demotivating, so i only do it as a hobby nowadays. fun fact: that's actually what got me back into video editing.
+i've been editing videos for about 8 years now, though i only recently got back into it as a hobby. programming's been a similar story but i've been doing it for about 10+ years, but with ai taking over it's been pretty demotivating, so i only do it as a hobby nowadays.
 
-programming-wise, i'm proficient in python, ts/js, and lua and i'm currently learning c# and rust.
+programming-wise, I know and use python, ts/js and lua. i'm currently learning c#, might give rust a try in the future.
 
-as for video editing, i've used adobe premiere pro for years, but about a year ago i switched to davinci resolve. i've been loving it ever since and i'm fully committed to the switch.
+as for video editing, i've used adobe premiere pro for years, but i switched to Davinci Resolve a bit ago now and i've been loving it ever since, i'm now fully committed to the switch and adobe-free.
 
 any pronouns`,
 
   projects: [
     {
+      id: "fishie",
       name: "Fishie",
       desc: `Fishie is an all around multipurpose Discord bot. Its main use is avatar, username, and nickname tracking.
 
@@ -192,6 +192,11 @@ As well, Fishie offers a wide range of useful features that make it a valuable a
 You'll also find a download command, which supports a variety of websites, essential moderation tools, including a honeypot system that can automatically ban spammers, along with many other features to help everyone in your server.
 
 <a href="https://discord.com/oauth2/authorize?client_id=1537535633038381190&scope=bot+applications.commands&permissions=138513074240" target="_blank" rel="noopener">Invite here.</a>`,
+    },
+    {
+      id: "nen",
+      name: "Nen",
+      desc: `My desktop app for streaming anime, syncs with your AniList and/or MyAnimeList. Check it out <a href="https://nen.may-be.gay/" target="_blank" rel="noopener">here</a>.`,
     },
     {
       name: "Mudae Tools",
@@ -204,19 +209,13 @@ You'll also find a download command, which supports a variety of websites, essen
 Check it out <a href="/discord" target="_blank" rel="noopener">here</a>`,
     },
     {
-      name: "Subreddit Image Downloader",
-      desc: `Simple CLI tool for mass downloading images from subreddits. Supports flags for time, hot, and more.
-<a href="https://github.com/crygup/subreddit-image-downloader" target="_blank" rel="noopener">Get it here.</a>`,
+      name: "Risk of Rain 2 Mark Logbook as Read Mod",
+      desc: `My mod for Risk of Rain 2 which adds a button to the logbook to mark an entire section as read. Check it out <a href="https://thunderstore.io/c/riskofrain2/p/crygup/LogbookMarkRead" target="_blank" rel="noopener">here</a>`,
     },
     {
       name: "Duckbot",
       desc: `Popular Discord bot that I have contributed to in the past.
 <a href="https://discord.com/oauth2/authorize?client_id=788278464474120202&scope=applications.commands+bot&permissions=294171045078" target="_blank" rel="noopener">Invite here.</a>`,
-    },
-    {
-      name: "Roblox Item Notifier (outdated)",
-      desc: `Tool to mention and link a user to an item on Discord via Webhook when it comes on sale. Defaults to the Headless Horseman bundle but can easily be changed to any item by swapping the link.
-<a href="https://github.com/crygup/headless-tracker" target="_blank" rel="noopener">Get it here.</a>`,
     },
   ],
 
@@ -484,10 +483,16 @@ if (bio) bio.innerHTML = profile.bio;
 
 if (bio) {
   bio.addEventListener("click", (e) => {
-    const tab = e.target.closest("a")?.dataset.tab;
+    const link = e.target.closest("a");
+    const tab = link?.dataset.tab;
     if (tab) {
       e.preventDefault();
-      document.querySelector(`[data-tab="${tab}"]`)?.click();
+      document.querySelector(`.tab-btn[data-tab="${tab}"]`)?.click();
+      if (link.dataset.project) {
+        const project = document.getElementById(`project-${link.dataset.project}`);
+        project?.classList.add("expanded");
+        project?.scrollIntoView({ block: "nearest" });
+      }
     }
   });
 }
@@ -541,6 +546,7 @@ const list = document.getElementById("project-list");
 if (list) {
   profile.projects.forEach((p) => {
     const li = document.createElement("li");
+    if (p.id) li.id = `project-${p.id}`;
     li.innerHTML = `${p.name}<div class="project-detail">${p.desc}</div>`;
     li.addEventListener("click", () => {
       li.classList.toggle("expanded");
@@ -629,8 +635,8 @@ function renderNowPlaying(track, trackInfo, totalScrobbles) {
     ${placeholder}
     <div class="np-info">
       <span class="np-label">${label}</span>
-      <span class="np-track" title="${escapeHtml(track.name)}">${escapeHtml(track.name)}${heart}</span>
-      <span class="np-artist">${escapeHtml(track.artist)}</span>
+      <a class="np-track" title="${escapeHtml(track.name)}" href="https://www.last.fm/music/${escapeHtml(encodeURIComponent(track.artist))}/_/${escapeHtml(encodeURIComponent(track.name))}" target="_blank" rel="noopener">${escapeHtml(track.name)}${heart}</a>
+      <a class="np-artist" href="https://www.last.fm/music/${escapeHtml(encodeURIComponent(track.artist))}" target="_blank" rel="noopener">${escapeHtml(track.artist)}</a>
       ${playsLine ? `<span class="np-plays">${playsLine}</span>` : ""}
     </div>`;
   npSection.classList.remove("hidden");
@@ -950,3 +956,75 @@ function escapeHtml(s) {
       window.__fishieOAuthPending = false;
     });
 })();
+
+
+const steamSection = document.getElementById("steam-playing");
+async function refreshSteamActivity() {
+  try {
+    const response = await fetch("/steam-activity", { signal: AbortSignal.timeout(30000) });
+    if (!response.ok) throw new Error("Steam activity unavailable");
+    const { game } = await response.json();
+    if (!game) { steamSection.classList.add("hidden"); return; }
+    if (!Number.isSafeInteger(game.appid) || game.appid <= 0) throw new Error("Invalid Steam app");
+    const label = game.playing ? "Now Playing" : `Last Played${game.last_played ? ` &middot; ${timeAgo(game.last_played * 1000)}` : ""}`;
+    const hours = (game.playtime_minutes / 60).toLocaleString(undefined, { maximumFractionDigits: 1 });
+    steamSection.innerHTML = `<div class="np-cover placeholder"></div><div class="np-info">
+      <span class="np-label">${label}</span>
+      <a class="np-track" href="https://store.steampowered.com/app/${game.appid}/" target="_blank" rel="noopener">${escapeHtml(game.name)}</a>
+      <span class="np-plays">${hours} hours played</span>
+    </div>`;
+    if (game.icon && /^https:\/\/cdn\.cloudflare\.steamstatic\.com\//.test(game.icon)) {
+      const icon = document.createElement("img");
+      icon.className = "np-cover";
+      icon.alt = "";
+      icon.src = game.icon;
+      icon.addEventListener("error", () => {
+        icon.addEventListener("error", () => icon.replaceWith(Object.assign(document.createElement("div"), { className: "np-cover placeholder" })), { once: true });
+        icon.src = game.icon.replace("_full.jpg", ".jpg");
+      }, { once: true });
+      steamSection.firstElementChild.replaceWith(icon);
+    }
+    steamSection.classList.remove("hidden");
+  } catch {
+    // Hide stale status instead of claiming that a game is still running.
+    steamSection.classList.add("hidden");
+  }
+}
+if (steamSection) {
+  refreshSteamActivity();
+  setInterval(refreshSteamActivity, 60000);
+}
+
+
+const animeSection = document.getElementById("anime-playing");
+async function refreshAnimeActivity() {
+  try {
+    const response = await fetch("/anilist-activity", { signal: AbortSignal.timeout(30000) });
+    if (!response.ok) throw new Error("AniList activity unavailable");
+    const { anime } = await response.json();
+    if (!anime) { animeSection.classList.add("hidden"); return; }
+    if (!Number.isSafeInteger(anime.id) || anime.id <= 0) throw new Error("Invalid anime");
+    const details = [anime.score ? `${anime.score}/10` : "",
+      anime.rewatches ? `${anime.rewatches} ${anime.rewatches === 1 ? "rewatch" : "rewatches"}` : ""].filter(Boolean).join(" \u00b7 ");
+    animeSection.innerHTML = `<div class="np-cover placeholder"></div><div class="np-info">
+      <span class="np-label">${escapeHtml(anime.label)} &middot; ${timeAgo(anime.watched_at * 1000)}</span>
+      <a class="np-track" href="https://anilist.co/anime/${anime.id}" target="_blank" rel="noopener">${escapeHtml(anime.name)}</a>
+      ${details ? `<span class="np-plays">${escapeHtml(details)}</span>` : ""}
+    </div>`;
+    if (anime.image && /^https:\/\/(?:s4|s5)\.anilist\.co\//.test(anime.image)) {
+      const image = document.createElement("img");
+      image.className = "np-cover";
+      image.alt = "";
+      image.src = anime.image;
+      image.addEventListener("error", () => image.replaceWith(Object.assign(document.createElement("div"), { className: "np-cover placeholder" })), { once: true });
+      animeSection.firstElementChild.replaceWith(image);
+    }
+    animeSection.classList.remove("hidden");
+  } catch {
+    animeSection.classList.add("hidden");
+  }
+}
+if (animeSection) {
+  refreshAnimeActivity();
+  setInterval(refreshAnimeActivity, 60000);
+}

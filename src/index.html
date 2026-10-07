@@ -22,8 +22,12 @@
       <button class="tab-btn" data-tab="videos">Videos</button>
     </nav>
     <section class="tab-panel bio-card" id="bio-panel">
-    <section id="now-playing"></section>
       <p id="bio"></p>
+      <aside id="activity-sidebar" aria-label="Recent activity">
+        <section id="now-playing"></section>
+        <section id="steam-playing" class="hidden" aria-label="Steam game activity"></section>
+        <section id="anime-playing" class="hidden" aria-label="Recently watched anime"></section>
+      </aside>
       <div id="socials"></div>
     </section>
     <section class="tab-panel projects-card hidden" id="projects-panel">
